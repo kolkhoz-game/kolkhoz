@@ -119,7 +119,10 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final cardSize = widget.tokens.card.small;
+    final cardSize = scaledPlanningRewardCardSize(
+      widget.tokens.card.small,
+      planningRewardCardScale,
+    );
     final rewards = {
       for (final job in widget.model.table.jobs) job.suit: job.reward,
     };
@@ -177,7 +180,7 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
                         ),
                       ),
                       SizedBox(
-                        height: planningTrumpButtonSize,
+                        height: planningRewardTrumpButtonSize,
                         child: AnimatedSwitcher(
                           duration: GameMotion.of(context).handInteraction,
                           child: rewardsReady
@@ -204,8 +207,8 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
                                         aiSelecting &&
                                         suit == widget.focusedSuit,
                                     tokens: widget.tokens,
-                                    size: planningTrumpButtonSize,
-                                    iconSize: planningTrumpIconSize,
+                                    size: planningRewardTrumpButtonSize,
+                                    iconSize: planningRewardTrumpIconSize,
                                   ),
                                 )
                               : Center(
@@ -249,6 +252,26 @@ TrumpActionOption? optionForSuit(
 ) => options.where((option) => option.suit == suit).firstOrNull;
 
 const planningRewardColumnSpacing = 7.0;
+const planningRewardCardScale = 1.2;
+const planningRewardTrumpButtonSize = 34.0;
+const planningRewardTrumpIconSize = 22.0;
+
+TokenCardSize scaledPlanningRewardCardSize(TokenCardSize base, double scale) {
+  return TokenCardSize(
+    width: base.width * scale,
+    height: base.height * scale,
+    faceInset: base.faceInset * scale,
+    cornerWidth: base.cornerWidth * scale,
+    cornerHeight: base.cornerHeight * scale,
+    cornerRankFontSize: base.cornerRankFontSize * scale,
+    cornerSuitSize: base.cornerSuitSize * scale,
+    topCornerRankSuitSpacing: base.topCornerRankSuitSpacing * scale,
+    bottomCornerRankSuitSpacing: base.bottomCornerRankSuitSpacing * scale,
+    topCornerSuitXOffset: base.topCornerSuitXOffset * scale,
+    bottomCornerSuitXOffset: base.bottomCornerSuitXOffset * scale,
+    pipSize: base.pipSize * scale,
+  );
+}
 
 class RewardFlipCard extends StatelessWidget {
   const RewardFlipCard({

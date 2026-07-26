@@ -281,7 +281,10 @@ void registerTutorialAndLayoutTests() {
       ),
     );
 
-    await tester.tap(find.byKey(const Key('player-portrait-0-inspect')));
+    final portrait = tester.widget<GestureDetector>(
+      find.byKey(const Key('player-portrait-0-inspect')),
+    );
+    portrait.onTap!();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 

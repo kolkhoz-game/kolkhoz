@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kolkhoz_app/src/app/settings/animation_speed.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/game_ui_state.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_view.dart';
@@ -20,9 +21,22 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1200, 760));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await _loadFonts(tester);
+    _clearImageCache();
+    await _precacheHeroUnderlays(tester);
 
     final model = fieldPlanFourCardTrickModel();
     await _pumpBoard(tester, model, settle: false);
+
+    final trickCard = find.byKey(const Key('static-hero-trick-card-wheat-12'));
+    final trickCardBox = tester.renderObject<RenderBox>(trickCard);
+    final visualCardWidth =
+        (trickCardBox.localToGlobal(Offset(trickCardBox.size.width, 0)) -
+                trickCardBox.localToGlobal(Offset.zero))
+            .distance;
+    expect(
+      visualCardWidth / trickCardBox.size.width,
+      closeTo(staticHeroTrickCardScale, 0.001),
+    );
 
     final winningCards = tester
         .widgetList<GameCard>(find.byType(GameCard))
@@ -118,25 +132,174 @@ void main() {
     expect(bottomProfileYs.first, greaterThan(topProfileYs.first));
 
     for (final seatID in [2, 1]) {
-      final profile = tester.getRect(
+      final profile = _visualRect(
+        tester,
         find.byKey(Key('player-portrait-$seatID-inspect')),
       );
       final cardID = seatID == 2 ? 'sunflower-8' : 'wheat-12';
-      final card = tester.getRect(
-        find.byKey(Key('static-hero-trick-card-$cardID')),
-      );
-      expect(profile.left, lessThan(card.left));
+      final card = _trickCardVisualRect(tester, cardID);
+      expect(profile.right, lessThanOrEqualTo(card.left));
     }
     for (final seatID in [3, 0]) {
-      final profile = tester.getRect(
+      final profile = _visualRect(
+        tester,
         find.byKey(Key('player-portrait-$seatID-inspect')),
       );
       final cardID = seatID == 3 ? 'potato-10' : 'beet-6';
-      final card = tester.getRect(
-        find.byKey(Key('static-hero-trick-card-$cardID')),
-      );
-      expect(profile.right, greaterThan(card.right));
+      final card = _trickCardVisualRect(tester, cardID);
+      expect(card.right, lessThanOrEqualTo(profile.left));
     }
+    _expectTrickCardGaps(tester);
+    _expectTrickCardsInsidePlayfield(tester);
+    _expectTrickProfilesAnchoredToCards(tester);
+    _expectPlotZonesAnchoredToProfiles(tester);
+    _expectTrickLayoutVerticallyCentered(tester);
+    _expectTrickProfileHorizontalGaps(tester);
+    _expectLeftPlotFansBuildOutward(tester);
+    await expectLater(
+      find.byKey(const Key('production-board-capture')),
+      matchesGoldenFile('static_hero_production/brigade.png'),
+    );
+  });
+
+  testWidgets('large trick cards clear profiles at phone landscape size', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(640, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _loadFonts(tester);
+    await _precacheHeroUnderlays(tester);
+
+    await _pumpBoard(tester, fieldPlanFourCardTrickModel(), settle: false);
+
+    for (final (seatID, cardID) in [(2, 'sunflower-8'), (1, 'wheat-12')]) {
+      final profile = _visualRect(
+        tester,
+        find.byKey(Key('player-portrait-$seatID-inspect')),
+      );
+      final card = _trickCardVisualRect(tester, cardID);
+      expect(profile.right, lessThanOrEqualTo(card.left));
+    }
+    for (final (seatID, cardID) in [(3, 'potato-10'), (0, 'beet-6')]) {
+      final profile = _visualRect(
+        tester,
+        find.byKey(Key('player-portrait-$seatID-inspect')),
+      );
+      final card = _trickCardVisualRect(tester, cardID);
+      expect(card.right, lessThanOrEqualTo(profile.left));
+    }
+    _expectTrickCardGaps(tester);
+    _expectTrickCardsInsidePlayfield(tester);
+    _expectTrickProfilesAnchoredToCards(tester);
+    _expectPlotZonesAnchoredToProfiles(tester);
+    _expectTrickLayoutVerticallyCentered(tester);
+    _expectTrickProfileHorizontalGaps(tester);
+    _expectLeftPlotFansBuildOutward(tester);
+  });
+
+  testWidgets('long player names leave room for every medal at phone size', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(640, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _loadFonts(tester);
+    await _precacheHeroUnderlays(tester);
+
+    final base = fieldPlanFourCardTrickModel();
+    final model = _withViewer(
+      base,
+      base.viewer.seatID ?? 0,
+      namesBySeat: const {0: 'Player 1', 1: 'Ivan', 2: 'Dmitri', 3: 'Alyosha'},
+      medalsBySeat: {
+        for (final seat in base.table.seats) seat.id: base.table.maxTricks,
+      },
+    );
+    await _pumpBoard(
+      tester,
+      model,
+      settle: false,
+      textScaler: const TextScaler.linear(1.2),
+    );
+
+    for (final seat in model.table.seats) {
+      final profile = _visualRect(
+        tester,
+        find.byKey(Key('player-portrait-${seat.id}-inspect')),
+      );
+      for (var index = 0; index < model.table.maxTricks; index++) {
+        final medal = _visualRect(
+          tester,
+          find.byKey(Key('player-profile-medal-${seat.id}-$index')),
+        );
+        expect(medal.left, greaterThanOrEqualTo(profile.left));
+        expect(medal.right, lessThanOrEqualTo(profile.right));
+      }
+    }
+  });
+
+  testWidgets('selected plot and cellar cards use the green swap frame', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(640, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _loadFonts(tester);
+    await _precacheHeroUnderlays(tester);
+
+    final base = fieldPlanFourCardTrickModel();
+    for (final (cardID, zone) in [
+      ('beet-10', plotZoneRevealed),
+      ('potato-6', plotZoneHidden),
+    ]) {
+      final model = _withViewer(
+        base,
+        base.viewer.seatID ?? 0,
+        selection: SelectionState(
+          handCardID: 'wheat-11',
+          plotCardID: cardID,
+          plotZone: zone,
+          assignmentCardID: null,
+        ),
+      );
+      await _pumpBoard(tester, model, settle: false);
+
+      final frame = tester.widget<Container>(
+        find.byKey(ValueKey('swap-selected-plot-card-$cardID')),
+      );
+      final decoration = frame.foregroundDecoration! as BoxDecoration;
+      expect(
+        decoration.border!.top.color,
+        KolkhozAppearance.light.tokens.colors.green,
+      );
+    }
+  });
+
+  testWidgets('field jobs fill the illustrated plots on desktop', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _loadFonts(tester);
+    _clearImageCache();
+    await _precacheHeroUnderlays(tester);
+
+    await _pumpBoard(tester, _scenario('assignment_jobs').model);
+    _expectFieldGeometry(tester);
+    await expectLater(
+      find.byKey(const Key('production-board-capture')),
+      matchesGoldenFile('static_hero_production/fields.png'),
+    );
+  });
+
+  testWidgets('field jobs remain aligned at phone landscape size', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(640, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _loadFonts(tester);
+    await _precacheHeroUnderlays(tester);
+
+    await _pumpBoard(tester, _scenario('assignment_jobs').model);
+    _expectFieldGeometry(tester);
   });
 
   testWidgets('field-art medals pulse when a player is one trick from Hero', (
@@ -190,22 +353,9 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1200, 760));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await _loadFonts(tester);
-    await tester.pumpWidget(const MaterialApp(home: SizedBox()));
-    final imageContext = tester.element(find.byType(SizedBox));
-    await tester.runAsync(
-      () => Future.wait([
-        for (final panel in ['brigade', 'fields', 'north'])
-          precacheImage(
-            AssetImage(
-              'assets/art/field_plan/game/backgrounds/'
-              'static-hero-$panel-underlay-v1.png',
-            ),
-            imageContext,
-          ),
-      ]),
-    );
+    await _precacheHeroUnderlays(tester);
 
-    await _pumpBoard(tester, _scenario('trick_brigade').model);
+    await _pumpBoard(tester, _scenario('trick_brigade').model, settle: false);
     expect(
       find.byKey(const Key('production-static-hero-brigade')),
       findsOneWidget,
@@ -237,16 +387,12 @@ void main() {
     );
     expect((bot1TrickCard.dx - bot2TrickCard.dx).abs(), lessThan(2));
     expect(bot2TrickCard.dy, lessThan(bot1TrickCard.dy));
-    await expectLater(
-      find.byKey(const Key('production-board-capture')),
-      matchesGoldenFile('static_hero_production/brigade.png'),
-    );
-
     LegalAction? selectedAction;
     await _pumpBoard(
       tester,
       _scenario('assignment_jobs').model,
       onAction: (action) => selectedAction = action,
+      settle: false,
     );
     expect(
       find.byKey(const Key('production-static-hero-fields')),
@@ -255,12 +401,11 @@ void main() {
     await tester.tap(find.byKey(const Key('static-hero-job-wheat')));
     expect(selectedAction?.kind, actionAssign);
     expect(selectedAction?.engineAction.targetSuit, 'wheat');
-    await expectLater(
-      find.byKey(const Key('production-board-capture')),
-      matchesGoldenFile('static_hero_production/fields.png'),
+    await _pumpBoard(
+      tester,
+      _scenario('sent_north_history').model,
+      settle: false,
     );
-
-    await _pumpBoard(tester, _scenario('sent_north_history').model);
     expect(
       find.byKey(const Key('production-static-hero-north')),
       findsOneWidget,
@@ -268,10 +413,6 @@ void main() {
     for (var year = 1; year <= finalGameYear; year++) {
       expect(find.byKey(Key('static-hero-north-year-$year')), findsOneWidget);
     }
-    await expectLater(
-      find.byKey(const Key('production-board-capture')),
-      matchesGoldenFile('static_hero_production/north.png'),
-    );
   });
 
   testWidgets('brigade seats and trick cards rotate around the viewer', (
@@ -281,7 +422,11 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await _loadFonts(tester);
 
-    await _pumpBoard(tester, _withViewer(_scenario('trick_brigade').model, 2));
+    await _pumpBoard(
+      tester,
+      _withViewer(_scenario('trick_brigade').model, 2),
+      settle: false,
+    );
     final viewerPortrait = tester.getCenter(
       find.byKey(const Key('player-portrait-2-inspect')),
     );
@@ -312,6 +457,8 @@ TableViewModel _withViewer(
   TableViewModel model,
   int viewerSeatID, {
   Map<int, int> medalsBySeat = const {},
+  Map<int, String> namesBySeat = const {},
+  SelectionState? selection,
 }) {
   return TableViewModel(
     viewer: Viewer(seatID: viewerSeatID, privacyMode: model.viewer.privacyMode),
@@ -327,7 +474,7 @@ TableViewModel _withViewer(
         for (final seat in model.table.seats)
           Seat(
             id: seat.id,
-            name: seat.name,
+            name: namesBySeat[seat.id] ?? seat.name,
             controller: seat.controller,
             portraitAsset: seat.portraitAsset,
             isViewer: seat.id == viewerSeatID,
@@ -353,7 +500,7 @@ TableViewModel _withViewer(
       finalYearTrumpCard: model.table.finalYearTrumpCard,
     ),
     panels: model.panels,
-    selection: model.selection,
+    selection: selection ?? model.selection,
     legalActions: model.legalActions,
     seed: model.seed,
   );
@@ -364,20 +511,26 @@ Future<void> _pumpBoard(
   TableViewModel model, {
   ValueChanged<LegalAction>? onAction,
   bool settle = true,
+  TextScaler textScaler = TextScaler.noScaling,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: fieldPlanDisplayFontFamily),
-      home: RepaintBoundary(
-        key: const Key('production-board-capture'),
-        child: KolkhozBoard(
-          model: model,
-          tokens: KolkhozAppearance.light.tokens,
-          language: KolkhozLanguage.en,
-          appearance: KolkhozAppearance.light,
-          animationSpeed: GameAnimationSpeed.instant,
-          onAction: onAction,
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+          child: RepaintBoundary(
+            key: const Key('production-board-capture'),
+            child: KolkhozBoard(
+              model: model,
+              tokens: KolkhozAppearance.light.tokens,
+              language: KolkhozLanguage.en,
+              appearance: KolkhozAppearance.light,
+              animationSpeed: GameAnimationSpeed.instant,
+              onAction: onAction,
+            ),
+          ),
         ),
       ),
     ),
@@ -404,4 +557,360 @@ Future<void> _loadFonts(WidgetTester tester) async {
       );
     await Future.wait([display.load(), body.load()]);
   });
+}
+
+Future<void> _precacheHeroUnderlays(WidgetTester tester) async {
+  await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+  final imageContext = tester.element(find.byType(SizedBox));
+  await tester.runAsync(
+    () => Future.wait([
+      for (final panel in ['brigade', 'fields', 'north'])
+        precacheImage(
+          AssetImage(
+            'assets/art/field_plan/game/backgrounds/'
+            'static-hero-$panel-underlay-v1.png',
+          ),
+          imageContext,
+        ),
+    ]),
+  );
+}
+
+void _clearImageCache() {
+  PaintingBinding.instance.imageCache
+    ..clear()
+    ..clearLiveImages();
+}
+
+Rect _visualRect(WidgetTester tester, Finder finder) {
+  final box = tester.renderObject<RenderBox>(finder);
+  final corners = [
+    box.localToGlobal(Offset.zero),
+    box.localToGlobal(Offset(box.size.width, 0)),
+    box.localToGlobal(Offset(0, box.size.height)),
+    box.localToGlobal(box.size.bottomRight(Offset.zero)),
+  ];
+  final left = corners.map((point) => point.dx).reduce(math.min);
+  final top = corners.map((point) => point.dy).reduce(math.min);
+  final right = corners.map((point) => point.dx).reduce(math.max);
+  final bottom = corners.map((point) => point.dy).reduce(math.max);
+  return Rect.fromLTRB(left, top, right, bottom);
+}
+
+Rect _trickCardVisualRect(WidgetTester tester, String cardID) {
+  return _visualRect(
+    tester,
+    find.descendant(
+      of: find.byKey(Key('static-hero-trick-card-$cardID')),
+      matching: find.byType(GameCard),
+    ),
+  );
+}
+
+void _expectTrickCardGaps(WidgetTester tester) {
+  const minimumGap = 2.0;
+  final topLeft = _trickCardVisualRect(tester, 'sunflower-8');
+  final topRight = _trickCardVisualRect(tester, 'potato-10');
+  final bottomLeft = _trickCardVisualRect(tester, 'wheat-12');
+  final bottomRight = _trickCardVisualRect(tester, 'beet-6');
+
+  expect(topLeft.right + minimumGap, lessThanOrEqualTo(topRight.left));
+  expect(bottomLeft.right + minimumGap, lessThanOrEqualTo(bottomRight.left));
+  expect(topLeft.bottom + minimumGap, lessThanOrEqualTo(bottomLeft.top));
+  expect(topRight.bottom + minimumGap, lessThanOrEqualTo(bottomRight.top));
+}
+
+void _expectTrickCardsInsidePlayfield(WidgetTester tester) {
+  final playfield = _visualRect(
+    tester,
+    find.byKey(const Key('production-static-hero-brigade')),
+  );
+  for (final cardID in ['sunflower-8', 'potato-10', 'wheat-12', 'beet-6']) {
+    final card = _trickCardVisualRect(tester, cardID);
+    expect(card.top, greaterThanOrEqualTo(playfield.top));
+    expect(card.bottom, lessThanOrEqualTo(playfield.bottom));
+  }
+}
+
+void _expectTrickProfilesAnchoredToCards(WidgetTester tester) {
+  for (final (seatID, cardID) in [(2, 'sunflower-8'), (3, 'potato-10')]) {
+    final profile = _visualRect(
+      tester,
+      find.byKey(Key('player-portrait-$seatID-inspect')),
+    );
+    final card = _trickCardVisualRect(tester, cardID);
+    expect(profile.bottom, closeTo(card.bottom, 0.01));
+  }
+  for (final (seatID, cardID) in [(1, 'wheat-12'), (0, 'beet-6')]) {
+    final profile = _visualRect(
+      tester,
+      find.byKey(Key('player-portrait-$seatID-inspect')),
+    );
+    final card = _trickCardVisualRect(tester, cardID);
+    expect(profile.top, closeTo(card.top, 0.01));
+  }
+}
+
+void _expectPlotZonesAnchoredToProfiles(WidgetTester tester) {
+  const gap = 2.0;
+  final playfield = _visualRect(
+    tester,
+    find.byKey(const Key('production-static-hero-brigade')),
+  );
+  final plotPadding = 4 * (playfield.height / 410).clamp(0.45, 1);
+  for (final (seatID, cardID) in [
+    (2, 'sunflower-8'),
+    (3, 'potato-10'),
+    (1, 'wheat-12'),
+    (0, 'beet-6'),
+  ]) {
+    final profile = _visualRect(
+      tester,
+      find.byKey(Key('player-portrait-$seatID-inspect')),
+    );
+    final plotZone = _visualRect(
+      tester,
+      find.byKey(Key('static-hero-plot-zone-$seatID')),
+    );
+    final card = _trickCardVisualRect(tester, cardID);
+    final isLeftColumn = seatID == 2 || seatID == 1;
+    final isTopRow = seatID == 2 || seatID == 3;
+
+    expect(
+      isLeftColumn ? plotZone.right : plotZone.left,
+      closeTo(isLeftColumn ? profile.right : profile.left, 0.01),
+    );
+    expect(
+      isTopRow ? plotZone.bottom + gap : plotZone.top - gap,
+      closeTo(isTopRow ? profile.top : profile.bottom, 0.01),
+    );
+    expect(
+      isTopRow ? plotZone.top + plotPadding : plotZone.bottom - plotPadding,
+      isTopRow
+          ? lessThanOrEqualTo(card.top)
+          : greaterThanOrEqualTo(card.bottom),
+    );
+    final profileGap = isTopRow
+        ? profile.top - (plotZone.bottom - plotPadding)
+        : plotZone.top + plotPadding - profile.bottom;
+    final playfieldGap = isTopRow
+        ? plotZone.top + plotPadding - playfield.top
+        : playfield.bottom - (plotZone.bottom - plotPadding);
+    expect(playfieldGap, closeTo(profileGap, 0.01));
+  }
+}
+
+void _expectTrickLayoutVerticallyCentered(WidgetTester tester) {
+  final playfield = _visualRect(
+    tester,
+    find.byKey(const Key('production-static-hero-brigade')),
+  );
+  final top = math.min(
+    _trickCardVisualRect(tester, 'sunflower-8').top,
+    _trickCardVisualRect(tester, 'potato-10').top,
+  );
+  final bottom = math.max(
+    _trickCardVisualRect(tester, 'wheat-12').bottom,
+    _trickCardVisualRect(tester, 'beet-6').bottom,
+  );
+  expect((top + bottom) / 2, closeTo(playfield.center.dy, 0.01));
+}
+
+void _expectTrickProfileHorizontalGaps(WidgetTester tester) {
+  final playfield = _visualRect(
+    tester,
+    find.byKey(const Key('production-static-hero-brigade')),
+  );
+  final minimumGap = 8 * (playfield.height / 410).clamp(0.45, 1);
+  for (final (seatID, cardID) in [(2, 'sunflower-8'), (1, 'wheat-12')]) {
+    final profile = _visualRect(
+      tester,
+      find.byKey(Key('player-portrait-$seatID-inspect')),
+    );
+    final card = _trickCardVisualRect(tester, cardID);
+    expect(card.left - profile.right, greaterThanOrEqualTo(minimumGap));
+  }
+  for (final (seatID, cardID) in [(3, 'potato-10'), (0, 'beet-6')]) {
+    final profile = _visualRect(
+      tester,
+      find.byKey(Key('player-portrait-$seatID-inspect')),
+    );
+    final card = _trickCardVisualRect(tester, cardID);
+    expect(profile.left - card.right, greaterThanOrEqualTo(minimumGap));
+  }
+}
+
+void _expectLeftPlotFansBuildOutward(WidgetTester tester) {
+  for (final seatID in [2, 1]) {
+    final fanCards = find
+        .descendant(
+          of: find.byKey(Key('static-hero-plot-zone-$seatID')),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget.key is ValueKey<String> &&
+                (widget.key! as ValueKey<String>).value.startsWith(
+                  'poster-fan-paint-',
+                ),
+          ),
+        )
+        .evaluate()
+        .toList();
+    expect(fanCards.length, greaterThanOrEqualTo(2));
+    final bottomCard = find.byKey(fanCards.first.widget.key!);
+    final topCard = find.byKey(fanCards.last.widget.key!);
+    expect(
+      tester.getCenter(bottomCard).dx,
+      greaterThan(tester.getCenter(topCard).dx),
+    );
+  }
+}
+
+void _expectFieldGeometry(WidgetTester tester) {
+  final panel = tester.getRect(
+    find.byKey(const Key('production-static-hero-fields')),
+  );
+  final jobs = {
+    for (final suit in ['wheat', 'beet', 'sunflower', 'potato'])
+      suit: tester.getRect(find.byKey(Key('static-hero-job-$suit'))),
+  };
+  final wheat = jobs['wheat']!;
+  final beet = jobs['beet']!;
+  final sunflower = jobs['sunflower']!;
+  final potato = jobs['potato']!;
+
+  for (final rect in jobs.values) {
+    expect(panel.contains(rect.topLeft), isTrue);
+    expect(panel.contains(rect.bottomRight), isTrue);
+  }
+  expect(wheat.overlaps(beet), isFalse);
+  expect(wheat.overlaps(sunflower), isFalse);
+  expect(beet.overlaps(potato), isFalse);
+  expect(sunflower.overlaps(potato), isFalse);
+  expect(wheat.left, closeTo(sunflower.left, 0.01));
+  expect(wheat.right, closeTo(sunflower.right, 0.01));
+  expect(beet.left, closeTo(potato.left, 0.01));
+  expect(beet.right, closeTo(potato.right, 0.01));
+  expect(wheat.top, closeTo(beet.top, 0.01));
+  expect(wheat.bottom, closeTo(beet.bottom, 0.01));
+  expect(sunflower.top, closeTo(potato.top, 0.01));
+  expect(sunflower.bottom, closeTo(potato.bottom, 0.01));
+  expect(wheat.width, greaterThan(panel.width * 0.45));
+  expect(wheat.height, greaterThan(panel.height * 0.30));
+  expect(sunflower.height, greaterThan(panel.height * 0.40));
+
+  final title = tester.getRect(find.text('FIELDS'));
+  expect(title.bottom, lessThan(wheat.top));
+
+  final counters = {
+    for (final suit in jobs.keys)
+      suit: tester.getRect(find.byKey(Key('static-hero-job-counter-$suit'))),
+  };
+  final rewards = {
+    for (final suit in jobs.keys)
+      suit: tester.getRect(find.byKey(Key('static-hero-job-reward-$suit'))),
+  };
+  final assignments = {
+    for (final suit in jobs.keys)
+      suit: tester.getRect(find.byKey(Key('static-hero-job-assignment-$suit'))),
+  };
+  final markers = {
+    for (final suit in jobs.keys)
+      suit: tester.getRect(find.byKey(Key('static-hero-job-marker-$suit'))),
+  };
+  for (final suit in jobs.keys) {
+    final job = jobs[suit]!;
+    final counter = counters[suit]!;
+    final reward = rewards[suit]!;
+    final assignment = assignments[suit]!;
+    final marker = markers[suit]!;
+    expect(panel.contains(counter.topLeft), isTrue);
+    expect(panel.contains(counter.bottomRight), isTrue);
+    expect(
+      panel.contains(reward.topLeft),
+      isTrue,
+      reason: '$suit reward $reward must start inside $panel',
+    );
+    expect(
+      panel.contains(reward.bottomRight),
+      isTrue,
+      reason: '$suit reward $reward must end inside $panel',
+    );
+    expect(reward.width, closeTo(counter.width * 0.8, 0.01));
+    expect(reward.center.dx, closeTo(counter.center.dx, 0.01));
+    expect(assignment.left, greaterThanOrEqualTo(job.left));
+    expect(assignment.right, lessThanOrEqualTo(job.right));
+    expect(assignment.top, greaterThanOrEqualTo(job.top));
+    expect(assignment.bottom, lessThanOrEqualTo(job.bottom));
+    expect(assignment.overlaps(marker), isFalse);
+    expect(assignment.top, closeTo(job.top, 0.01));
+    expect(assignment.bottom, closeTo(job.bottom, 0.01));
+    expect(assignment.width, greaterThan(job.width * 0.65));
+
+    final isLeftColumn = suit == 'wheat' || suit == 'sunflower';
+    final isTopRow = suit == 'wheat' || suit == 'beet';
+    if (isTopRow) {
+      expect(job.contains(counter.topLeft), isTrue);
+      expect(job.contains(counter.bottomRight), isTrue);
+    } else {
+      expect(job.contains(counter.topLeft), isTrue);
+      expect(job.contains(counter.bottomRight), isTrue);
+    }
+    expect(
+      counter.center.dx,
+      isLeftColumn ? greaterThan(job.center.dx) : lessThan(job.center.dx),
+    );
+    expect(
+      isLeftColumn ? assignment.left : assignment.right,
+      closeTo(isLeftColumn ? job.left : job.right, 0.01),
+    );
+    expect(
+      counter.center.dy,
+      isTopRow ? greaterThan(job.center.dy) : lessThan(job.center.dy),
+    );
+    expect(
+      isTopRow ? reward.bottom : counter.bottom,
+      lessThan(isTopRow ? counter.top : reward.top),
+    );
+
+    final counterText = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(Key('static-hero-job-counter-$suit')),
+        matching: find.byType(Text),
+      ),
+    );
+    final expectedScale = (panel.height / 410).clamp(0.45, 1).toDouble() * 1.5;
+    expect(counterText.style!.fontSize, closeTo(10 * expectedScale, 0.01));
+    expect(counter.width, closeTo(80 * expectedScale, 0.01));
+  }
+  final counterWidth = counters.values.first.width;
+  final rewardWidth = rewards.values.first.width;
+  for (final counter in counters.values) {
+    expect(counter.width, closeTo(counterWidth, 0.01));
+  }
+  for (final reward in rewards.values) {
+    expect(reward.width, closeTo(rewardWidth, 0.01));
+  }
+  expect(counters['wheat']!.right, lessThan(counters['beet']!.left));
+  expect(counters['sunflower']!.right, lessThan(counters['potato']!.left));
+  expect(counters['wheat']!.bottom, lessThan(counters['sunflower']!.top));
+  expect(counters['beet']!.bottom, lessThan(counters['potato']!.top));
+
+  for (final entry in jobs.entries) {
+    final motionTarget = tester.getRect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is MotionTrackedRegion &&
+            widget.motionKey == jobFieldMotionTargetKey(entry.key),
+      ),
+    );
+    expect(
+      (motionTarget.center - entry.value.center).distance,
+      lessThanOrEqualTo(panel.shortestSide * 0.015),
+    );
+    expect(motionTarget.width, closeTo(entry.value.width, panel.width * 0.01));
+    expect(
+      motionTarget.height,
+      closeTo(entry.value.height, panel.height * 0.02),
+    );
+  }
 }

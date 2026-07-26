@@ -1509,7 +1509,7 @@ void registerStoreAndOnlineTests() {
       );
       expect(
         seatNameForController(playerID: 1, controller: controllers[1]),
-        'Bot 1',
+        'Ivan',
       );
     },
   );
@@ -1709,6 +1709,9 @@ void registerStoreAndOnlineTests() {
   testWidgets('planning popup combines revealed rewards and trump choice', (
     tester,
   ) async {
+    PaintingBinding.instance.imageCache
+      ..clear()
+      ..clearLiveImages();
     const tokens = defaultDesignTokens;
     final metrics = ResponsiveBoardMetrics.fromSize(
       const Size(900, 520),
@@ -1751,13 +1754,16 @@ void registerStoreAndOnlineTests() {
         home: SizedBox(
           width: 900,
           height: 520,
-          child: BoardPlayArea(
-            model: model,
-            tokens: tokens,
-            metrics: metrics,
-            language: KolkhozLanguage.en,
-            appearance: KolkhozAppearance.dark,
-            onAction: (action) => selectedAction = action,
+          child: RepaintBoundary(
+            key: const Key('planning-overlay-capture'),
+            child: BoardPlayArea(
+              model: model,
+              tokens: tokens,
+              metrics: metrics,
+              language: KolkhozLanguage.en,
+              appearance: KolkhozAppearance.dark,
+              onAction: (action) => selectedAction = action,
+            ),
           ),
         ),
       ),
@@ -1765,17 +1771,45 @@ void registerStoreAndOnlineTests() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PlanningRewardsPanel), findsOneWidget);
+    final planningOverlay = find.byKey(const Key('planning-phase-overlay'));
+    final panelPosition = tester.widget<Positioned>(
+      find.byKey(const Key('planning-phase-panel-insets')),
+    );
+    final expectedInset = planningPhaseOverlayInsetForSize(
+      tester.getSize(planningOverlay),
+    );
+    expect(panelPosition.left, expectedInset);
+    expect(panelPosition.top, expectedInset);
+    expect(panelPosition.bottom, expectedInset);
+    expect(panelPosition.right, isNull);
     expect(
-      tester
-          .widget<Transform>(
-            find.byKey(const Key('planning-phase-panel-scale')),
-          )
-          .transform
-          .getMaxScaleOnAxis(),
-      planningPhaseOverlayScale,
+      tester.getCenter(find.byKey(const Key('planning-phase-panel-fit'))).dx,
+      lessThan(tester.getCenter(planningOverlay).dx),
     );
     expect(find.byType(RewardFlipCard), findsNWidgets(4));
+    expect(
+      tester
+          .widgetList<RewardFlipCard>(find.byType(RewardFlipCard))
+          .every(
+            (card) =>
+                card.size.width ==
+                    tokens.card.small.width * planningRewardCardScale &&
+                card.size.height ==
+                    tokens.card.small.height * planningRewardCardScale,
+          ),
+      isTrue,
+    );
     expect(find.byType(TrumpSelectionButton), findsNWidgets(4));
+    expect(
+      tester
+          .widgetList<TrumpSelectionButton>(find.byType(TrumpSelectionButton))
+          .every(
+            (button) =>
+                button.size == planningRewardTrumpButtonSize &&
+                button.iconSize == planningRewardTrumpIconSize,
+          ),
+      isTrue,
+    );
     expect(
       find.descendant(
         of: find.byType(TrumpSelectionButton),
@@ -1791,6 +1825,10 @@ void registerStoreAndOnlineTests() {
           .onPressed,
       isNull,
     );
+    await expectLater(
+      find.byKey(const Key('planning-overlay-capture')),
+      matchesGoldenFile('planning_overlay/left-planning-panel.png'),
+    );
 
     await tester.tap(find.byType(TrumpSelectionButton).first);
     await tester.pump();
@@ -1799,6 +1837,17 @@ void registerStoreAndOnlineTests() {
     await tester.tap(find.byKey(const Key('hand-console-primary')));
     expect(selectedAction?.kind, actionSetTrump);
     expect(selectedAction?.engineAction.suit, 'wheat');
+  });
+
+  test('planning overlay uses equal reduced edge insets', () {
+    expect(
+      planningPhaseOverlayInsetForSize(const Size(640, 240)),
+      closeTo(28.8, 0.001),
+    );
+    expect(
+      planningPhaseOverlayInsetForSize(const Size(900, 520)),
+      closeTo(62.4, 0.001),
+    );
   });
 
   testWidgets('planning starts on reward backs without legacy trump popup', (

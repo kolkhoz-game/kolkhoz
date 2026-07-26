@@ -2013,6 +2013,58 @@ void registerBoardTests() {
     expect(find.byType(GameCard), findsNothing);
   });
 
+  testWidgets('card flights grow continuously into a larger destination', (
+    tester,
+  ) async {
+    final card = testCard(id: 'growing-flight', suit: 'wheat', value: 9);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 320,
+          height: 240,
+          child: Stack(
+            children: [
+              FlyingCard(
+                flight: CardFlight(
+                  id: 2,
+                  card: card,
+                  from: const Rect.fromLTWH(20, 20, 40, 60),
+                  to: const Rect.fromLTWH(180, 60, 100, 150),
+                  destinationZone: const MotionZone.trick(0),
+                ),
+                tokens: defaultDesignTokens,
+                duration: const Duration(seconds: 1),
+                onDone: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    Positioned flightPosition() => tester.widget<Positioned>(
+      find
+          .descendant(
+            of: find.byType(FlyingCard),
+            matching: find.byType(Positioned),
+          )
+          .first,
+    );
+
+    expect(flightPosition().width, 40);
+    expect(flightPosition().height, 60);
+
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(flightPosition().width, allOf(greaterThan(40), lessThan(100)));
+    expect(flightPosition().height, allOf(greaterThan(60), lessThan(150)));
+
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(flightPosition().width, 100);
+    expect(flightPosition().height, 150);
+  });
+
   testWidgets(
     'hidden requisition flips at its source before flying with a red frame',
     (tester) async {
@@ -3899,6 +3951,7 @@ void registerBoardTests() {
       const handRect = Rect.fromLTWH(18, 220, 280, 72);
       const playedCardRect = Rect.fromLTWH(360, 220, 42, 60);
       const trickRect = Rect.fromLTWH(220, 76, 42, 60);
+      const finalTrickCardRect = Rect.fromLTWH(205, 54, 72, 104);
       final exactCardSource = cardFlightSourceRect(
         cardID: 'wheat-11',
         previousZone: const MotionZone.hand(0),
@@ -3930,6 +3983,16 @@ void registerBoardTests() {
         cardID: 'wheat-11',
         previousZone: const MotionZone.hand(0),
         nextZone: const MotionZone.trick(0),
+        currentRects: MotionGeometry({
+          trickCardMotionTargetKey(0): trickRect,
+          const MotionAnchor.card('wheat-11'): finalTrickCardRect,
+        }),
+        tokens: defaultDesignTokens,
+      );
+      final fallbackDestination = cardFlightDestinationRect(
+        cardID: 'wheat-11',
+        previousZone: const MotionZone.hand(0),
+        nextZone: const MotionZone.trick(0),
         currentRects: MotionGeometry({trickCardMotionTargetKey(0): trickRect}),
         tokens: defaultDesignTokens,
       );
@@ -3939,10 +4002,11 @@ void registerBoardTests() {
       expect(stableHandSource!.center, handRect.center);
       expect(source, isNotNull);
       expect(source!.center, playerRect.center);
-      expect(destination, isNotNull);
-      expect(destination!.center, trickRect.center);
+      expect(destination, finalTrickCardRect);
+      expect(fallbackDestination, isNotNull);
+      expect(fallbackDestination!.center, trickRect.center);
       expect(
-        destination.height,
+        fallbackDestination.height,
         closeTo(defaultDesignTokens.card.small.height, 0.001),
       );
     },

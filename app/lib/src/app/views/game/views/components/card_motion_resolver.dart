@@ -250,12 +250,12 @@ Rect? cardFlightDestinationRect({
     );
   }
   if (nextZone.kind == MotionZoneKind.trick) {
-    return trickCardMotionTargetRect(
+    return currentRects[MotionAnchor.card(cardID)] ??
+        trickCardMotionTargetRect(
           seatID: nextZone.seatID!,
           currentRects: currentRects,
           tokens: tokens,
         ) ??
-        currentRects[MotionAnchor.card(cardID)] ??
         currentRects[trickCardMotionSourceKey(cardID)];
   }
   return currentRects[MotionAnchor.card(cardID)];

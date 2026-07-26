@@ -1089,7 +1089,7 @@ double? activePanelPreferredHeight({
   );
 }
 
-const planningPhaseOverlayScale = 2.0;
+double planningPhaseOverlayInsetForSize(Size size) => size.height * 0.12;
 
 class BoardPlayArea extends StatelessWidget {
   const BoardPlayArea({
@@ -1349,22 +1349,46 @@ class BoardPlayArea extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                Center(
-                                  child: Transform.scale(
-                                    key: const Key(
-                                      'planning-phase-panel-scale',
-                                    ),
-                                    scale: planningPhaseOverlayScale,
-                                    child: PlanningPhasePanel(
-                                      model: model,
-                                      tokens: tokens,
-                                      language: language,
-                                      focusedSuit: planningTrumpFocusedSuit,
-                                      onAction: onPlanningTrumpActionSelected,
-                                      onRewardsRevealed:
-                                          onPlanningRewardsRevealed,
-                                    ),
-                                  ),
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final inset =
+                                        planningPhaseOverlayInsetForSize(
+                                          constraints.biggest,
+                                        );
+                                    return Stack(
+                                      key: const Key(
+                                        'planning-phase-panel-position',
+                                      ),
+                                      children: [
+                                        Positioned(
+                                          key: const Key(
+                                            'planning-phase-panel-insets',
+                                          ),
+                                          left: inset,
+                                          top: inset,
+                                          bottom: inset,
+                                          child: FittedBox(
+                                            key: const Key(
+                                              'planning-phase-panel-fit',
+                                            ),
+                                            fit: BoxFit.contain,
+                                            alignment: Alignment.centerLeft,
+                                            child: PlanningPhasePanel(
+                                              model: model,
+                                              tokens: tokens,
+                                              language: language,
+                                              focusedSuit:
+                                                  planningTrumpFocusedSuit,
+                                              onAction:
+                                                  onPlanningTrumpActionSelected,
+                                              onRewardsRevealed:
+                                                  onPlanningRewardsRevealed,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ],
                             ),
