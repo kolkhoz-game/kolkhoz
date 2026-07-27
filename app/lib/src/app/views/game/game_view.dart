@@ -463,14 +463,11 @@ class KolkhozBoard extends StatelessWidget {
               final contentWidth = constraints.maxWidth - margin * 2;
               final contentHeight = constraints.maxHeight - margin * 2;
               final boardWidth = boardPlayableContentWidth(contentWidth);
-              final railWidth = metrics.railWidth(boardWidth);
-              final separatorWidth = metrics.separatorWidth;
               final safePadding = MediaQuery.paddingOf(context);
               final compact = shouldUseCompactBoardShell(
                 contentWidth: contentWidth,
                 contentHeight: contentHeight,
               );
-              final gameWidth = boardWidth - railWidth - separatorWidth;
 
               return DecoratedBox(
                 decoration: boardBackdropDecoration(tokens),
@@ -572,99 +569,68 @@ class KolkhozBoard extends StatelessWidget {
                                     onCardBackChanged: onCardBackChanged,
                                   )
                                 else
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      SizedBox(
-                                        width: railWidth,
-                                        child: BoardRail(
-                                          activePanel:
-                                              visibleModel.panels.active,
-                                          actionPanel: actionPanelForPhase(
-                                            visibleModel.table.phase,
-                                          ),
-                                          tokens: tokens,
-                                          metrics: metrics,
-                                          language: language,
-                                          year: visibleModel.table.year,
-                                          hasUnreadLogMessages:
-                                              hasUnreadLogMessages,
-                                          onPanelSelected: onPanelSelected,
-                                        ),
-                                      ),
-                                      BoardSeparator(
-                                        tokens: tokens,
-                                        vertical: true,
-                                        thickness: separatorWidth,
-                                      ),
-                                      SizedBox(
-                                        width: gameWidth,
-                                        height: contentHeight,
-                                        child: BoardPlayArea(
-                                          model: visibleModel,
-                                          tokens: tokens,
-                                          metrics: metrics,
-                                          fieldPlanBoardWidth: boardWidth,
-                                          fieldPlanBoardHeight: contentHeight,
-                                          fieldPlanBoardLeftInset:
-                                              railWidth + separatorWidth,
-                                          heroOfSovietUnion: heroOfSovietUnion,
-                                          onAction: onAction,
-                                          onPanelSelected: onPanelSelected,
-                                          onSwapHandCardTap: onSwapHandCardTap,
-                                          onHandCardTap: onHandCardTap,
-                                          onPlotCardTap: onPlotCardTap,
-                                          onAssignmentCardTap:
-                                              onAssignmentCardTap,
-                                          onInvalidHandCardTap:
-                                              onInvalidHandCardTap,
-                                          canUndo: canUndo,
-                                          onUndo: onUndo,
-                                          onNewGame: onNewGame,
-                                          onReturnToLobby: onReturnToLobby,
-                                          onCopyGameResult: onCopyGameResult,
-                                          onSaveGameLog: onSaveGameLog,
-                                          gameLogActions: gameLogActions,
-                                          gameReactions: gameReactions,
-                                          canSendReaction: canSendReaction,
-                                          onReaction: onReaction,
-                                          activeReaction: activeReaction,
-                                          gameOverReturnsToLobby:
-                                              gameOverReturnsToLobby,
-                                          onTutorial: onTutorial,
-                                          animationSpeed: animationSpeed,
-                                          onAnimationSpeedChanged:
-                                              onAnimationSpeedChanged,
-                                          confirmNewGame: confirmNewGame,
-                                          onConfirmNewGameChanged:
-                                              onConfirmNewGameChanged,
-                                          confirmMainMenu: confirmMainMenu,
-                                          onConfirmMainMenuChanged:
-                                              onConfirmMainMenuChanged,
-                                          showInvalidTapHints:
-                                              showInvalidTapHints,
-                                          onShowInvalidTapHintsChanged:
-                                              onShowInvalidTapHintsChanged,
-                                          currentProfileUserID:
-                                              currentProfileUserID,
-                                          comradeUserIDs: comradeUserIDs,
-                                          incomingComradeRequestUserIDs:
-                                              incomingComradeRequestUserIDs,
-                                          outgoingComradeRequestUserIDs:
-                                              outgoingComradeRequestUserIDs,
-                                          onComradeRequestToUser:
-                                              onComradeRequestToUser,
-                                          language: language,
-                                          appearance: appearance,
-                                          cardBack: cardBack,
-                                          onLanguageToggle: onLanguageToggle,
-                                          onAppearanceToggle:
-                                              onAppearanceToggle,
-                                          onCardBackChanged: onCardBackChanged,
-                                        ),
-                                      ),
-                                    ],
+                                  SizedBox(
+                                    width: boardWidth,
+                                    height: contentHeight,
+                                    child: BoardPlayArea(
+                                      model: visibleModel,
+                                      tokens: tokens,
+                                      metrics: metrics,
+                                      fieldPlanBoardWidth: boardWidth,
+                                      fieldPlanBoardHeight: contentHeight,
+                                      heroOfSovietUnion: heroOfSovietUnion,
+                                      onAction: onAction,
+                                      onPanelSelected: onPanelSelected,
+                                      onSwapHandCardTap: onSwapHandCardTap,
+                                      onHandCardTap: onHandCardTap,
+                                      onPlotCardTap: onPlotCardTap,
+                                      onAssignmentCardTap: onAssignmentCardTap,
+                                      onInvalidHandCardTap:
+                                          onInvalidHandCardTap,
+                                      canUndo: canUndo,
+                                      onUndo: onUndo,
+                                      onNewGame: onNewGame,
+                                      onReturnToLobby: onReturnToLobby,
+                                      onCopyGameResult: onCopyGameResult,
+                                      onSaveGameLog: onSaveGameLog,
+                                      gameLogActions: gameLogActions,
+                                      gameReactions: gameReactions,
+                                      hasUnreadLogMessages:
+                                          hasUnreadLogMessages,
+                                      canSendReaction: canSendReaction,
+                                      onReaction: onReaction,
+                                      activeReaction: activeReaction,
+                                      gameOverReturnsToLobby:
+                                          gameOverReturnsToLobby,
+                                      onTutorial: onTutorial,
+                                      animationSpeed: animationSpeed,
+                                      onAnimationSpeedChanged:
+                                          onAnimationSpeedChanged,
+                                      confirmNewGame: confirmNewGame,
+                                      onConfirmNewGameChanged:
+                                          onConfirmNewGameChanged,
+                                      confirmMainMenu: confirmMainMenu,
+                                      onConfirmMainMenuChanged:
+                                          onConfirmMainMenuChanged,
+                                      showInvalidTapHints: showInvalidTapHints,
+                                      onShowInvalidTapHintsChanged:
+                                          onShowInvalidTapHintsChanged,
+                                      currentProfileUserID:
+                                          currentProfileUserID,
+                                      comradeUserIDs: comradeUserIDs,
+                                      incomingComradeRequestUserIDs:
+                                          incomingComradeRequestUserIDs,
+                                      outgoingComradeRequestUserIDs:
+                                          outgoingComradeRequestUserIDs,
+                                      onComradeRequestToUser:
+                                          onComradeRequestToUser,
+                                      language: language,
+                                      appearance: appearance,
+                                      cardBack: cardBack,
+                                      onLanguageToggle: onLanguageToggle,
+                                      onAppearanceToggle: onAppearanceToggle,
+                                      onCardBackChanged: onCardBackChanged,
+                                    ),
                                   ),
                               ],
                             ),
@@ -865,6 +831,7 @@ class CompactBoardShell extends StatelessWidget {
             onSaveGameLog: onSaveGameLog,
             gameLogActions: gameLogActions,
             gameReactions: gameReactions,
+            hasUnreadLogMessages: hasUnreadLogMessages,
             canSendReaction: canSendReaction,
             onReaction: onReaction,
             activeReaction: activeReaction,
@@ -1116,6 +1083,7 @@ class BoardPlayArea extends StatelessWidget {
     this.onSaveGameLog,
     this.gameLogActions = const [],
     this.gameReactions = const [],
+    this.hasUnreadLogMessages = false,
     this.canSendReaction = false,
     this.onReaction,
     this.activeReaction,
@@ -1167,6 +1135,7 @@ class BoardPlayArea extends StatelessWidget {
   final VoidCallback? onSaveGameLog;
   final List<EngineAction> gameLogActions;
   final List<OnlineReaction> gameReactions;
+  final bool hasUnreadLogMessages;
   final bool canSendReaction;
   final ValueChanged<String>? onReaction;
   final OnlineReaction? activeReaction;
@@ -1196,7 +1165,8 @@ class BoardPlayArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fieldPlanEnvironmentActive = fieldPlanEnvironmentPage != null;
-    final topInfoHeight = fieldPlanEnvironmentActive
+    final fullBleedChrome = !compact && !fieldPlanEnvironmentActive;
+    final topInfoHeight = fieldPlanEnvironmentActive || fullBleedChrome
         ? 0.0
         : metrics.topInfoHeight;
     final fieldPlanTransitionProgress = BrigadeFieldsScope.transitionProgressOf(
@@ -1214,11 +1184,13 @@ class BoardPlayArea extends StatelessWidget {
     );
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: metrics.playAreaHorizontalPadding,
+        horizontal: compact ? metrics.playAreaHorizontalPadding : 0,
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final preferredPanelHeight = compact
+          final denseFullBleedChrome =
+              fullBleedChrome && constraints.maxHeight < 500;
+          final preferredPanelHeight = compact || fullBleedChrome
               ? null
               : activePanelPreferredHeight(
                   model: model,
@@ -1230,8 +1202,18 @@ class BoardPlayArea extends StatelessWidget {
             0.0,
             constraints.maxHeight - topInfoHeight,
           );
+          final fullBleedHandTrayHeight = fullBleedChrome && !gameOver
+              ? math.min(
+                  remainingHeight,
+                  metrics.fullBleedHandTrayLayoutHeightForBoardHeight(
+                    constraints.maxHeight,
+                  ),
+                )
+              : null;
           final panelHeight = gameOver
               ? remainingHeight
+              : fullBleedHandTrayHeight != null
+              ? math.max(0.0, remainingHeight - fullBleedHandTrayHeight)
               : preferredPanelHeight == null
               ? null
               : math.max(
@@ -1243,6 +1225,8 @@ class BoardPlayArea extends StatelessWidget {
                 );
           final handTrayHeight = gameOver
               ? 0.0
+              : fullBleedHandTrayHeight != null
+              ? fullBleedHandTrayHeight
               : preferredPanelHeight == null
               ? metrics.handTrayLayoutHeightForBoardHeight(
                   constraints.maxHeight,
@@ -1255,6 +1239,13 @@ class BoardPlayArea extends StatelessWidget {
           final handTrayVisibleHeight = gameOver
               ? 0.0
               : metrics.handTrayVisibleHeightForLayoutHeight(handTrayHeight);
+          final denseMenuButtonSize = denseFullBleedChrome
+              ? clampDouble(
+                  (handTrayHeight - 2) / 2,
+                  28,
+                  metrics.railButtonSize,
+                )
+              : null;
           return PlanningTrumpFocusHost(
             model: model,
             builder:
@@ -1476,6 +1467,17 @@ class BoardPlayArea extends StatelessWidget {
                                     tokens: tokens,
                                     language: language,
                                     visibleTrayHeight: handTrayVisibleHeight,
+                                    leadingInset: fullBleedChrome
+                                        ? denseFullBleedChrome
+                                              ? denseMenuButtonSize! +
+                                                    metrics
+                                                        .playAreaHorizontalPadding +
+                                                    4
+                                              : metrics.railButtonSize +
+                                                    metrics
+                                                        .playAreaHorizontalPadding +
+                                                    metrics.railSpacing
+                                        : 0,
                                     planningTrumpFocusedSuit:
                                         planningTrumpFocusedSuit,
                                     confirmActionOverride: planningTrumpAction,
@@ -1504,7 +1506,9 @@ class BoardPlayArea extends StatelessWidget {
                       ),
                       if (!fieldPlanEnvironmentActive)
                         Positioned(
-                          top: 0,
+                          top: fullBleedChrome
+                              ? metrics.playAreaHorizontalPadding
+                              : 0,
                           left: 0,
                           right: 0,
                           child: compact
@@ -1527,7 +1531,25 @@ class BoardPlayArea extends StatelessWidget {
                                   metrics: metrics,
                                   language: language,
                                   animationSpeed: animationSpeed,
+                                  floating: true,
+                                  includeYear: true,
                                 ),
+                        ),
+                      if (fullBleedChrome && !gameOver)
+                        Positioned(
+                          left: metrics.playAreaHorizontalPadding,
+                          bottom: 0,
+                          child: BoardViewMenu(
+                            activePanel: model.panels.active,
+                            actionPanel: actionPanelForPhase(model.table.phase),
+                            tokens: tokens,
+                            metrics: metrics,
+                            language: language,
+                            hasUnreadLogMessages: hasUnreadLogMessages,
+                            dense: denseFullBleedChrome,
+                            denseButtonSize: denseMenuButtonSize,
+                            onPanelSelected: onPanelSelected,
+                          ),
                         ),
                     ],
                   );
@@ -1652,6 +1674,8 @@ class TopInfoStrip extends StatefulWidget {
     required this.metrics,
     required this.language,
     required this.animationSpeed,
+    this.floating = false,
+    this.includeYear = false,
     super.key,
   });
 
@@ -1660,6 +1684,8 @@ class TopInfoStrip extends StatefulWidget {
   final ResponsiveBoardMetrics metrics;
   final KolkhozLanguage language;
   final GameAnimationSpeed animationSpeed;
+  final bool floating;
+  final bool includeYear;
 
   @override
   State<TopInfoStrip> createState() => _TopInfoStripState();
@@ -1813,22 +1839,40 @@ class _TopInfoStripState extends State<TopInfoStrip> {
             topInfo.scoreWidthMax,
           );
           final scoreGroupWidth = scoreWidth * 2 + rowSpacing;
+          final yearWidth = widget.includeYear
+              ? metrics.railButtonSize + rowSpacing
+              : 0.0;
           final contentWidth =
+              yearWidth +
               gaugesWidth +
               scoreGroupWidth +
               rowSpacing +
               (turnClock == null ? 0 : scoreWidth + rowSpacing);
+          final horizontalPadding = widget.floating ? 8.0 : 0.0;
 
           return ClipRect(
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: SizedBox(
-                width: contentWidth,
+              alignment: widget.floating
+                  ? Alignment.center
+                  : Alignment.centerLeft,
+              child: Container(
+                width: contentWidth + horizontalPadding * 2,
                 height: constraints.maxHeight,
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 child: Row(
                   spacing: rowSpacing,
                   children: [
+                    if (widget.includeYear)
+                      RailStatusIcon(
+                        asset: 'icon-year-${model.table.year.clamp(1, 5)}.png',
+                        label: widget.language.strings
+                            .lowerbaractionsYearValue1(
+                              value1: model.table.year,
+                            ),
+                        tokens: tokens,
+                        metrics: metrics,
+                      ),
                     SizedBox(
                       width: gaugesWidth,
                       height: gaugeHeight,
@@ -1886,24 +1930,30 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                         children: [
                           SizedBox(
                             width: scoreWidth,
-                            child: TopInfoCell(
-                              icon: 'icon-cellar.png',
-                              value: '$cellarScore',
-                              iconSize: gaugeHeight * 0.8,
-                              contentSpacing: rowSpacing,
-                              height: metrics.topInfoHeight,
+                            child: _TopInfoUnderlay(
                               tokens: tokens,
+                              child: TopInfoCell(
+                                icon: 'icon-cellar.png',
+                                value: '$cellarScore',
+                                iconSize: gaugeHeight * 0.8,
+                                contentSpacing: rowSpacing,
+                                height: gaugeHeight,
+                                tokens: tokens,
+                              ),
                             ),
                           ),
                           SizedBox(
                             width: scoreWidth,
-                            child: TopInfoCell(
-                              icon: 'icon-plot.png',
-                              value: '$plotScore',
-                              iconSize: gaugeHeight * 0.8,
-                              contentSpacing: rowSpacing,
-                              height: metrics.topInfoHeight,
+                            child: _TopInfoUnderlay(
                               tokens: tokens,
+                              child: TopInfoCell(
+                                icon: 'icon-plot.png',
+                                value: '$plotScore',
+                                iconSize: gaugeHeight * 0.8,
+                                contentSpacing: rowSpacing,
+                                height: gaugeHeight,
+                                tokens: tokens,
+                              ),
                             ),
                           ),
                         ],
@@ -1914,13 +1964,16 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                       SizedBox(
                         key: const Key('online-turn-clock'),
                         width: scoreWidth,
-                        child: TopInfoCell(
-                          icon: 'icon-turn-timer-clock.png',
-                          value: turnClock,
-                          iconSize: gaugeHeight * 0.68,
-                          contentSpacing: rowSpacing,
-                          height: metrics.topInfoHeight,
+                        child: _TopInfoUnderlay(
                           tokens: tokens,
+                          child: TopInfoCell(
+                            icon: 'icon-turn-timer-clock.png',
+                            value: turnClock,
+                            iconSize: gaugeHeight * 0.68,
+                            contentSpacing: rowSpacing,
+                            height: gaugeHeight,
+                            tokens: tokens,
+                          ),
                         ),
                       ),
                     ],
@@ -1931,6 +1984,25 @@ class _TopInfoStripState extends State<TopInfoStrip> {
           );
         },
       ),
+    );
+  }
+}
+
+class _TopInfoUnderlay extends StatelessWidget {
+  const _TopInfoUnderlay({required this.tokens, required this.child});
+
+  final DesignTokens tokens;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: tokens.colors.table.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(tokens.radius.sm),
+        border: Border.all(color: tokens.colors.gold.withValues(alpha: 0.62)),
+      ),
+      child: child,
     );
   }
 }

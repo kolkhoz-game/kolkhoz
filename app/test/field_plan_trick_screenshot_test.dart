@@ -109,7 +109,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(BoardRail), findsOneWidget);
+      expect(find.byType(BoardRail), findsNothing);
+      expect(find.byType(BoardViewMenu), findsOneWidget);
       expect(find.byType(TopInfoStrip), findsOneWidget);
       expect(
         find.byKey(const Key('production-static-hero-brigade')),

@@ -67,6 +67,176 @@ class BoardRail extends StatelessWidget {
   }
 }
 
+class BoardViewMenu extends StatefulWidget {
+  const BoardViewMenu({
+    required this.activePanel,
+    required this.actionPanel,
+    required this.tokens,
+    required this.metrics,
+    required this.language,
+    this.hasUnreadLogMessages = false,
+    this.dense = false,
+    this.denseButtonSize,
+    this.onPanelSelected,
+    super.key,
+  });
+
+  final String activePanel;
+  final String actionPanel;
+  final DesignTokens tokens;
+  final ResponsiveBoardMetrics metrics;
+  final KolkhozLanguage language;
+  final bool hasUnreadLogMessages;
+  final bool dense;
+  final double? denseButtonSize;
+  final ValueChanged<String>? onPanelSelected;
+
+  @override
+  State<BoardViewMenu> createState() => _BoardViewMenuState();
+}
+
+class _BoardViewMenuState extends State<BoardViewMenu> {
+  bool expanded = false;
+  late String currentView;
+
+  @override
+  void initState() {
+    super.initState();
+    currentView = boardViewPanels.contains(widget.activePanel)
+        ? widget.activePanel
+        : panelBrigade;
+  }
+
+  @override
+  void didUpdateWidget(BoardViewMenu oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (boardViewPanels.contains(widget.activePanel)) {
+      currentView = widget.activePanel;
+    }
+  }
+
+  void selectView(String panel) {
+    setState(() {
+      currentView = panel;
+      expanded = false;
+    });
+    widget.onPanelSelected?.call(panel);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = widget.dense ? 2.0 : widget.metrics.railSpacing;
+    final buttonSize = widget.dense ? widget.denseButtonSize ?? 32.0 : null;
+    final iconSize = buttonSize == null ? null : buttonSize * 0.68;
+    final otherViews = boardViewPanels
+        .where((panel) => panel != currentView)
+        .toList(growable: false);
+    return Semantics(
+      container: true,
+      label: widget.language == KolkhozLanguage.en
+          ? 'View selector'
+          : 'Выбор вида',
+      expanded: expanded,
+      child: Column(
+        key: const Key('board-view-menu'),
+        mainAxisSize: MainAxisSize.min,
+        spacing: spacing,
+        children: [
+          if (expanded)
+            for (final panel in otherViews)
+              boardViewButton(
+                panel: panel,
+                active: false,
+                action: widget.actionPanel == panel,
+                tokens: widget.tokens,
+                metrics: widget.metrics,
+                language: widget.language,
+                hasUnreadLogMessages: widget.hasUnreadLogMessages,
+                size: buttonSize,
+                iconSize: iconSize,
+                onTap: () => selectView(panel),
+              ),
+          boardViewButton(
+            panel: currentView,
+            active: true,
+            action: widget.actionPanel == currentView,
+            tokens: widget.tokens,
+            metrics: widget.metrics,
+            language: widget.language,
+            hasUnreadLogMessages: widget.hasUnreadLogMessages,
+            size: buttonSize,
+            iconSize: iconSize,
+            onTap: () => setState(() => expanded = !expanded),
+          ),
+          if (!widget.dense) SizedBox(height: widget.metrics.railSpacing * 0.5),
+          RailButton(
+            key: const Key('board-view-menu-settings'),
+            asset: 'icon-menu.png',
+            active: widget.activePanel == panelOptions,
+            action: false,
+            label: widget.language.strings.boardOptionspanelMenu,
+            muted: widget.activePanel != panelOptions,
+            tokens: widget.tokens,
+            metrics: widget.metrics,
+            size: buttonSize,
+            iconSize: iconSize,
+            onTap: () => widget.onPanelSelected?.call(panelOptions),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const boardViewPanels = <String>[panelLog, panelNorth, panelJobs, panelBrigade];
+
+RailButton boardViewButton({
+  required String panel,
+  required bool active,
+  required bool action,
+  required DesignTokens tokens,
+  required ResponsiveBoardMetrics metrics,
+  required KolkhozLanguage language,
+  required bool hasUnreadLogMessages,
+  double? size,
+  double? iconSize,
+  required VoidCallback onTap,
+}) {
+  final (asset, label, motionKey) = switch (panel) {
+    panelBrigade => (
+      'icon-brigade.png',
+      language.strings.boardBoardrailBrigade,
+      null,
+    ),
+    panelJobs => ('icon-jobs.png', language.strings.boardBoardrailJobs, null),
+    panelNorth => (
+      'icon-north.png',
+      language.strings.boardBoardrailTheNorth,
+      northRailCardMotionTargetKey,
+    ),
+    panelLog => (
+      'icon-game-log.png',
+      language == KolkhozLanguage.en ? 'Game Log' : 'Журнал игры',
+      null,
+    ),
+    _ => throw ArgumentError.value(panel, 'panel'),
+  };
+  return RailButton(
+    key: ValueKey('board-view-menu-$panel'),
+    asset: asset,
+    active: active,
+    action: action,
+    label: label,
+    unread: panel == panelLog && hasUnreadLogMessages,
+    motionKey: motionKey,
+    tokens: tokens,
+    metrics: metrics,
+    size: size,
+    iconSize: iconSize,
+    onTap: onTap,
+  );
+}
+
 class CompactBoardToolbar extends StatefulWidget {
   const CompactBoardToolbar({
     required this.activePanel,
@@ -348,6 +518,8 @@ class RailButton extends StatelessWidget {
     this.muted = false,
     this.unread = false,
     this.motionKey,
+    this.size,
+    this.iconSize,
     this.onTap,
     super.key,
   });
@@ -361,6 +533,8 @@ class RailButton extends StatelessWidget {
   final bool muted;
   final bool unread;
   final MotionAnchor? motionKey;
+  final double? size;
+  final double? iconSize;
   final VoidCallback? onTap;
 
   @override
@@ -393,8 +567,8 @@ class RailButton extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onTap,
               child: SizedBox(
-                width: metrics.railButtonSize,
-                height: metrics.railButtonSize,
+                width: size ?? metrics.railButtonSize,
+                height: size ?? metrics.railButtonSize,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     boxShadow: [
@@ -420,8 +594,8 @@ class RailButton extends StatelessWidget {
                         ),
                         child: ChromeAssetIcon(
                           asset: 'assets/ui/Icons/$asset',
-                          width: metrics.railIconSize,
-                          height: metrics.railIconSize,
+                          width: iconSize ?? metrics.railIconSize,
+                          height: iconSize ?? metrics.railIconSize,
                           muted: muted,
                           errorBuilder: (_, _, _) => Icon(
                             Icons.crop_square,

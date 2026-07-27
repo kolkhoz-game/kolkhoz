@@ -340,8 +340,6 @@ double handConsoleButtonScale(double visibleTrayHeight) {
   }
   final availableButtonHeight =
       visibleTrayHeight -
-      handTrayActionBarPadding * 2 -
-      2 -
       handConsoleCompactStatusHeight -
       handConsoleRowSpacing;
   return clampDouble(
@@ -537,6 +535,7 @@ class HandTray extends StatelessWidget {
     required this.tokens,
     required this.language,
     required this.visibleTrayHeight,
+    this.leadingInset = 0,
     this.onAction,
     this.onSwapHandCardTap,
     this.onHandCardTap,
@@ -555,6 +554,7 @@ class HandTray extends StatelessWidget {
   final DesignTokens tokens;
   final KolkhozLanguage language;
   final double visibleTrayHeight;
+  final double leadingInset;
   final ValueChanged<LegalAction>? onAction;
   final ValueChanged<String>? onSwapHandCardTap;
   final ValueChanged<String>? onHandCardTap;
@@ -664,170 +664,178 @@ class HandTray extends StatelessWidget {
       spacing: handTrayOuterSpacing,
       children: [
         Expanded(
-          child:
-              contentOverride ??
-              Container(
-                height: visibleTrayHeight,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: handTrayZoneHorizontalPadding,
-                ),
-                decoration: BoxDecoration(
-                  color: tokens.colors.black.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(tokens.radius.sm),
-                  border: Border.all(
-                    color: tokens.colors.steel.withValues(alpha: 0.32),
+          child: contentOverride == null
+              ? Container(
+                  height: visibleTrayHeight,
+                  padding: EdgeInsets.only(
+                    left: handTrayZoneHorizontalPadding + leadingInset,
+                    right: handTrayZoneHorizontalPadding,
                   ),
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final largeCardSize = scaledHandTrayCardSize(
-                      tokens.card.large,
-                      visibleTrayHeight,
-                    );
-                    final cardStride = handTrayCardStride(
-                      constraints.maxWidth,
-                      largeCardSize.width,
-                      hand.length,
-                    );
-                    final railWidth = handTrayCardRailWidth(
-                      largeCardSize.width,
-                      cardStride,
-                      hand.length,
-                    );
-                    return KolkhozScrollbar(
-                      tokens: tokens,
-                      orientation: ScrollbarOrientation.bottom,
-                      thumbVisibility: false,
-                      trackVisibility: false,
-                      childBuilder: (context, scrollController) => SingleChildScrollView(
-                        controller: scrollController,
-                        scrollDirection: Axis.horizontal,
-                        clipBehavior: Clip.none,
-                        child: SizedBox(
-                          width: math.max(constraints.maxWidth, railWidth),
-                          height: visibleTrayHeight,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              for (final (index, card) in hand.indexed)
-                                Positioned(
-                                  left: index * cardStride,
-                                  top: 0,
-                                  child: Builder(
-                                    builder: (context) {
-                                      final playAction = handCardPlayAction(
-                                        model,
-                                        card,
-                                      );
-                                      final passAction = handCardPassAction(
-                                        model,
-                                        card,
-                                      );
-                                      final onTap = switch (model.table.phase) {
-                                        phaseTrick =>
-                                          playAction != null &&
-                                                  onHandCardTap != null
-                                              ? () => onHandCardTap!(card.id)
-                                              : handCardCanShowInvalidHint(
-                                                  model,
-                                                  card,
-                                                )
-                                              ? onInvalidHandCardTap
-                                              : null,
-                                        phaseSwap =>
-                                          onSwapHandCardTap == null
-                                              ? null
-                                              : () =>
-                                                    onSwapHandCardTap!(card.id),
-                                        phasePass =>
-                                          passAction == null ||
-                                                  onHandCardTap == null
-                                              ? null
-                                              : () => onHandCardTap!(card.id),
-                                        _ => null,
-                                      };
-                                      final displayCard = handTrayCard(
-                                        model,
-                                        card,
-                                        planningTrumpFocusedSuit:
-                                            planningTrumpFocusedSuit,
-                                      );
-                                      final playable =
-                                          switch (model.table.phase) {
-                                            phaseTrick => playAction != null,
-                                            phaseSwap => card.highlighted,
-                                            phasePass => passAction != null,
-                                            _ => displayCard.highlighted,
-                                          };
-                                      final invalid =
-                                          playAction == null &&
-                                          handCardCanShowInvalidHint(
-                                            model,
-                                            card,
-                                          );
-                                      final actionable =
-                                          switch (model.table.phase) {
-                                            phaseTrick =>
-                                              playAction != null || invalid,
-                                            phaseSwap => card.highlighted,
-                                            phasePass => passAction != null,
-                                            _ => false,
-                                          };
-                                      return NaturalSizeViewport(
-                                        width: largeCardSize.width,
-                                        height: visibleTrayHeight,
-                                        naturalWidth: largeCardSize.width,
-                                        naturalHeight: largeCardSize.height,
-                                        clipBehavior: Clip.none,
-                                        child: Transform.translate(
-                                          offset: const Offset(
-                                            0,
-                                            handTrayCardYOffset,
-                                          ),
-                                          child: HandCardControl(
-                                            card: displayCard,
-                                            tokens: tokens,
-                                            language: language,
-                                            trump: model.table.trump,
-                                            size: largeCardSize,
-                                            playable: playable,
-                                            unavailable: invalid,
-                                            onTap: actionable ? onTap : null,
-                                            highlightColor:
-                                                handTrayHighlightColor(
-                                                  model,
-                                                  card,
-                                                  planningTrumpFocusedSuit:
-                                                      planningTrumpFocusedSuit,
-                                                  swapHighlightColor:
-                                                      tokens.colors.red,
-                                                  playableHighlightColor:
-                                                      tokens.colors.green,
-                                                ),
-                                            highlightGlowEnabled:
-                                                model.table.phase != phaseSwap,
-                                            highlightedStrokeWidth:
-                                                model.table.phase == phaseSwap
-                                                ? handTraySwapHighlightStrokeWidth
+                  decoration: BoxDecoration(
+                    color: tokens.colors.black.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(tokens.radius.sm),
+                    border: Border.all(
+                      color: tokens.colors.steel.withValues(alpha: 0.32),
+                    ),
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final largeCardSize = scaledHandTrayCardSize(
+                        tokens.card.large,
+                        visibleTrayHeight,
+                      );
+                      final cardStride = handTrayCardStride(
+                        constraints.maxWidth,
+                        largeCardSize.width,
+                        hand.length,
+                      );
+                      final railWidth = handTrayCardRailWidth(
+                        largeCardSize.width,
+                        cardStride,
+                        hand.length,
+                      );
+                      return KolkhozScrollbar(
+                        tokens: tokens,
+                        orientation: ScrollbarOrientation.bottom,
+                        thumbVisibility: false,
+                        trackVisibility: false,
+                        childBuilder: (context, scrollController) => SingleChildScrollView(
+                          controller: scrollController,
+                          scrollDirection: Axis.horizontal,
+                          clipBehavior: Clip.none,
+                          child: SizedBox(
+                            width: math.max(constraints.maxWidth, railWidth),
+                            height: visibleTrayHeight,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                for (final (index, card) in hand.indexed)
+                                  Positioned(
+                                    left: index * cardStride,
+                                    top: 0,
+                                    child: Builder(
+                                      builder: (context) {
+                                        final playAction = handCardPlayAction(
+                                          model,
+                                          card,
+                                        );
+                                        final passAction = handCardPassAction(
+                                          model,
+                                          card,
+                                        );
+                                        final onTap = switch (model
+                                            .table
+                                            .phase) {
+                                          phaseTrick =>
+                                            playAction != null &&
+                                                    onHandCardTap != null
+                                                ? () => onHandCardTap!(card.id)
+                                                : handCardCanShowInvalidHint(
+                                                    model,
+                                                    card,
+                                                  )
+                                                ? onInvalidHandCardTap
                                                 : null,
-                                            highlightedBorderRadius:
-                                                model.table.phase == phaseSwap
-                                                ? handTraySwapHighlightCornerRadius
-                                                : null,
+                                          phaseSwap =>
+                                            onSwapHandCardTap == null
+                                                ? null
+                                                : () => onSwapHandCardTap!(
+                                                    card.id,
+                                                  ),
+                                          phasePass =>
+                                            passAction == null ||
+                                                    onHandCardTap == null
+                                                ? null
+                                                : () => onHandCardTap!(card.id),
+                                          _ => null,
+                                        };
+                                        final displayCard = handTrayCard(
+                                          model,
+                                          card,
+                                          planningTrumpFocusedSuit:
+                                              planningTrumpFocusedSuit,
+                                        );
+                                        final playable =
+                                            switch (model.table.phase) {
+                                              phaseTrick => playAction != null,
+                                              phaseSwap => card.highlighted,
+                                              phasePass => passAction != null,
+                                              _ => displayCard.highlighted,
+                                            };
+                                        final invalid =
+                                            playAction == null &&
+                                            handCardCanShowInvalidHint(
+                                              model,
+                                              card,
+                                            );
+                                        final actionable =
+                                            switch (model.table.phase) {
+                                              phaseTrick =>
+                                                playAction != null || invalid,
+                                              phaseSwap => card.highlighted,
+                                              phasePass => passAction != null,
+                                              _ => false,
+                                            };
+                                        return NaturalSizeViewport(
+                                          width: largeCardSize.width,
+                                          height: visibleTrayHeight,
+                                          naturalWidth: largeCardSize.width,
+                                          naturalHeight: largeCardSize.height,
+                                          clipBehavior: Clip.none,
+                                          child: Transform.translate(
+                                            offset: const Offset(
+                                              0,
+                                              handTrayCardYOffset,
+                                            ),
+                                            child: HandCardControl(
+                                              card: displayCard,
+                                              tokens: tokens,
+                                              language: language,
+                                              trump: model.table.trump,
+                                              size: largeCardSize,
+                                              playable: playable,
+                                              unavailable: invalid,
+                                              onTap: actionable ? onTap : null,
+                                              highlightColor:
+                                                  handTrayHighlightColor(
+                                                    model,
+                                                    card,
+                                                    planningTrumpFocusedSuit:
+                                                        planningTrumpFocusedSuit,
+                                                    swapHighlightColor:
+                                                        tokens.colors.red,
+                                                    playableHighlightColor:
+                                                        tokens.colors.green,
+                                                  ),
+                                              highlightGlowEnabled:
+                                                  model.table.phase !=
+                                                  phaseSwap,
+                                              highlightedStrokeWidth:
+                                                  model.table.phase == phaseSwap
+                                                  ? handTraySwapHighlightStrokeWidth
+                                                  : null,
+                                              highlightedBorderRadius:
+                                                  model.table.phase == phaseSwap
+                                                  ? handTraySwapHighlightCornerRadius
+                                                  : null,
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                    },
+                                        );
+                                      },
+                                    ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
+                )
+              : Padding(
+                  padding: EdgeInsets.only(left: leadingInset),
+                  child: contentOverride,
                 ),
-              ),
         ),
         if (showAssignmentCommandBar)
           AssignmentCommandBar(
@@ -835,6 +843,7 @@ class HandTray extends StatelessWidget {
             selectedCardID: model.selection.assignmentCardID,
             trump: model.table.trump,
             tokens: tokens,
+            language: language,
             visibleTrayHeight: visibleTrayHeight,
             onCardTap: onAssignmentCardTap,
           ),
@@ -1010,40 +1019,41 @@ class HandConsole extends StatelessWidget {
     final statusHeight = compact
         ? handConsoleCompactStatusHeight
         : handConsoleStatusHeight;
-    return Container(
+    return SizedBox(
       key: const Key('hand-console'),
       width: handConsoleWidth,
       height: visibleTrayHeight,
-      padding: const EdgeInsets.all(handTrayActionBarPadding),
-      decoration: BoxDecoration(
-        color: tokens.colors.black.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(tokens.radius.sm),
-        border: Border.all(color: tokens.colors.steel.withValues(alpha: 0.42)),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: handConsoleRowSpacing,
         children: [
-          Container(
-            key: const Key('hand-console-status'),
-            width: double.infinity,
-            height: statusHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: tokens.colors.iron,
-              borderRadius: BorderRadius.circular(tokens.radius.xs),
-              border: Border.all(
-                color: tokens.colors.gold.withValues(alpha: 0.54),
-              ),
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: PixelText(
-                status,
-                size: compact ? PixelTextSize.caption2 : PixelTextSize.caption,
-                variant: PixelTextVariant.heavy,
-                color: tokens.colors.cream,
+          Semantics(
+            liveRegion: true,
+            label: status,
+            child: ExcludeSemantics(
+              child: Container(
+                key: const Key('hand-console-status'),
+                width: double.infinity,
+                height: statusHeight,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(tokens.radius.xs),
+                  border: Border.all(
+                    color: tokens.colors.gold.withValues(alpha: 0.54),
+                  ),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: PixelText(
+                    status,
+                    size: compact
+                        ? PixelTextSize.caption2
+                        : PixelTextSize.caption,
+                    variant: PixelTextVariant.heavy,
+                    color: tokens.colors.cream,
+                  ),
+                ),
               ),
             ),
           ),
@@ -1101,6 +1111,7 @@ class AssignmentCommandBar extends StatelessWidget {
     required this.selectedCardID,
     required this.trump,
     required this.tokens,
+    required this.language,
     required this.visibleTrayHeight,
     this.onCardTap,
     super.key,
@@ -1110,6 +1121,7 @@ class AssignmentCommandBar extends StatelessWidget {
   final String? selectedCardID;
   final String? trump;
   final DesignTokens tokens;
+  final KolkhozLanguage language;
   final double visibleTrayHeight;
   final ValueChanged<String>? onCardTap;
 
@@ -1174,6 +1186,7 @@ class AssignmentCommandBar extends StatelessWidget {
                           card: card,
                           tokens: tokens,
                           trump: trump,
+                          language: language,
                           selected: card.id == selectedCardID,
                           sizeOverride: assignmentCardSize,
                           onTap: () => onCardTap?.call(card.id),
@@ -1195,6 +1208,7 @@ class AssignmentCommandCard extends StatelessWidget {
     required this.card,
     required this.tokens,
     required this.trump,
+    required this.language,
     required this.selected,
     required this.sizeOverride,
     this.onTap,
@@ -1204,61 +1218,116 @@ class AssignmentCommandCard extends StatelessWidget {
   final TableCard card;
   final DesignTokens tokens;
   final String? trump;
+  final KolkhozLanguage language;
   final bool selected;
   final TokenCardSize sizeOverride;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: tokens.colors.gold.withValues(
-                      alpha: assignmentCommandSelectedShadowOpacity,
-                    ),
-                    blurRadius: assignmentCommandSelectedShadowRadius,
-                    offset: const Offset(
-                      0,
-                      assignmentCommandSelectedShadowYOffset,
-                    ),
+    final enabled = onTap != null;
+    final label = assignmentCardAccessibilityLabel(
+      card,
+      language,
+      selected: selected,
+    );
+    final cardSurface = DecoratedBox(
+      decoration: BoxDecoration(
+        boxShadow: selected
+            ? [
+                BoxShadow(
+                  color: tokens.colors.gold.withValues(
+                    alpha: assignmentCommandSelectedShadowOpacity,
                   ),
-                ]
-              : const [],
-        ),
-        child: Stack(
-          children: [
-            GameCard(
-              card: cardWithSelection(card, highlighted: false),
-              tokens: tokens,
-              trump: trump,
-              sizeOverride: sizeOverride,
-            ),
-            if (selected)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(
-                        assignmentCommandSelectedRadius,
-                      ),
-                      border: Border.all(
-                        color: tokens.colors.gold,
-                        width: assignmentCommandSelectedStrokeWidth,
-                      ),
+                  blurRadius: assignmentCommandSelectedShadowRadius,
+                  offset: const Offset(
+                    0,
+                    assignmentCommandSelectedShadowYOffset,
+                  ),
+                ),
+              ]
+            : const [],
+      ),
+      child: Stack(
+        children: [
+          GameCard(
+            card: cardWithSelection(card, highlighted: false),
+            tokens: tokens,
+            trump: trump,
+            sizeOverride: sizeOverride,
+          ),
+          if (selected)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(
+                      assignmentCommandSelectedRadius,
+                    ),
+                    border: Border.all(
+                      color: tokens.colors.gold,
+                      width: assignmentCommandSelectedStrokeWidth,
                     ),
                   ),
                 ),
               ),
-          ],
+            ),
+        ],
+      ),
+    );
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        container: true,
+        button: enabled,
+        enabled: enabled,
+        selected: selected,
+        label: label,
+        onTap: onTap,
+        child: ExcludeSemantics(
+          child: FocusableActionDetector(
+            enabled: enabled,
+            mouseCursor: enabled
+                ? SystemMouseCursors.click
+                : SystemMouseCursors.basic,
+            actions: {
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  onTap?.call();
+                  return null;
+                },
+              ),
+            },
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: cardSurface,
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+String assignmentCardAccessibilityLabel(
+  TableCard card,
+  KolkhozLanguage language, {
+  required bool selected,
+}) {
+  final suit = card.suit == wreckerSuit
+      ? language == KolkhozLanguage.en
+            ? 'Wrecker'
+            : 'Вредитель'
+      : language.suitName(card.suit);
+  final state = language == KolkhozLanguage.en
+      ? selected
+            ? ', selected for assignment'
+            : ', available for assignment'
+      : selected
+      ? ', выбрана для назначения'
+      : ', доступна для назначения';
+  return '${card.rank} $suit$state';
 }
 
 class ActionIconButton extends StatelessWidget {
@@ -1313,23 +1382,38 @@ class ActionIconButton extends StatelessWidget {
         button: true,
         enabled: enabled,
         label: label,
+        onTap: onPressed,
         child: ExcludeSemantics(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onPressed,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: tokens.colors.black.withValues(
-                      alpha: prominent ? 0.28 : 0.18,
-                    ),
-                    blurRadius: (prominent ? 5 : 3) * scale,
-                    offset: Offset(0, 2 * scale),
-                  ),
-                ],
+          child: FocusableActionDetector(
+            enabled: enabled,
+            mouseCursor: enabled
+                ? SystemMouseCursors.click
+                : SystemMouseCursors.basic,
+            actions: {
+              ActivateIntent: CallbackAction<ActivateIntent>(
+                onInvoke: (_) {
+                  onPressed?.call();
+                  return null;
+                },
               ),
-              child: child,
+            },
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onPressed,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: tokens.colors.black.withValues(
+                        alpha: prominent ? 0.28 : 0.18,
+                      ),
+                      blurRadius: (prominent ? 5 : 3) * scale,
+                      offset: Offset(0, 2 * scale),
+                    ),
+                  ],
+                ),
+                child: child,
+              ),
             ),
           ),
         ),

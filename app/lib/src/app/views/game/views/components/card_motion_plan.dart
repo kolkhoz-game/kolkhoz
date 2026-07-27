@@ -268,12 +268,21 @@ CardMotionPlan planCardFlights({
   final otherFlights = flights
       .where((flight) => !assignmentOrder.containsKey(flight.card.id))
       .toList();
+  final assignmentTarget = assignmentTargets.values.toSet().singleOrNull;
+  final parallelAssignment =
+      assignmentFlights.length == 4 &&
+      assignmentTargets.length == 4 &&
+      assignmentTarget != null &&
+      assignmentFlights.every((flight) => flight.card.suit == assignmentTarget);
   return CardMotionPlan(
     transitionID: transitionID,
     stages: assignmentFlights.isNotEmpty
         ? [
             if (otherFlights.isNotEmpty) otherFlights,
-            for (final flight in assignmentFlights) [flight],
+            if (parallelAssignment)
+              assignmentFlights
+            else
+              for (final flight in assignmentFlights) [flight],
           ]
         : [flights],
     immediateJobArrivals: immediateJobArrivals,

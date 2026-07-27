@@ -216,7 +216,7 @@ void registerTutorialAndLayoutTests() {
     );
   });
 
-  testWidgets('landscape phone keeps the side rail layout', (tester) async {
+  testWidgets('landscape phone uses the floating board chrome', (tester) async {
     await tester.binding.setSurfaceSize(const Size(667, 375));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -233,7 +233,23 @@ void registerTutorialAndLayoutTests() {
 
     expect(find.byType(CompactBoardShell), findsNothing);
     expect(find.byType(CompactBoardToolbar), findsNothing);
-    expect(find.byType(BoardRail), findsOneWidget);
+    expect(find.byType(BoardRail), findsNothing);
+    expect(find.byType(BoardViewMenu), findsOneWidget);
+    expect(find.byType(TopInfoStrip), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(TopInfoStrip),
+        matching: find.byType(RailStatusIcon),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(BoardViewMenu),
+        matching: find.byType(RailStatusIcon),
+      ),
+      findsNothing,
+    );
     expect(
       find.byKey(const Key('production-static-hero-brigade')),
       findsOneWidget,

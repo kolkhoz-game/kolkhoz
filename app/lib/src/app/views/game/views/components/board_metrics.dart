@@ -85,6 +85,14 @@ class ResponsiveBoardMetrics {
     );
   }
 
+  double fullBleedHandTrayLayoutHeightForBoardHeight(double boardHeight) {
+    return clampDouble(
+      boardHeight * fullBleedHandTrayHeightFactor,
+      handTrayHeight,
+      handTrayLayoutHeightMax,
+    );
+  }
+
   double handTrayHeightForVisibleHeight(double visibleHeight) {
     return math.max(handTrayHeight, visibleHeight - handTrayVisibleOverhang);
   }
@@ -105,3 +113,4 @@ const handTrayLayoutHeightMax = 390.0;
 const handTrayVisibleOverhang = 14.0;
 const handTrayResponsiveStartHeight = 500.0;
 const handTrayResponsiveGrowthFactor = 1.0;
+const fullBleedHandTrayHeightFactor = 0.22;

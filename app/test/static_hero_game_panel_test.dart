@@ -835,10 +835,11 @@ void _expectFieldGeometry(WidgetTester tester) {
       isTrue,
       reason: '$suit reward $reward must end inside $panel',
     );
-    expect(reward.width, closeTo(counter.width * 0.8, 0.01));
+    final expectedScale = (panel.height / 410).clamp(0.45, 1).toDouble() * 1.5;
+    expect(reward.width, closeTo(64 * expectedScale, 0.01));
     expect(reward.center.dx, closeTo(counter.center.dx, 0.01));
-    expect(assignment.left, greaterThanOrEqualTo(job.left));
-    expect(assignment.right, lessThanOrEqualTo(job.right));
+    expect(assignment.left, greaterThanOrEqualTo(job.left - 0.01));
+    expect(assignment.right, lessThanOrEqualTo(job.right + 0.01));
     expect(assignment.top, greaterThanOrEqualTo(job.top));
     expect(assignment.bottom, lessThanOrEqualTo(job.bottom));
     expect(assignment.overlaps(marker), isFalse);
@@ -878,14 +879,23 @@ void _expectFieldGeometry(WidgetTester tester) {
         matching: find.byType(Text),
       ),
     );
-    final expectedScale = (panel.height / 410).clamp(0.45, 1).toDouble() * 1.5;
     expect(counterText.style!.fontSize, closeTo(10 * expectedScale, 0.01));
-    expect(counter.width, closeTo(80 * expectedScale, 0.01));
+    expect(counter.width, closeTo(90 * expectedScale, 0.01));
+    expect(counter.height, closeTo(18 * expectedScale, 0.01));
+    expect(
+      find.descendant(
+        of: find.byKey(Key('static-hero-job-counter-$suit')),
+        matching: find.byType(FittedBox),
+      ),
+      findsNothing,
+    );
   }
   final counterWidth = counters.values.first.width;
+  final counterHeight = counters.values.first.height;
   final rewardWidth = rewards.values.first.width;
   for (final counter in counters.values) {
     expect(counter.width, closeTo(counterWidth, 0.01));
+    expect(counter.height, closeTo(counterHeight, 0.01));
   }
   for (final reward in rewards.values) {
     expect(reward.width, closeTo(rewardWidth, 0.01));

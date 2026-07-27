@@ -20,6 +20,9 @@ import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
 
 enum StaticHeroGamePanelKind { brigade, fields, north }
 
+const _brigadePosterLayoutHeight = 410.0;
+const _staticHeroCompactHeaderClearance = 54.0;
+
 const _fieldJobHorizontalInset = 0.02;
 const _fieldJobColumnGap = 0.02;
 const _fieldJobColumnWidth =
@@ -33,7 +36,10 @@ const _fieldJobBottom = 0.035;
 const _fieldJobBottomRowTop =
     _fieldJobTop + _fieldJobTopRowHeight + _fieldJobRowGap;
 const _fieldJobBottomRowHeight = 1 - _fieldJobBottomRowTop - _fieldJobBottom;
-const _fieldJobCounterBaseWidth = 80.0;
+// A suit pictogram and two-digit progress value fit without truncation.
+const _fieldJobCounterBaseWidth = 64.0;
+const _fieldJobCounterBaseHeight = 18.0;
+const _fieldJobRewardBaseWidth = 64.0;
 
 const staticHeroJobRects = {
   'wheat': Rect.fromLTWH(
@@ -93,12 +99,6 @@ class StaticHeroJobMotionTargets extends StatelessWidget {
 }
 
 extension on StaticHeroGamePanelKind {
-  String get label => switch (this) {
-    StaticHeroGamePanelKind.brigade => 'BRIGADE',
-    StaticHeroGamePanelKind.fields => 'FIELDS',
-    StaticHeroGamePanelKind.north => 'NORTH',
-  };
-
   String get asset =>
       'assets/art/field_plan/game/backgrounds/'
       'static-hero-$name-underlay-v1.png';
@@ -169,115 +169,58 @@ class StaticHeroGamePanel extends StatelessWidget {
                 ),
               ),
               switch (kind) {
-                StaticHeroGamePanelKind.brigade => _BrigadePosterContent(
-                  model: model,
-                  tokens: tokens,
-                  language: language,
-                  compact: posterCompact,
-                  heroOfSovietUnion: heroOfSovietUnion,
-                  showPlanningPanel: showPlanningPanel,
-                  planningTrumpFocusedSuit: planningTrumpFocusedSuit,
-                  onPlanningTrumpActionSelected: onPlanningTrumpActionSelected,
-                  onPlotCardTap: onPlotCardTap,
+                StaticHeroGamePanelKind.brigade => Padding(
+                  padding: EdgeInsets.only(
+                    top: posterCompact ? _staticHeroCompactHeaderClearance : 0,
+                  ),
+                  child: Align(
+                    alignment: const Alignment(0, 0.3),
+                    child: SizedBox(
+                      width: constraints.maxWidth,
+                      height: math.min(
+                        math.max(
+                          0,
+                          constraints.maxHeight -
+                              (posterCompact
+                                  ? _staticHeroCompactHeaderClearance
+                                  : 0),
+                        ),
+                        _brigadePosterLayoutHeight,
+                      ),
+                      child: _BrigadePosterContent(
+                        model: model,
+                        tokens: tokens,
+                        language: language,
+                        compact: posterCompact,
+                        heroOfSovietUnion: heroOfSovietUnion,
+                        showPlanningPanel: showPlanningPanel,
+                        planningTrumpFocusedSuit: planningTrumpFocusedSuit,
+                        onPlanningTrumpActionSelected:
+                            onPlanningTrumpActionSelected,
+                        onPlotCardTap: onPlotCardTap,
+                      ),
+                    ),
+                  ),
                 ),
-                StaticHeroGamePanelKind.fields => _FieldsPosterContent(
-                  model: model,
-                  tokens: tokens,
-                  onAction: onAction,
+                StaticHeroGamePanelKind.fields => Padding(
+                  padding: EdgeInsets.only(
+                    top: posterCompact ? _staticHeroCompactHeaderClearance : 0,
+                  ),
+                  child: _FieldsPosterContent(
+                    model: model,
+                    tokens: tokens,
+                    onAction: onAction,
+                  ),
                 ),
                 StaticHeroGamePanelKind.north => _NorthPosterContent(
                   model: model,
                   tokens: tokens,
                 ),
               },
-              if (kind != StaticHeroGamePanelKind.brigade)
-                Positioned(
-                  left: posterCompact ? 8 : 14,
-                  top: posterCompact ? 8 : 12,
-                  child: _PosterTitle(
-                    title: kind.label,
-                    subtitle: _subtitle(),
-                    compact: posterCompact,
-                  ),
-                ),
             ],
           ),
         );
       },
-    );
-  }
-
-  String _subtitle() => switch (kind) {
-    StaticHeroGamePanelKind.brigade =>
-      '${model.table.phasePrompt.title.toUpperCase()} · COMMUNAL TRICK',
-    StaticHeroGamePanelKind.fields =>
-      model.table.phase == phaseAssignment
-          ? 'ASSIGN THE CAPTURED CARDS'
-          : 'WORKER ASSIGNMENT',
-    StaticHeroGamePanelKind.north => 'REMOVED CARDS · YEAR ${model.table.year}',
-  };
-}
-
-class _PosterTitle extends StatelessWidget {
-  const _PosterTitle({
-    required this.title,
-    required this.subtitle,
-    required this.compact,
-  });
-
-  final String title;
-  final String subtitle;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: compact ? 146 : 236,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Color(0xffefe0b7),
-          boxShadow: [
-            BoxShadow(color: Color(0x6621251f), offset: Offset(3, 3)),
-          ],
-        ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 8 : 12,
-            vertical: compact ? 5 : 7,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                style: TextStyle(
-                  fontFamily: fieldPlanDisplayFontFamily,
-                  color: const Color(0xffb52b1d),
-                  fontSize: compact ? 17 : 24,
-                  height: 0.95,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              if (!compact)
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: fieldPlanDisplayFontFamily,
-                    color: Color(0xff20231f),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -973,9 +916,10 @@ class _JobPosterZone extends StatelessWidget {
     final markerHorizontalInset = 8 * contentScale;
     final markerVerticalInset = (isTopRow ? 18 : 0) * contentScale;
     final counterScale = contentScale * 1.5;
-    final counterText =
-        '${job.suit.toUpperCase()}  $hours/${job.requiredHours}';
+    final counterText = '$hours/${job.requiredHours}';
     final counterWidth = _fieldJobCounterBaseWidth * counterScale;
+    final counterHeight = _fieldJobCounterBaseHeight * counterScale;
+    final rewardWidth = _fieldJobRewardBaseWidth * counterScale;
     final assignmentMarkerClearance =
         counterWidth + markerHorizontalInset + 10 * contentScale;
     return Positioned.fromRect(
@@ -1031,13 +975,15 @@ class _JobPosterZone extends StatelessWidget {
                   gap: 6 * contentScale,
                   tokens: tokens,
                   counterWidth: counterWidth,
+                  counterHeight: counterHeight,
+                  rewardWidth: rewardWidth,
                   counter: _PosterPlacard(
                     key: Key('static-hero-job-counter-${job.suit}'),
                     text: counterText,
+                    iconAsset: 'assets/ui/Icons/icon-${job.suit}.png',
                     active: handler != null,
                     complete: hours >= job.requiredHours,
                     scale: counterScale,
-                    fitText: true,
                   ),
                 ),
               ),
@@ -1057,6 +1003,8 @@ class _FieldJobMarker extends StatelessWidget {
     required this.gap,
     required this.tokens,
     required this.counterWidth,
+    required this.counterHeight,
+    required this.rewardWidth,
     required this.counter,
   });
 
@@ -1066,11 +1014,12 @@ class _FieldJobMarker extends StatelessWidget {
   final double gap;
   final DesignTokens tokens;
   final double counterWidth;
+  final double counterHeight;
+  final double rewardWidth;
   final Widget counter;
 
   @override
   Widget build(BuildContext context) {
-    final rewardWidth = counterWidth * 0.8;
     final rewardCard = reward == null
         ? null
         : SizedBox(
@@ -1090,7 +1039,7 @@ class _FieldJobMarker extends StatelessWidget {
         children: [
           if (rewardAbove && rewardCard != null) rewardCard,
           if (rewardAbove && rewardCard != null) SizedBox(height: gap),
-          SizedBox(width: counterWidth, child: counter),
+          SizedBox(width: counterWidth, height: counterHeight, child: counter),
           if (!rewardAbove && rewardCard != null) SizedBox(height: gap),
           if (!rewardAbove && rewardCard != null) rewardCard,
         ],
@@ -1660,6 +1609,7 @@ class _ProfileStat extends StatelessWidget {
 class _PosterPlacard extends StatelessWidget {
   const _PosterPlacard({
     required this.text,
+    this.iconAsset,
     this.active = false,
     this.complete = false,
     this.scale = 1,
@@ -1668,6 +1618,7 @@ class _PosterPlacard extends StatelessWidget {
   });
 
   final String text;
+  final String? iconAsset;
   final bool active;
   final bool complete;
   final double scale;
@@ -1693,9 +1644,29 @@ class _PosterPlacard extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: 7 * scale,
-          vertical: 3 * scale,
+          vertical: (iconAsset == null ? 3 : 2) * scale,
         ),
-        child: _placardText(text),
+        child: iconAsset == null
+            ? _placardText(text)
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    iconAsset!,
+                    width: 13 * scale,
+                    height: 13 * scale,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.none,
+                  ),
+                  SizedBox(width: 3 * scale),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: _placardText(text),
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

@@ -951,6 +951,18 @@ void registerBoardTests() {
     expect(metrics.handTrayVisibleHeightForBoardHeight(620), 198);
     expect(metrics.handTrayVisibleHeightForBoardHeight(970), 404);
     expect(metrics.handTrayVisibleHeightForBoardHeight(1400), 404);
+    expect(
+      metrics.fullBleedHandTrayLayoutHeightForBoardHeight(420),
+      closeTo(92.4, 0.001),
+    );
+    expect(
+      metrics.fullBleedHandTrayLayoutHeightForBoardHeight(738),
+      closeTo(162.36, 0.001),
+    );
+    expect(
+      metrics.fullBleedHandTrayLayoutHeightForBoardHeight(1400),
+      closeTo(308, 0.001),
+    );
     expect(metrics.handTrayHeightForVisibleHeight(66), 64);
     expect(metrics.handTrayHeightForVisibleHeight(186), 172);
     expect(handTrayCardScale(66, defaultDesignTokens.card.large), 1);
@@ -1106,6 +1118,7 @@ void registerBoardTests() {
             selectedCardID: null,
             trump: 'wheat',
             tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
             visibleTrayHeight: visibleHeight,
           ),
         ),
@@ -2243,6 +2256,68 @@ void registerBoardTests() {
     ]);
     expect(plan.stages[2].map((flight) => flight.card.id), [
       secondAssignment.id,
+    ]);
+  });
+
+  test('one-suit trick assignment flights move in parallel', () {
+    final base = runtimeModel();
+    final cards = [
+      for (var index = 0; index < 4; index++)
+        testCard(
+          id: 'wheat-${index + 6}',
+          suit: 'wheat',
+          value: index + 6,
+          pending: true,
+        ),
+    ];
+    final before = runtimeModelWith(
+      phase: phaseAssignment,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      lastTrick: Trick(
+        plays: [
+          for (final (index, card) in cards.indexed)
+            TrickPlay(seatID: index, card: card),
+        ],
+        winnerSeatID: 3,
+      ),
+    );
+    final plan = planCardFlights(
+      motionEnabled: true,
+      minimumFlightDistance: GameMotion.minimumFlightDistance,
+      previousModel: before,
+      nextModel: before,
+      previousZones: {
+        for (final (index, card) in cards.indexed)
+          card.id: MotionZone.trick(index),
+      },
+      nextZones: const {},
+      previousCards: {for (final card in cards) card.id: card},
+      nextCards: const {},
+      previousGeometry: MotionGeometry({
+        for (final (index, card) in cards.indexed)
+          trickCardMotionSourceKey(card.id): Rect.fromLTWH(
+            70.0 + index * 60,
+            120,
+            48,
+            68,
+          ),
+      }),
+      currentGeometry: MotionGeometry({
+        jobGaugeMotionTargetKey('wheat'): const Rect.fromLTWH(320, 20, 90, 38),
+      }),
+      geometry: const DefaultCardMotionGeometryResolver(defaultDesignTokens),
+      transitionID: 18,
+      assignmentCardIDs: [for (final card in cards) card.id],
+      assignmentTargets: {for (final card in cards) card.id: 'wheat'},
+      suppressedCardIDs: const {},
+      presentedAssignmentCardIDs: const {},
+      initialFlightID: 0,
+    );
+
+    expect(plan.stages, hasLength(1));
+    expect(plan.stages.single.map((flight) => flight.card.id), [
+      for (final card in cards) card.id,
     ]);
   });
 

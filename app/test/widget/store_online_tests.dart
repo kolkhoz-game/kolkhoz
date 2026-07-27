@@ -207,6 +207,62 @@ void registerStoreAndOnlineTests() {
     expect(transition.event!.toZone, kcObjectZoneCurrentTrick);
   });
 
+  test('presentation snapshots preserve the current panel override', () {
+    final model = modelWithActivePanel(runtimeModel(), panelBrigade);
+    const uiState = GameUiState(activePanel: panelNorth);
+
+    final presented = withPresentationUiState(model, uiState);
+
+    expect(presented.panels.active, panelNorth);
+    expect(presented.table, same(model.table));
+    expect(
+      withPresentationUiState(model, const GameUiState()).panels.active,
+      panelBrigade,
+    );
+  });
+
+  test('one-suit assignment events form one presentation run', () {
+    final events = [
+      for (var index = 0; index < 4; index++)
+        EngineTransitionEvent(
+          kind: kcTransitionAssignmentTargeted,
+          playerID: index,
+          card: EngineCardValue(suit: 0, value: index + 6),
+          fromZone: kcObjectZoneLastTrick,
+          toZone: kcObjectZonePendingAssignment,
+          fromOwner: index,
+          toOwner: 0,
+          targetSuit: 0,
+        ),
+      const EngineTransitionEvent(
+        kind: kcTransitionAssignmentOpened,
+        playerID: 0,
+        card: EngineCardValue(suit: -1, value: 0),
+        fromZone: kcObjectZoneLastTrick,
+        toZone: kcObjectZonePendingAssignment,
+        fromOwner: 0,
+        toOwner: 0,
+        targetSuit: -1,
+      ),
+    ];
+
+    expect(assignmentTargetRunEnd(events, 0), 3);
+    expect(assignmentTargetRunEnd(events, 4), 4);
+
+    final mixedSuitEvents = [...events];
+    mixedSuitEvents[2] = const EngineTransitionEvent(
+      kind: kcTransitionAssignmentTargeted,
+      playerID: 2,
+      card: EngineCardValue(suit: 1, value: 8),
+      fromZone: kcObjectZoneLastTrick,
+      toZone: kcObjectZonePendingAssignment,
+      fromOwner: 2,
+      toOwner: 0,
+      targetSuit: 0,
+    );
+    expect(assignmentTargetRunEnd(mixedSuitEvents, 0), 0);
+  });
+
   test('online snapshots preserve authoritative engine transitions', () {
     final json = onlineUpdateJson();
     final snapshot = json['snapshot']! as Map<String, Object?>;
@@ -1238,6 +1294,75 @@ void registerStoreAndOnlineTests() {
     expect(findAssetImage('assets/ui/Icons/icon-game-log.png'), findsOneWidget);
     expect(find.byType(RailStatusIcon), findsOneWidget);
     expect(find.byType(RailButton), findsNWidgets(5));
+  });
+
+  testWidgets('floating view menu expands upward from the active view', (
+    tester,
+  ) async {
+    const tokens = defaultDesignTokens;
+    final metrics = ResponsiveBoardMetrics.fromSize(
+      const Size(844, 390),
+      tokens,
+    );
+    String? selectedPanel;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Align(
+          alignment: Alignment.bottomLeft,
+          child: BoardViewMenu(
+            activePanel: panelBrigade,
+            actionPanel: panelJobs,
+            tokens: tokens,
+            metrics: metrics,
+            language: KolkhozLanguage.en,
+            onPanelSelected: (panel) => selectedPanel = panel,
+          ),
+        ),
+      ),
+    );
+
+    Finder menuButtons() => find.descendant(
+      of: find.byKey(const Key('board-view-menu')),
+      matching: find.byType(RailButton),
+    );
+
+    expect(menuButtons(), findsNWidgets(2));
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(const ValueKey('board-view-menu-$panelBrigade')),
+          )
+          .dy,
+      lessThan(
+        tester.getTopLeft(find.byKey(const Key('board-view-menu-settings'))).dy,
+      ),
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('board-view-menu-$panelBrigade')),
+    );
+    await tester.pump();
+
+    expect(menuButtons(), findsNWidgets(5));
+    expect(
+      tester
+          .getTopLeft(find.byKey(const ValueKey('board-view-menu-$panelLog')))
+          .dy,
+      lessThan(
+        tester
+            .getTopLeft(
+              find.byKey(const ValueKey('board-view-menu-$panelBrigade')),
+            )
+            .dy,
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('board-view-menu-$panelJobs')));
+    await tester.pump();
+
+    expect(selectedPanel, panelJobs);
+    expect(menuButtons(), findsNWidgets(2));
   });
 
   testWidgets('left rail reports selected panel', (tester) async {

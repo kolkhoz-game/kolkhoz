@@ -37,6 +37,21 @@ TableViewModel withoutLegalActions(TableViewModel model) => TableViewModel(
   seed: model.seed,
 );
 
+TableViewModel withPresentationUiState(
+  TableViewModel model,
+  GameUiState uiState,
+) => TableViewModel(
+  viewer: model.viewer,
+  table: model.table,
+  panels: Panels(
+    active: uiState.activePanel ?? model.panels.active,
+    available: model.panels.available,
+  ),
+  selection: uiState.selection,
+  legalActions: model.legalActions,
+  seed: model.seed,
+);
+
 enum GameControllerLifecycle { lobby, starting, playing, finishing, finished }
 
 GameUiState autoSelectCards(GameUiState uiState, TableViewModel model) {
@@ -581,7 +596,9 @@ class GameController extends ChangeNotifier {
         events: update.transitions,
       );
       var visibleBefore = before;
-      for (final (index, event) in update.transitions.indexed) {
+      var index = 0;
+      while (index < update.transitions.length) {
+        final event = update.transitions[index];
         final cardID = event.card.isValid
             ? '${engineSuitName(event.card.suit)}-${event.card.value}'
             : null;
@@ -589,17 +606,34 @@ class GameController extends ChangeNotifier {
             event.kind == kcTransitionAssignmentTargeted &&
             cardID != null &&
             event.targetSuit >= 0;
+        final lastIndex = isAssignment
+            ? assignmentTargetRunEnd(update.transitions, index)
+            : index;
+        final assignmentEvents = isAssignment
+            ? update.transitions.sublist(index, lastIndex + 1)
+            : const <EngineTransitionEvent>[];
+        final assignmentCardIDs = [
+          for (final assignmentEvent in assignmentEvents)
+            '${engineSuitName(assignmentEvent.card.suit)}-${assignmentEvent.card.value}',
+        ];
+        final assignmentTarget = isAssignment
+            ? engineSuitName(event.targetSuit)
+            : null;
         _presentationQueue.enqueue(
           before: visibleBefore,
-          after: visibleStates[index],
+          after: visibleStates[lastIndex],
           action: index == 0 ? action : null,
-          event: event,
-          assignmentCardIDs: isAssignment ? [cardID] : const [],
-          assignmentTargets: isAssignment
-              ? {cardID: engineSuitName(event.targetSuit)!}
-              : const {},
+          event: lastIndex == index ? event : null,
+          assignmentCardIDs: assignmentCardIDs,
+          assignmentTargets: assignmentTarget == null
+              ? const {}
+              : {
+                  for (final assignmentCardID in assignmentCardIDs)
+                    assignmentCardID: assignmentTarget,
+                },
         );
-        visibleBefore = visibleStates[index];
+        visibleBefore = visibleStates[lastIndex];
+        index = lastIndex + 1;
       }
     }
     if (wasIdle) {
@@ -635,7 +669,7 @@ class GameController extends ChangeNotifier {
       _sync();
       return;
     }
-    _model = transition.after;
+    _model = withPresentationUiState(transition.after, uiState);
     finishedGameLobby = null;
     lifecycle = _model!.table.phase == phaseGameOver
         ? GameControllerLifecycle.finishing
@@ -654,6 +688,10 @@ class GameController extends ChangeNotifier {
       return;
     }
     if (_presentationQueue.isBusy) {
+      final transitionModel = _presentationQueue.current?.after;
+      if (transitionModel != null) {
+        _model = withPresentationUiState(transitionModel, uiState);
+      }
       notifyListeners();
       return;
     }

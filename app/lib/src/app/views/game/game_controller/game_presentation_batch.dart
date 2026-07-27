@@ -3,6 +3,30 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_const
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_ui_state.dart';
 
+int assignmentTargetRunEnd(List<EngineTransitionEvent> events, int startIndex) {
+  final first = events[startIndex];
+  if (first.kind != kcTransitionAssignmentTargeted ||
+      !first.card.isValid ||
+      first.targetSuit < 0) {
+    return startIndex;
+  }
+  var endIndex = startIndex;
+  while (endIndex + 1 < events.length) {
+    final next = events[endIndex + 1];
+    if (next.kind != kcTransitionAssignmentTargeted ||
+        !next.card.isValid ||
+        next.targetSuit != first.targetSuit) {
+      break;
+    }
+    endIndex++;
+  }
+  final run = events.sublist(startIndex, endIndex + 1);
+  return run.length == 4 &&
+          run.every((event) => event.card.suit == first.targetSuit)
+      ? endIndex
+      : startIndex;
+}
+
 /// Builds the visible state at each semantic boundary in one engine dispatch.
 ///
 /// The engine remains authoritative for the final model. Intermediate models
