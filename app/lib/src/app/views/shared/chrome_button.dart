@@ -595,10 +595,19 @@ class ChromeAssetButton extends StatelessWidget {
     final child = enabled
         ? button
         : Opacity(opacity: disabledOpacity, child: button);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: enabled ? onPressed : null,
-      child: child,
+    final canActivate = enabled && onPressed != null;
+    return Semantics(
+      button: true,
+      enabled: canActivate,
+      label: uppercase ? label.toUpperCase() : label,
+      onTap: canActivate ? onPressed : null,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: canActivate ? onPressed : null,
+          child: child,
+        ),
+      ),
     );
   }
 }

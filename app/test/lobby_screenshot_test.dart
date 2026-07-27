@@ -124,11 +124,14 @@ void main() {
         home: SizedBox.expand(child: _lobby(const _LobbyScenario('routing'))),
       ),
     );
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    final addPlayers = find.bySemanticsLabel('ADD PLAYERS');
+    expect(tester.getSemantics(addPlayers).flagsCollection.isButton, isTrue);
 
     final nestedNavigator = find.byType(Navigator).last;
     expect(tester.state<NavigatorState>(nestedNavigator).canPop(), isFalse);
 
-    await tester.tap(find.bySemanticsLabel('ADD PLAYERS'));
+    await tester.tap(addPlayers);
     await tester.pumpAndSettle();
 
     expect(tester.state<NavigatorState>(nestedNavigator).canPop(), isTrue);

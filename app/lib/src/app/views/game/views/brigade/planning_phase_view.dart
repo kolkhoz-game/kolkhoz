@@ -184,32 +184,32 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
                         child: AnimatedSwitcher(
                           duration: GameMotion.of(context).handInteraction,
                           child: rewardsReady
-                              ? GestureDetector(
+                              ? Builder(
                                   key: ValueKey('planning-trump-$suit'),
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap:
-                                      optionForSuit(options, suit)?.action !=
-                                              null &&
-                                          widget.onAction != null
-                                      ? () => widget.onAction!(
-                                          optionForSuit(options, suit)!.action!,
-                                        )
-                                      : null,
-                                  child: TrumpSelectionButton(
-                                    suit: suit,
-                                    label:
-                                        optionForSuit(options, suit)?.label ??
-                                        widget.language.suitName(suit),
-                                    selected:
-                                        !aiSelecting &&
-                                        suit == widget.focusedSuit,
-                                    aiFocused:
-                                        aiSelecting &&
-                                        suit == widget.focusedSuit,
-                                    tokens: widget.tokens,
-                                    size: planningRewardTrumpButtonSize,
-                                    iconSize: planningRewardTrumpIconSize,
-                                  ),
+                                  builder: (context) {
+                                    final option = optionForSuit(options, suit);
+                                    return AccessibleTrumpSelection(
+                                      suit: suit,
+                                      label:
+                                          option?.label ??
+                                          widget.language.suitName(suit),
+                                      selected:
+                                          !aiSelecting &&
+                                          suit == widget.focusedSuit,
+                                      aiFocused:
+                                          aiSelecting &&
+                                          suit == widget.focusedSuit,
+                                      tokens: widget.tokens,
+                                      size: planningRewardTrumpButtonSize,
+                                      iconSize: planningRewardTrumpIconSize,
+                                      onPressed:
+                                          option?.action != null &&
+                                              widget.onAction != null
+                                          ? () =>
+                                                widget.onAction!(option!.action!)
+                                          : null,
+                                    );
+                                  },
                                 )
                               : Center(
                                   key: ValueKey('planning-reward-suit-$suit'),
@@ -421,20 +421,17 @@ class PlanningTrumpPanel extends StatelessWidget {
                 alignment: WrapAlignment.center,
                 children: [
                   for (final option in trumpOptions)
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: option.action != null && actionHandler != null
+                    AccessibleTrumpSelection(
+                      suit: option.suit,
+                      label: option.label,
+                      selected: !aiSelecting && option.suit == focusedSuit,
+                      aiFocused: aiSelecting && option.suit == focusedSuit,
+                      tokens: tokens,
+                      size: planningTrumpButtonSize,
+                      iconSize: planningTrumpIconSize,
+                      onPressed: option.action != null && actionHandler != null
                           ? () => actionHandler(option.action!)
                           : null,
-                      child: TrumpSelectionButton(
-                        suit: option.suit,
-                        label: option.label,
-                        selected: !aiSelecting && option.suit == focusedSuit,
-                        aiFocused: aiSelecting && option.suit == focusedSuit,
-                        tokens: tokens,
-                        size: planningTrumpButtonSize,
-                        iconSize: planningTrumpIconSize,
-                      ),
                     ),
                 ],
               ),
@@ -457,6 +454,71 @@ bool planningTrumpSelectorIsAI(TableViewModel model) {
     }
   }
   return false;
+}
+
+class AccessibleTrumpSelection extends StatelessWidget {
+  const AccessibleTrumpSelection({
+    required this.suit,
+    required this.label,
+    required this.selected,
+    required this.aiFocused,
+    required this.tokens,
+    required this.size,
+    required this.iconSize,
+    this.onPressed,
+    super.key,
+  });
+
+  final String suit;
+  final String label;
+  final bool selected;
+  final bool aiFocused;
+  final DesignTokens tokens;
+  final double size;
+  final double iconSize;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: enabled,
+      selected: selected,
+      label: label,
+      onTap: onPressed,
+      child: ExcludeSemantics(
+        child: FocusableActionDetector(
+          enabled: enabled,
+          mouseCursor: enabled
+              ? SystemMouseCursors.click
+              : SystemMouseCursors.basic,
+          actions: {
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                onPressed?.call();
+                return null;
+              },
+            ),
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onPressed,
+            child: TrumpSelectionButton(
+              suit: suit,
+              label: label,
+              selected: selected,
+              aiFocused: aiFocused,
+              tokens: tokens,
+              size: size,
+              iconSize: iconSize,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 const planningTrumpPanelWidth = 112.0;
