@@ -73,8 +73,8 @@ void registerLobbyAndProfileTests() {
     await tester.pumpWidget(
       MaterialApp(
         home: SizedBox(
-          width: 1200,
-          height: 800,
+          width: 844,
+          height: 390,
           child: StandaloneLobby(
             tokens: lightDesignTokens,
             language: KolkhozLanguage.en,
@@ -104,77 +104,12 @@ void registerLobbyAndProfileTests() {
       ),
     );
 
-    await tester.tap(find.byKey(const Key('field-plan-menu-language')));
-    await tester.tap(find.byKey(const Key('field-plan-menu-theme')));
-    await tester.tap(find.byKey(const Key('field-plan-menu-settings')));
+    await tester.tap(find.bySemanticsLabel('Language'));
+    await tester.tap(find.bySemanticsLabel('Theme'));
+    await tester.tap(find.bySemanticsLabel('Settings'));
 
     expect(calls, ['language', 'appearance', 'settings']);
     expect(findAppText('STANDARD'), findsNothing);
-  });
-
-  testWidgets('field-plan lobby uses the bright village and profile plaque', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1200, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    var profilePresses = 0;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: StandaloneLobby(
-          tokens: lightDesignTokens,
-          language: KolkhozLanguage.en,
-          appearance: KolkhozAppearance.light,
-          onStart: () {},
-          selectedPreset: KolkhozGamePreset.kolkhoz,
-          customVariants: KolkhozGameVariants.kolkhoz,
-          playerControllers: KolkhozPlayerController.defaultControllers,
-          showingRules: false,
-          showingOnline: false,
-          onHostOnline: (_, _, _, _, _) async => 'session',
-          onJoinOnline: (_, _, _) async {},
-          onEnterOnlineGame: () {},
-          onPresetChanged: (_) {},
-          onCustomVariantsChanged: (_) {},
-          onPlayerControllersChanged: (_) {},
-          onRulesPressed: () {},
-          onOfflinePressed: () {},
-          onOnlinePressed: () {},
-          onTutorialPressed: () {},
-          onLanguageToggle: () {},
-          onAppearanceToggle: () {},
-          onProfilePressed: () => profilePresses += 1,
-          displayName: 'Will',
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final background = tester.widget<Image>(
-      find.byKey(const Key('field-plan-menu-background')),
-    );
-    expect(
-      (background.image as AssetImage).assetName,
-      'assets/art/field_plan/menu-village-day-underlay-v3.png',
-    );
-    expect(find.text('COMRADE WILL'), findsOneWidget);
-    expect(find.byKey(const Key('field-plan-profile-plaque')), findsOneWidget);
-    expect(
-      tester
-          .widgetList<Semantics>(
-            find.descendant(
-              of: find.byKey(const Key('field-plan-menu-local')),
-              matching: find.byType(Semantics),
-            ),
-          )
-          .any((widget) => widget.properties.selected == true),
-      isTrue,
-    );
-
-    await tester.tap(find.byKey(const Key('field-plan-profile-plaque')));
-    expect(profilePresses, 1);
   });
 
   testWidgets('custom lobby allows selecting the number of years', (
@@ -1289,7 +1224,7 @@ void registerLobbyAndProfileTests() {
             widget is Image &&
             widget.image is AssetImage &&
             (widget.image as AssetImage).assetName ==
-                'assets/art/field_plan/shared/pictograms/how-to-play.png',
+                'assets/ui/Icons/icon-foreman-misha.png',
       ),
       findsWidgets,
     );

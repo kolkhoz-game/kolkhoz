@@ -15,8 +15,6 @@ import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_controller/main_me
 import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
-import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/profile/views/progression_overview.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
@@ -335,1022 +333,199 @@ class StandaloneLobby extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xff171712),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/art/field_plan/menu-village-day-underlay-v3.png',
-            key: const Key('field-plan-menu-background'),
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            filterQuality: FilterQuality.high,
-          ),
-          const _FieldPlanMenuSceneTreatment(),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final usableWidth = constraints.maxWidth;
-                final usableHeight = constraints.maxHeight.isFinite
-                    ? constraints.maxHeight
-                    : 640.0;
-                final wide = usableWidth >= 560 && usableWidth > usableHeight;
-                final shortLandscape = wide && usableHeight < 520;
-                final showCornerProfile = wide && usableHeight >= 620;
-                final outerPadding = shortLandscape
-                    ? 8.0
-                    : wide
-                    ? 10.0
-                    : 18.0;
-                final spacing = shortLandscape
-                    ? 6.0
-                    : wide
-                    ? 12.0
-                    : 18.0;
-                final contentWidth = math.max(
-                  280.0,
-                  usableWidth - outerPadding * 2,
-                );
-                final contentHeight = math.max(
-                  300.0,
-                  usableHeight - outerPadding * 2,
-                );
-                final railWidth = wide
-                    ? (contentWidth * (shortLandscape ? 0.25 : 0.34)).clamp(
-                        shortLandscape ? 148.0 : 210.0,
-                        shortLandscape ? 148.0 : 455.0,
-                      )
-                    : contentWidth;
-                final panelWidth = wide
-                    ? math.max(300.0, contentWidth - railWidth - spacing)
-                    : contentWidth;
-                final panelTop = showCornerProfile ? 92.0 : 0.0;
-                final panelHeight = wide
-                    ? math.max(280.0, contentHeight - panelTop)
-                    : math.max(440.0, usableHeight * 0.72);
-                final railHeight = wide
-                    ? contentHeight
-                    : (usableHeight * 0.38).clamp(250.0, 360.0);
-
-                final menuRail = SizedBox(
-                  width: railWidth,
-                  height: railHeight,
-                  child: _FieldPlanMenuRail(
-                    language: language,
-                    appearance: appearance,
-                    compact: shortLandscape,
-                    showingRules: showingRules,
-                    showingOnline: showingOnline,
-                    showingProfile: showingProfile,
-                    settingsSelected:
-                        showingProfile &&
-                        initialSettingsTab != KolkhozSettingsTab.profile,
-                    demoMode: demoMode,
-                    cloudConfigured: cloudConfigured,
-                    cloudReady: cloudReady,
-                    cloudSignedIn: cloudSignedIn,
-                    cloudAuthBusy: cloudAuthBusy,
-                    comradeRequestCount:
-                        comradesSummary.incomingRequests.length,
-                    displayName: displayName,
-                    portraitAsset: portraitAsset,
-                    onOfflinePressed: onOfflinePressed,
-                    onOnlinePressed: onOnlinePressed,
-                    onProfilePressed: onProfilePressed,
-                    onSettingsPressed: onSettingsPressed,
-                    onRulesPressed: onRulesPressed,
-                    onLanguageToggle: onLanguageToggle,
-                    onAppearanceToggle: onAppearanceToggle,
-                  ),
-                );
-                final panel = SizedBox(
-                  width: panelWidth,
-                  height: panelHeight,
-                  child: _LobbyPanel(
-                    tokens: tokens,
-                    language: language,
-                    selectedPreset: selectedPreset,
-                    customVariants: customVariants,
-                    playerControllers: playerControllers,
-                    gameLobby: gameLobby,
-                    demoMode: demoMode,
-                    appearance: appearance,
-                    cardBack: cardBack,
-                    compactRail: shortLandscape,
-                    animationSpeed: animationSpeed,
-                    confirmNewGame: confirmNewGame,
-                    confirmMainMenu: confirmMainMenu,
-                    showInvalidTapHints: showInvalidTapHints,
-                    soundEnabled: soundEnabled,
-                    showingRules: showingRules,
-                    showingOnline: showingOnline,
-                    showingProfile: showingProfile,
-                    initialSettingsTab: initialSettingsTab,
-                    hostedInviteCode: hostedInviteCode,
-                    onlineSessionUpdate: onlineSessionUpdate,
-                    showHostedInviteCode: showHostedInviteCode,
-                    displayName: displayName,
-                    portraitAsset: portraitAsset,
-                    profileStats: profileStats,
-                    progression: progression,
-                    unlockedCardBacks: unlockedCardBacks,
-                    favoriteSetup: favoriteSetup,
-                    lastStartedSetup: lastStartedSetup,
-                    comradesSummary: comradesSummary,
-                    cloudConfigured: cloudConfigured,
-                    cloudReady: cloudReady,
-                    cloudSignedIn: cloudSignedIn,
-                    cloudEmail: cloudEmail,
-                    cloudAuthBusy: cloudAuthBusy,
-                    cloudAuthMessage: cloudAuthMessage,
-                    cloudAuthIsError: cloudAuthIsError,
-                    onTutorialPressed: onTutorialPressed,
-                    onStart: onStart,
-                    onHostOnline: onHostOnline,
-                    onHostOnlineSeries: onHostOnlineSeries,
-                    onInviteOnlineComrades: onInviteOnlineComrades,
-                    onJoinOnline: onJoinOnline,
-                    onWatchOnline: onWatchOnline,
-                    onRememberStartedSetup: onRememberStartedSetup,
-                    onMatchmakeOnline: onMatchmakeOnline,
-                    onKickOnlinePlayer: onKickOnlinePlayer,
-                    onEnterOnlineGame: onEnterOnlineGame,
-                    onSyncActiveSession: onSyncActiveSession,
-                    onCancelOnlineGame: onCancelOnlineGame,
-                    onPresetChanged: onPresetChanged,
-                    onCustomVariantsChanged: onCustomVariantsChanged,
-                    onPlayerControllersChanged: onPlayerControllersChanged,
-                    onAnimationSpeedChanged: onAnimationSpeedChanged,
-                    onConfirmNewGameChanged: onConfirmNewGameChanged,
-                    onConfirmMainMenuChanged: onConfirmMainMenuChanged,
-                    onShowInvalidTapHintsChanged: onShowInvalidTapHintsChanged,
-                    onSoundEnabledChanged: onSoundEnabledChanged,
-                    onLanguageToggle: onLanguageToggle,
-                    onAppearanceToggle: onAppearanceToggle,
-                    onCardBackChanged: onCardBackChanged,
-                    onDisplayNameChanged: onDisplayNameChanged,
-                    onPortraitChanged: onPortraitChanged,
-                    onSaveFavoriteSetup: onSaveFavoriteSetup,
-                    onUseFavoriteSetup: onUseFavoriteSetup,
-                    onCloudSignIn: onCloudSignIn,
-                    onCloudSignUp: onCloudSignUp,
-                    onCloudResetPassword: onCloudResetPassword,
-                    onCloudDeleteAccount: onCloudDeleteAccount,
-                    onComradeRequestToUser: onComradeRequestToUser,
-                    menuRemoteConnection: menuRemoteConnection,
-                    mainMenuController: mainMenuController,
-                    profileController: profileController,
-                    onStartDailyChallenge: onStartDailyChallenge,
-                  ),
-                );
-
-                return SingleChildScrollView(
-                  padding: EdgeInsets.all(outerPadding),
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: Stack(
-                      children: [
-                        if (wide)
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              menuRail,
-                              SizedBox(width: spacing),
-                              Padding(
-                                padding: EdgeInsets.only(top: panelTop),
-                                child: panel,
-                              ),
-                            ],
-                          )
-                        else
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              menuRail,
-                              SizedBox(height: spacing),
-                              panel,
-                            ],
-                          ),
-                        if (showCornerProfile)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: _FieldPlanProfilePlaque(
-                              displayName: displayName,
-                              portraitAsset: portraitAsset,
-                              cloudSignedIn: cloudSignedIn,
-                              badgeCount:
-                                  comradesSummary.incomingRequests.length,
-                              selected:
-                                  showingProfile &&
-                                  initialSettingsTab ==
-                                      KolkhozSettingsTab.profile,
-                              onPressed: onProfilePressed,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FieldPlanMenuSceneTreatment extends StatelessWidget {
-  const _FieldPlanMenuSceneTreatment();
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color(0xbd151713),
-                  Color(0x68151713),
-                  Color(0x12151713),
-                  Color(0x00151713),
-                ],
-                stops: [0, 0.28, 0.58, 0.82],
-              ),
-            ),
-          ),
-          Opacity(
-            opacity: 0.055,
-            child: Image.asset(
-              'assets/art/field_plan/shared/textures/paper-light.png',
-              fit: BoxFit.none,
-              repeat: ImageRepeat.repeat,
-              color: const Color(0xff705c3b),
-              colorBlendMode: BlendMode.multiply,
-              filterQuality: FilterQuality.low,
-            ),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0x99211e17), width: 7),
-              gradient: const RadialGradient(
-                radius: 1.08,
-                colors: [Colors.transparent, Color(0x32110f0c)],
-                stops: [0.62, 1],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FieldPlanMenuRail extends StatelessWidget {
-  const _FieldPlanMenuRail({
-    required this.language,
-    required this.appearance,
-    required this.compact,
-    required this.showingRules,
-    required this.showingOnline,
-    required this.showingProfile,
-    required this.settingsSelected,
-    required this.demoMode,
-    required this.cloudConfigured,
-    required this.cloudReady,
-    required this.cloudSignedIn,
-    required this.cloudAuthBusy,
-    required this.comradeRequestCount,
-    required this.displayName,
-    required this.portraitAsset,
-    required this.onOfflinePressed,
-    required this.onOnlinePressed,
-    required this.onProfilePressed,
-    required this.onSettingsPressed,
-    required this.onRulesPressed,
-    required this.onLanguageToggle,
-    required this.onAppearanceToggle,
-  });
-
-  final KolkhozLanguage language;
-  final KolkhozAppearance appearance;
-  final bool compact;
-  final bool showingRules;
-  final bool showingOnline;
-  final bool showingProfile;
-  final bool settingsSelected;
-  final bool demoMode;
-  final bool cloudConfigured;
-  final bool cloudReady;
-  final bool cloudSignedIn;
-  final bool cloudAuthBusy;
-  final int comradeRequestCount;
-  final String displayName;
-  final String portraitAsset;
-  final VoidCallback onOfflinePressed;
-  final VoidCallback onOnlinePressed;
-  final VoidCallback? onProfilePressed;
-  final VoidCallback? onSettingsPressed;
-  final VoidCallback onRulesPressed;
-  final VoidCallback onLanguageToggle;
-  final VoidCallback onAppearanceToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    final localSelected = !showingRules && !showingOnline && !showingProfile;
-    final mainButtonHeight = compact ? 48.0 : 68.0;
-    final gap = compact ? 6.0 : 10.0;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final titleHeight = compact
-            ? 70.0
-            : (constraints.maxHeight * 0.23).clamp(112.0, 180.0);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(height: titleHeight, child: const _FieldPlanTitleBanner()),
-            SizedBox(height: gap),
-            _FieldPlanMenuButton(
-              key: const Key('field-plan-menu-local'),
-              label: language.t(
-                demoMode
-                    ? KolkhozText.lobbyPlayDemo
-                    : KolkhozText.lobbyCreateGame,
-              ),
-              pictogram: fieldPlanCreateGamePictogram.fieldPlanPath,
-              selected: localSelected,
-              height: mainButtonHeight,
-              onPressed: onOfflinePressed,
-            ),
-            SizedBox(height: gap),
-            _FieldPlanMenuButton(
-              key: const Key('field-plan-menu-online'),
-              label: language.strings.lobbyJoinGame,
-              pictogram: demoMode
-                  ? 'assets/ui/Icons/icon-lock.png'
-                  : fieldPlanJoinGamePictogram.fieldPlanPath,
-              selected: showingOnline,
-              enabled: !demoMode,
-              height: mainButtonHeight,
-              onPressed: onOnlinePressed,
-            ),
-            SizedBox(height: gap),
-            _FieldPlanMenuButton(
-              key: const Key('field-plan-menu-rules'),
-              label: language.strings.lobbyHowToPlay,
-              pictogram: fieldPlanHowToPlayPictogram.fieldPlanPath,
-              selected: showingRules,
-              height: mainButtonHeight,
-              onPressed: onRulesPressed,
-            ),
-            SizedBox(height: compact ? 7 : 12),
-            _FieldPlanUtilityStrip(
-              language: language,
-              appearance: appearance,
-              compact: compact,
-              profileSelected: showingProfile && !settingsSelected,
-              settingsSelected: settingsSelected,
-              cloudConfigured: cloudConfigured,
-              cloudReady: cloudReady,
-              cloudSignedIn: cloudSignedIn,
-              cloudAuthBusy: cloudAuthBusy,
-              badgeCount: comradeRequestCount,
-              onProfilePressed: onProfilePressed,
-              onSettingsPressed: onSettingsPressed ?? onProfilePressed,
-              onLanguageToggle: onLanguageToggle,
-              onAppearanceToggle: onAppearanceToggle,
-            ),
-            if (!compact) ...[
-              const Spacer(),
-              Text(
-                language.strings.kolkhozappGameBy,
-                textAlign: TextAlign.left,
-                style: fieldPlanBodyStrongTextStyle.copyWith(
-                  color: const Color(0xffddc590),
-                  fontSize: 11,
-                  letterSpacing: 0.8,
-                ),
-              ),
-              Text(
-                language.strings.kolkhozappWilliamTheisen,
-                textAlign: TextAlign.left,
-                style: fieldPlanBodyStrongTextStyle.copyWith(
-                  color: const Color(0xffddc590),
-                  fontSize: 11,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _FieldPlanTitleBanner extends StatelessWidget {
-  const _FieldPlanTitleBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: const _FieldPlanPaperBorderPainter(),
-      child: ClipPath(
-        clipper: const _FieldPlanTitleClipper(),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const ColoredBox(color: Color(0xffdfcfaa)),
-            Opacity(
-              opacity: 0.14,
-              child: Image.asset(
-                'assets/art/field_plan/shared/textures/paper-light.png',
-                fit: BoxFit.none,
-                repeat: ImageRepeat.repeat,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 14, 34, 12),
-              child: FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '★  KOLKHOZ',
-                      style: TextStyle(
-                        color: Color(0xffa82e21),
-                        fontFamily: fieldPlanDisplayFontFamily,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 68,
-                        height: 0.86,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'A COLLECTIVE CARD GAME',
-                      style: fieldPlanDisplayTextStyle.copyWith(
-                        color: const Color(0xff20221d),
-                        fontSize: 18,
-                        letterSpacing: 3.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldPlanMenuButton extends StatelessWidget {
-  const _FieldPlanMenuButton({
-    required this.label,
-    required this.pictogram,
-    required this.selected,
-    required this.height,
-    required this.onPressed,
-    this.enabled = true,
-    super.key,
-  });
-
-  final String label;
-  final String pictogram;
-  final bool selected;
-  final bool enabled;
-  final double height;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final fill = selected ? const Color(0xffaa3022) : const Color(0xffddcda5);
-    final ink = selected ? const Color(0xfff0dfb7) : const Color(0xff20221d);
-    final clipper = _FieldPlanButtonClipper(pointed: selected);
-    final content = ClipPath(
-      clipper: clipper,
-      child: Material(
-        color: fill,
-        child: InkWell(
-          onTap: enabled ? onPressed : null,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              height * 0.27,
-              height * 0.12,
-              selected ? height * 0.55 : height * 0.28,
-              height * 0.12,
-            ),
-            child: Row(
-              children: [
-                Image.asset(
-                  pictogram,
-                  width: height * 0.56,
-                  height: height * 0.56,
-                  color: ink,
-                  colorBlendMode: BlendMode.srcIn,
-                  filterQuality: FilterQuality.medium,
-                  errorBuilder: (_, _, _) =>
-                      Icon(Icons.star, size: height * 0.48, color: ink),
-                ),
-                SizedBox(width: height * 0.2),
-                Expanded(
-                  child: FittedBox(
-                    alignment: Alignment.centerLeft,
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label.toUpperCase(),
-                      maxLines: 1,
-                      style: fieldPlanDisplayTextStyle.copyWith(
-                        color: ink,
-                        fontSize: height * 0.48,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    return Semantics(
-      button: true,
-      selected: selected,
-      enabled: enabled,
-      label: label,
-      child: Opacity(
-        opacity: enabled ? 1 : 0.5,
-        child: SizedBox(
-          height: height,
-          child: CustomPaint(
-            painter: _FieldPlanButtonBorderPainter(
-              pointed: selected,
-              shadow: true,
-            ),
-            child: content,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldPlanUtilityStrip extends StatelessWidget {
-  const _FieldPlanUtilityStrip({
-    required this.language,
-    required this.appearance,
-    required this.compact,
-    required this.profileSelected,
-    required this.settingsSelected,
-    required this.cloudConfigured,
-    required this.cloudReady,
-    required this.cloudSignedIn,
-    required this.cloudAuthBusy,
-    required this.badgeCount,
-    required this.onProfilePressed,
-    required this.onSettingsPressed,
-    required this.onLanguageToggle,
-    required this.onAppearanceToggle,
-  });
-
-  final KolkhozLanguage language;
-  final KolkhozAppearance appearance;
-  final bool compact;
-  final bool profileSelected;
-  final bool settingsSelected;
-  final bool cloudConfigured;
-  final bool cloudReady;
-  final bool cloudSignedIn;
-  final bool cloudAuthBusy;
-  final int badgeCount;
-  final VoidCallback? onProfilePressed;
-  final VoidCallback? onSettingsPressed;
-  final VoidCallback onLanguageToggle;
-  final VoidCallback onAppearanceToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    if (compact) {
-      return Container(
-        height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      backgroundColor: tokens.colors.background,
+      body: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xee20221d),
-          border: Border.all(color: const Color(0xffc8ae72), width: 2),
-          boxShadow: const [
-            BoxShadow(color: Color(0xaa11120f), offset: Offset(4, 5)),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _FieldPlanCompactUtilityButton(
-              label: KolkhozSettingsTab.profile.title(language),
-              icon: Icons.person,
-              badgeCount: badgeCount,
-              selected: profileSelected,
-              onPressed: onProfilePressed,
-            ),
-            _FieldPlanCompactUtilityButton(
-              key: const Key('field-plan-menu-language'),
-              label: language.strings.lobbyLanguage,
-              asset: fieldPlanLanguagePictogram.fieldPlanPath,
-              onPressed: onLanguageToggle,
-            ),
-            _FieldPlanCompactUtilityButton(
-              key: const Key('field-plan-menu-theme'),
-              label: language.strings.lobbyTheme,
-              asset: fieldPlanAppearancePictogram.fieldPlanPath,
-              onPressed: onAppearanceToggle,
-            ),
-            _FieldPlanCompactUtilityButton(
-              key: const Key('field-plan-menu-settings'),
-              label: language.strings.lobbySettings,
-              icon: Icons.settings,
-              selected: settingsSelected,
-              onPressed: onSettingsPressed,
-            ),
-          ],
-        ),
-      );
-    }
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xee20221d),
-        border: Border.all(color: const Color(0xffc8ae72), width: 2),
-        boxShadow: const [
-          BoxShadow(color: Color(0xaa11120f), offset: Offset(5, 6)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _FieldPlanUtilityButton(
-              label: KolkhozSettingsTab.profile.title(language),
-              icon: Icons.person,
-              selected: profileSelected,
-              badgeCount: badgeCount,
-              onPressed: onProfilePressed,
-            ),
-          ),
-          _FieldPlanUtilityIconButton(
-            key: const Key('field-plan-menu-language'),
-            label: language.strings.lobbyLanguage,
-            tooltip: language.toggleTitle,
-            asset: fieldPlanLanguagePictogram.fieldPlanPath,
-            onPressed: onLanguageToggle,
-          ),
-          _FieldPlanUtilityIconButton(
-            key: const Key('field-plan-menu-theme'),
-            label: language.strings.lobbyTheme,
-            tooltip: appearance.toggleTitle(language),
-            asset: fieldPlanAppearancePictogram.fieldPlanPath,
-            onPressed: onAppearanceToggle,
-          ),
-          Expanded(
-            child: _FieldPlanUtilityButton(
-              key: const Key('field-plan-menu-settings'),
-              label: language.strings.lobbySettings,
-              icon: Icons.settings,
-              selected: settingsSelected,
-              onPressed: onSettingsPressed,
-            ),
-          ),
-          _FieldPlanCloudStatus(
-            configured: cloudConfigured,
-            ready: cloudReady,
-            signedIn: cloudSignedIn,
-            busy: cloudAuthBusy,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FieldPlanCompactUtilityButton extends StatelessWidget {
-  const _FieldPlanCompactUtilityButton({
-    super.key,
-    required this.label,
-    required this.onPressed,
-    this.icon,
-    this.asset,
-    this.selected = false,
-    this.badgeCount = 0,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-  final IconData? icon;
-  final String? asset;
-  final bool selected;
-  final int badgeCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? const Color(0xfff0dfb7) : const Color(0xffd2bb83);
-    final visual = icon != null
-        ? Icon(icon, size: 22, color: color)
-        : Image.asset(
-            asset!,
-            width: 22,
-            height: 22,
-            color: color,
-            colorBlendMode: BlendMode.srcIn,
-          );
-    return Tooltip(
-      message: label,
-      child: Semantics(
-        container: true,
-        button: true,
-        selected: selected,
-        enabled: onPressed != null,
-        label: label,
-        child: ExcludeSemantics(
-          child: InkWell(
-            onTap: onPressed,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  visual,
-                  if (badgeCount > 0)
-                    Positioned(
-                      right: -7,
-                      top: -6,
-                      child: _FieldPlanBadge(count: badgeCount),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldPlanUtilityButton extends StatelessWidget {
-  const _FieldPlanUtilityButton({
-    super.key,
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onPressed,
-    this.badgeCount = 0,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback? onPressed;
-  final int badgeCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? const Color(0xfff0dfb7) : const Color(0xffd2bb83);
-    return Semantics(
-      container: true,
-      button: true,
-      selected: selected,
-      enabled: onPressed != null,
-      label: label,
-      child: ExcludeSemantics(
-        child: InkWell(
-          onTap: onPressed,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(icon, size: 22, color: color),
-                  if (badgeCount > 0)
-                    Positioned(
-                      right: -7,
-                      top: -6,
-                      child: _FieldPlanBadge(count: badgeCount),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 5),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label.toUpperCase(),
-                    maxLines: 1,
-                    style: fieldPlanDisplayTextStyle.copyWith(
-                      color: color,
-                      fontSize: 14,
-                      letterSpacing: 0.9,
-                    ),
-                  ),
-                ),
-              ),
+          gradient: LinearGradient(
+            colors: [
+              tokens.colors.background,
+              tokens.colors.iron,
+              tokens.colors.black,
             ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
-      ),
-    );
-  }
-}
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final usableWidth = constraints.maxWidth;
+              final usableHeight = constraints.maxHeight.isFinite
+                  ? constraints.maxHeight
+                  : 640.0;
+              final shortLandscape =
+                  usableWidth > usableHeight && usableHeight < 430;
+              final wide = usableWidth >= 560 && usableWidth > usableHeight;
+              final compactRail = wide && shortLandscape;
+              const outerPadding = 10.0;
+              final contentWidth = (usableWidth - outerPadding * 2).clamp(
+                260.0,
+                double.infinity,
+              );
+              final contentHeight = (usableHeight - outerPadding * 2).clamp(
+                300.0,
+                double.infinity,
+              );
+              final spacing = (usableHeight * 0.018).clamp(8.0, 12.0);
+              final titleWidth = compactRail
+                  ? (contentWidth * 0.24).clamp(148.0, 168.0)
+                  : wide
+                  ? (contentWidth * 0.34).clamp(210.0, 292.0)
+                  : contentWidth;
+              final panelWidth = wide
+                  ? (contentWidth - titleWidth - spacing).clamp(
+                      300.0,
+                      double.infinity,
+                    )
+                  : contentWidth;
+              final titleHeight = wide
+                  ? contentHeight
+                  : (usableHeight * 0.40).clamp(300.0, 326.0);
+              final panelHeight = wide
+                  ? contentHeight
+                  : (usableHeight - titleHeight - spacing - 20).clamp(
+                      320.0,
+                      double.infinity,
+                    );
 
-class _FieldPlanUtilityIconButton extends StatelessWidget {
-  const _FieldPlanUtilityIconButton({
-    super.key,
-    required this.label,
-    required this.tooltip,
-    required this.asset,
-    required this.onPressed,
-  });
+              final titleColumn = SizedBox(
+                width: titleWidth,
+                height: titleHeight,
+                child: _LobbyTitleColumn(
+                  tokens: tokens,
+                  language: language,
+                  appearance: appearance,
+                  compact: compactRail,
+                  showingRules: showingRules,
+                  showingOnline: showingOnline,
+                  showingProfile: showingProfile,
+                  demoMode: demoMode,
+                  cloudConfigured: cloudConfigured,
+                  cloudReady: cloudReady,
+                  cloudSignedIn: cloudSignedIn,
+                  cloudEmail: cloudEmail,
+                  cloudAuthBusy: cloudAuthBusy,
+                  comradeRequestCount: comradesSummary.incomingRequests.length,
+                  onOfflinePressed: onOfflinePressed,
+                  onOnlinePressed: onOnlinePressed,
+                  onProfilePressed: onProfilePressed,
+                  onSettingsPressed: onSettingsPressed,
+                  onRulesPressed: onRulesPressed,
+                  onLanguageToggle: onLanguageToggle,
+                  onAppearanceToggle: onAppearanceToggle,
+                ),
+              );
+              final panel = SizedBox(
+                width: panelWidth,
+                height: panelHeight,
+                child: _LobbyPanel(
+                  tokens: tokens,
+                  language: language,
+                  selectedPreset: selectedPreset,
+                  customVariants: customVariants,
+                  playerControllers: playerControllers,
+                  gameLobby: gameLobby,
+                  demoMode: demoMode,
+                  appearance: appearance,
+                  cardBack: cardBack,
+                  compactRail: compactRail,
+                  animationSpeed: animationSpeed,
+                  confirmNewGame: confirmNewGame,
+                  confirmMainMenu: confirmMainMenu,
+                  showInvalidTapHints: showInvalidTapHints,
+                  soundEnabled: soundEnabled,
+                  showingRules: showingRules,
+                  showingOnline: showingOnline,
+                  showingProfile: showingProfile,
+                  initialSettingsTab: initialSettingsTab,
+                  hostedInviteCode: hostedInviteCode,
+                  onlineSessionUpdate: onlineSessionUpdate,
+                  showHostedInviteCode: showHostedInviteCode,
+                  displayName: displayName,
+                  portraitAsset: portraitAsset,
+                  profileStats: profileStats,
+                  progression: progression,
+                  unlockedCardBacks: unlockedCardBacks,
+                  favoriteSetup: favoriteSetup,
+                  lastStartedSetup: lastStartedSetup,
+                  comradesSummary: comradesSummary,
+                  cloudConfigured: cloudConfigured,
+                  cloudReady: cloudReady,
+                  cloudSignedIn: cloudSignedIn,
+                  cloudEmail: cloudEmail,
+                  cloudAuthBusy: cloudAuthBusy,
+                  cloudAuthMessage: cloudAuthMessage,
+                  cloudAuthIsError: cloudAuthIsError,
+                  onTutorialPressed: onTutorialPressed,
+                  onStart: onStart,
+                  onHostOnline: onHostOnline,
+                  onHostOnlineSeries: onHostOnlineSeries,
+                  onInviteOnlineComrades: onInviteOnlineComrades,
+                  onJoinOnline: onJoinOnline,
+                  onWatchOnline: onWatchOnline,
+                  onRememberStartedSetup: onRememberStartedSetup,
+                  onMatchmakeOnline: onMatchmakeOnline,
+                  onKickOnlinePlayer: onKickOnlinePlayer,
+                  onEnterOnlineGame: onEnterOnlineGame,
+                  onSyncActiveSession: onSyncActiveSession,
+                  onCancelOnlineGame: onCancelOnlineGame,
+                  onPresetChanged: onPresetChanged,
+                  onCustomVariantsChanged: onCustomVariantsChanged,
+                  onPlayerControllersChanged: onPlayerControllersChanged,
+                  onAnimationSpeedChanged: onAnimationSpeedChanged,
+                  onConfirmNewGameChanged: onConfirmNewGameChanged,
+                  onConfirmMainMenuChanged: onConfirmMainMenuChanged,
+                  onShowInvalidTapHintsChanged: onShowInvalidTapHintsChanged,
+                  onSoundEnabledChanged: onSoundEnabledChanged,
+                  onLanguageToggle: onLanguageToggle,
+                  onAppearanceToggle: onAppearanceToggle,
+                  onCardBackChanged: onCardBackChanged,
+                  onDisplayNameChanged: onDisplayNameChanged,
+                  onPortraitChanged: onPortraitChanged,
+                  onSaveFavoriteSetup: onSaveFavoriteSetup,
+                  onUseFavoriteSetup: onUseFavoriteSetup,
+                  onCloudSignIn: onCloudSignIn,
+                  onCloudSignUp: onCloudSignUp,
+                  onCloudResetPassword: onCloudResetPassword,
+                  onCloudDeleteAccount: onCloudDeleteAccount,
+                  onComradeRequestToUser: onComradeRequestToUser,
+                  menuRemoteConnection: menuRemoteConnection,
+                  mainMenuController: mainMenuController,
+                  profileController: profileController,
+                  onStartDailyChallenge: onStartDailyChallenge,
+                ),
+              );
 
-  final String label;
-  final String tooltip;
-  final String asset;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Semantics(
-        button: true,
-        label: label,
-        child: InkWell(
-          onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 7),
-            child: Image.asset(
-              asset,
-              width: 23,
-              height: 23,
-              color: const Color(0xffd2bb83),
-              colorBlendMode: BlendMode.srcIn,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldPlanCloudStatus extends StatelessWidget {
-  const _FieldPlanCloudStatus({
-    required this.configured,
-    required this.ready,
-    required this.signedIn,
-    required this.busy,
-  });
-
-  final bool configured;
-  final bool ready;
-  final bool signedIn;
-  final bool busy;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = !configured
-        ? const Color(0xffbc4a32)
-        : busy || !ready
-        ? const Color(0xffd0a74f)
-        : signedIn
-        ? const Color(0xff8ca163)
-        : const Color(0xff7f7767);
-    return Padding(
-      padding: const EdgeInsets.only(right: 3),
-      child: Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xffe2ce9a)),
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldPlanProfilePlaque extends StatelessWidget {
-  const _FieldPlanProfilePlaque({
-    required this.displayName,
-    required this.portraitAsset,
-    required this.cloudSignedIn,
-    required this.badgeCount,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final String displayName;
-  final String portraitAsset;
-  final bool cloudSignedIn;
-  final int badgeCount;
-  final bool selected;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      enabled: onPressed != null,
-      label: KolkhozSettingsTab.profile.title(
-        Localizations.localeOf(context).languageCode == 'ru'
-            ? KolkhozLanguage.ru
-            : KolkhozLanguage.en,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: const Key('field-plan-profile-plaque'),
-          onTap: onPressed,
-          child: Container(
-            width: 340,
-            height: 76,
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: const Color(0xf221231f),
-              border: Border.all(
-                color: selected
-                    ? const Color(0xffc44a30)
-                    : const Color(0xffc8ae72),
-                width: 3,
-              ),
-              boxShadow: const [
-                BoxShadow(color: Color(0xaa11120f), offset: Offset(5, 6)),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: const Color(0xffd9c797),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xffc23b29),
-                      width: 4,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      _fieldPlanPortraitPath(portraitAsset),
-                      fit: BoxFit.cover,
-                      alignment: Alignment.topCenter,
-                    ),
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(outerPadding),
+                child: Align(
+                  alignment: wide ? Alignment.topLeft : Alignment.topCenter,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (wide)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            titleColumn,
+                            SizedBox(width: spacing),
+                            panel,
+                          ],
+                        )
+                      else
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            titleColumn,
+                            SizedBox(height: spacing),
+                            panel,
+                          ],
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'COMRADE ${displayName.toUpperCase()}',
-                      maxLines: 1,
-                      style: fieldPlanDisplayTextStyle.copyWith(
-                        color: const Color(0xffead7a6),
-                        fontSize: 25,
-                        letterSpacing: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 7),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(
-                      cloudSignedIn ? Icons.star : Icons.star_border,
-                      color: const Color(0xffb43827),
-                      size: 26,
-                    ),
-                    if (badgeCount > 0)
-                      Positioned(
-                        right: -7,
-                        top: -6,
-                        child: _FieldPlanBadge(count: badgeCount),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -1358,141 +533,6 @@ class _FieldPlanProfilePlaque extends StatelessWidget {
   }
 }
 
-class _FieldPlanBadge extends StatelessWidget {
-  const _FieldPlanBadge({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minWidth: 17),
-      height: 17,
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xffb43827),
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xffead7a6)),
-      ),
-      child: Center(
-        child: Text(
-          count > 9 ? '9+' : '$count',
-          style: fieldPlanDisplayTextStyle.copyWith(
-            color: const Color(0xfff0dfb7),
-            fontSize: 10,
-            height: 1,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-String _fieldPlanPortraitPath(String portraitAsset) {
-  return switch (portraitAsset) {
-    'worker1' || 'worker-forewoman' => fieldPlanPlayerForewoman.fieldPlanPath,
-    'worker2' || 'worker-mechanic' => fieldPlanPlayerMechanic.fieldPlanPath,
-    'worker3' || 'worker-agronomist' => fieldPlanPlayerAgronomist.fieldPlanPath,
-    'worker4' || 'worker-beekeeper' => fieldPlanPlayerBeekeeper.fieldPlanPath,
-    _ => 'assets/ui/$portraitAsset.png',
-  };
-}
-
-class _FieldPlanButtonClipper extends CustomClipper<Path> {
-  const _FieldPlanButtonClipper({required this.pointed});
-
-  final bool pointed;
-
-  @override
-  Path getClip(Size size) {
-    if (!pointed) return Path()..addRect(Offset.zero & size);
-    final tip = math.min(size.width * 0.09, size.height * 0.5);
-    return Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width - tip, 0)
-      ..lineTo(size.width, size.height / 2)
-      ..lineTo(size.width - tip, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant _FieldPlanButtonClipper oldClipper) =>
-      pointed != oldClipper.pointed;
-}
-
-class _FieldPlanTitleClipper extends CustomClipper<Path> {
-  const _FieldPlanTitleClipper();
-
-  @override
-  Path getClip(Size size) => Path()
-    ..moveTo(0, 0)
-    ..lineTo(size.width, 0)
-    ..lineTo(size.width * 0.92, size.height)
-    ..lineTo(0, size.height)
-    ..close();
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-class _FieldPlanButtonBorderPainter extends CustomPainter {
-  const _FieldPlanButtonBorderPainter({
-    required this.pointed,
-    required this.shadow,
-  });
-
-  final bool pointed;
-  final bool shadow;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = _FieldPlanButtonClipper(pointed: pointed).getClip(size);
-    if (shadow) {
-      canvas.drawPath(
-        path.shift(const Offset(5, 6)),
-        Paint()..color = const Color(0xaa11120f),
-      );
-    }
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = const Color(0xff292820)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _FieldPlanButtonBorderPainter oldDelegate) =>
-      pointed != oldDelegate.pointed || shadow != oldDelegate.shadow;
-}
-
-class _FieldPlanPaperBorderPainter extends CustomPainter {
-  const _FieldPlanPaperBorderPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = _FieldPlanTitleClipper().getClip(size);
-    canvas.drawPath(
-      path.shift(const Offset(6, 7)),
-      Paint()..color = const Color(0xaa11120f),
-    );
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = const Color(0xff292820)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// Kept as a private rollback shell while the field-plan menu is being evaluated.
-// ignore: unused_element
 class _LobbyTitleColumn extends StatelessWidget {
   const _LobbyTitleColumn({
     required this.tokens,
