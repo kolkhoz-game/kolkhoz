@@ -15,7 +15,12 @@ const fieldPlanPlantedSunflowerPath =
 const fieldPlanPlantedSunflowerMipPath =
     'assets/art/field_plan/cards/planted/pip-sunflower-isometric-mip.png';
 const fieldPlanCardBackAssetPath =
-    'assets/art/field_plan/cards/backs/card-back-kolkhoz.png';
+    'assets/art/field_plan/cards/backs/card-back-kolkhoz-light-v2.png';
+const fieldPlanCardBackDarkAssetPath =
+    'assets/art/field_plan/cards/backs/card-back-kolkhoz-dark-v2.png';
+
+String fieldPlanCardBackAssetPathFor({required bool dark}) =>
+    dark ? fieldPlanCardBackDarkAssetPath : fieldPlanCardBackAssetPath;
 
 String fieldPlanCardFrameAssetPath({
   required String suit,
@@ -46,6 +51,16 @@ String? fieldPlanCardSuitAssetPath(String suit, {bool mip = false}) => mip
     ? fieldPlanCardSuitMipAssetPaths[suit]
     : fieldPlanCardSuitAssetPaths[suit];
 
+const fieldPlanCardAceAssetPaths = <String, String>{
+  'wheat': 'assets/art/field_plan/cards/aces/ace-wheat-wreath.png',
+  'sunflower': 'assets/art/field_plan/cards/aces/ace-sunflower-wreath.png',
+  'potato': 'assets/art/field_plan/cards/aces/ace-potato-wreath.png',
+  'beet': 'assets/art/field_plan/cards/aces/ace-beet-wreath.png',
+};
+
+String? fieldPlanCardAceAssetPath(String suit) =>
+    fieldPlanCardAceAssetPaths[suit];
+
 String? fieldPlanCardFaceAssetPath({
   required String suit,
   required String rank,
@@ -64,6 +79,7 @@ String? fieldPlanCardFaceAssetPath({
 
 const fieldPlanCardArtAssetPaths = <String>[
   fieldPlanCardBackAssetPath,
+  fieldPlanCardBackDarkAssetPath,
   'assets/art/field_plan/cards/frames/card-frame-wheat.png',
   'assets/art/field_plan/cards/frames/card-frame-sunflower.png',
   'assets/art/field_plan/cards/frames/card-frame-potato.png',
@@ -85,6 +101,10 @@ const fieldPlanCardArtAssetPaths = <String>[
   'assets/art/field_plan/cards/suits/mip/suit-sunflower.png',
   'assets/art/field_plan/cards/suits/mip/suit-potato.png',
   'assets/art/field_plan/cards/suits/mip/suit-beet.png',
+  'assets/art/field_plan/cards/aces/ace-wheat-wreath.png',
+  'assets/art/field_plan/cards/aces/ace-sunflower-wreath.png',
+  'assets/art/field_plan/cards/aces/ace-potato-wreath.png',
+  'assets/art/field_plan/cards/aces/ace-beet-wreath.png',
   'assets/art/field_plan/cards/faces/face-jack-wheat.png',
   'assets/art/field_plan/cards/faces/face-jack-sunflower.png',
   'assets/art/field_plan/cards/faces/face-jack-potato.png',

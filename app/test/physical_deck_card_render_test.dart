@@ -49,7 +49,7 @@ void main() {
     });
 
     final cards = [
-      _card('wheat-7', 'wheat', 7, '7'),
+      _card('wheat-1', 'wheat', 1, 'A'),
       _card('beet-11', 'beet', 11, 'J'),
       _card('beet-12', 'beet', 12, 'Q', nomenclature: true),
       _card('sunflower-13', 'sunflower', 13, 'K'),

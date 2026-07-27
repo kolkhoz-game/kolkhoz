@@ -137,12 +137,28 @@ void main() {
       fieldPlanCardBackAssetPath,
     );
     expect(
+      KolkhozCardBack.classic.displayedAssetPathFor(dark: false),
+      fieldPlanCardBackAssetPath,
+    );
+    expect(
+      KolkhozCardBack.classic.displayedAssetPathFor(dark: true),
+      fieldPlanCardBackDarkAssetPath,
+    );
+    expect(
       fieldPlanCardSuitAssetPath('beet'),
       'assets/art/field_plan/cards/suits/suit-beet.png',
     );
     expect(
       fieldPlanCardSuitAssetPath('beet', mip: true),
       'assets/art/field_plan/cards/suits/mip/suit-beet.png',
+    );
+    expect(
+      fieldPlanCardAceAssetPath('wheat'),
+      'assets/art/field_plan/cards/aces/ace-wheat-wreath.png',
+    );
+    expect(
+      fieldPlanCardAceAssetPath('beet'),
+      'assets/art/field_plan/cards/aces/ace-beet-wreath.png',
     );
     expect(
       fieldPlanCardFaceAssetPath(

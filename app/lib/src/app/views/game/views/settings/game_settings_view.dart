@@ -943,7 +943,9 @@ class OptionsCardBackButton extends StatelessWidget {
                       fit: StackFit.expand,
                       children: [
                         Image.asset(
-                          cardBack.displayedAssetPath,
+                          cardBack.displayedAssetPathFor(
+                            dark: !tokens.usesLightAppearance,
+                          ),
                           fit: BoxFit.cover,
                           filterQuality: FilterQuality.medium,
                           color: unlocked

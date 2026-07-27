@@ -495,6 +495,10 @@ enum KolkhozCardBack {
 
   String get displayedAssetPath => fieldPlanCardBackAssetPath;
   String get displayedIconAssetPath => fieldPlanCardBackAssetPath;
+  String displayedAssetPathFor({required bool dark}) =>
+      fieldPlanCardBackAssetPathFor(dark: dark);
+  String displayedIconAssetPathFor({required bool dark}) =>
+      fieldPlanCardBackAssetPathFor(dark: dark);
 
   static KolkhozCardBack fromStoredValue(String? value) {
     return KolkhozCardBack.values.firstWhere(

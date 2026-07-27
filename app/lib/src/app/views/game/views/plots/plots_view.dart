@@ -1492,7 +1492,7 @@ class CardBackMini extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(cardViewCornerRadius),
           child: Image.asset(
-            cardBack.displayedAssetPath,
+            cardBack.displayedAssetPathFor(dark: !tokens.usesLightAppearance),
             fit: BoxFit.cover,
             filterQuality: FilterQuality.medium,
             errorBuilder: (_, _, _) => ColoredBox(color: tokens.colors.iron),

@@ -1,6 +1,7 @@
 const CARD = { width: 1644, height: 2244 };
 const STORAGE_KEY = "kolkhoz-card-layout-editor-v1";
 const DARK_PREVIEW_STORAGE_KEY = "kolkhoz-card-layout-editor-dark-preview";
+const VIEW_PREVIEW_STORAGE_KEY = "kolkhoz-card-layout-editor-view-preview";
 const FLUTTER_SYNC_URL = "/api/card-layout";
 const FLUTTER_SYNC_INTERVAL_MS = 30_000;
 const RANK_METRIC_SIZE = 1000;
@@ -10,10 +11,30 @@ const rankMetricCanvas = document.createElement("canvas");
 const rankMetricContext = rankMetricCanvas.getContext("2d");
 
 const suitDefinitions = [
-  { id: "wheat", label: "Wheat", pipHref: "../pips/wheat/suit-wheat-poster-c-v1.png" },
-  { id: "sunflower", label: "Sunflower", pipHref: "../pips/sunflower/suit-sunflower-poster-v1.png" },
-  { id: "potato", label: "Potato", pipHref: "../pips/potato/suit-potato-poster-v1.png" },
-  { id: "beet", label: "Beet", pipHref: "../pips/beet/suit-beet-poster-v1.png" }
+  {
+    id: "wheat",
+    label: "Wheat",
+    pipHref: "../pips/wheat/suit-wheat-poster-c-v1.png",
+    aceHref: "../aces/candidates/ace-wheat-wreath-poster-v1.png"
+  },
+  {
+    id: "sunflower",
+    label: "Sunflower",
+    pipHref: "../pips/sunflower/suit-sunflower-poster-v1.png",
+    aceHref: "../aces/candidates/ace-sunflower-wreath-poster-v1.png"
+  },
+  {
+    id: "potato",
+    label: "Potato",
+    pipHref: "../pips/potato/suit-potato-poster-v1.png",
+    aceHref: "../aces/candidates/ace-potato-wreath-poster-v1.png"
+  },
+  {
+    id: "beet",
+    label: "Beet",
+    pipHref: "../pips/beet/suit-beet-poster-v1.png",
+    aceHref: "../aces/candidates/ace-beet-wreath-poster-v1.png"
+  }
 ];
 
 const artworkPlateHrefs = {
@@ -24,6 +45,10 @@ const artworkPlateHrefs = {
 };
 const trumpArtworkHref = "../proofs/generated-borders/trump-inset-tile-v2-flat-red.png";
 const trumpArtworkRotatedHref = "../proofs/generated-borders/trump-inset-tile-v2-flat-red-rotated.png";
+const cardBackHrefs = {
+  light: "../backs/exports/card-back-kolkhoz-light-v2-mpc.png",
+  dark: "../backs/exports/card-back-kolkhoz-dark-v2-mpc.png"
+};
 
 const faceRankDefinitions = [
   { key: "jack", label: "Jack", rank: "В", value: 11, caption: "Валет" },
@@ -101,6 +126,8 @@ const ordinaryCardDefinitions = suitDefinitions.flatMap(suit => [
     pickerLabel: String(index + 1),
     rank: index === 0 ? "Т" : String(index + 1),
     value: index + 1,
+    cornerValue: index === 0 ? "1" : undefined,
+    aceHref: index === 0 ? suit.aceHref : undefined,
     kind: "number",
     suitHref: suit.pipHref
   })),
@@ -126,7 +153,7 @@ const cardDefinitions = [
   {
     id: "saboteur", suit: "all", rankKey: "saboteur", label: "Saboteur · S / 0", pickerLabel: "Saboteur", rank: "S", value: 0, cornerValue: "0", kind: "face",
     suitHref: "../pips/all-suits/suit-all-poster-v1.png",
-    rankHref: "../ranks/saboteur/rank-saboteur-star-v1.png",
+    rankHref: "../../../app/assets/art/field_plan/cards/ranks/rank-saboteur-star.png",
     rankAspectRatio: 1047 / 968,
     faceHref: "../faces/candidates/face-saboteur-poster-v2-palette-normalized.png",
     faceLabel: "Saboteur portrait",
@@ -136,6 +163,7 @@ const cardDefinitions = [
 
 const cardById = Object.fromEntries(cardDefinitions.map(card => [card.id, card]));
 const clone = value => JSON.parse(JSON.stringify(value));
+const geometryKeys = ["x", "y", "width", "height", "visualHeight", "rotation"];
 const cornerIds = [
   "topRank", "topValue", "topSuit", "bottomRank", "bottomValue", "bottomSuit",
   "topTrumpInset", "bottomTrumpInset"
@@ -208,17 +236,37 @@ function numberDefaults(card) {
   if (card.value === 7) return sevenDefaults(card);
   const corners = cornerDefaults(card);
   const size = card.value <= 3 ? 420 : card.value >= 9 ? 280 : 330;
-  const pieces = { topRank: corners.topRank, topSuit: corners.topSuit };
-  pipPositions[card.value].forEach(([nx, ny], index) => {
-    const centerX = 458 + nx * 728;
-    const centerY = 300 + ny * 1600;
-    pieces[`pip${index + 1}`] = {
-      type: "image", label: `Pip ${index + 1}`, href: card.suitHref,
-      x: centerX - size / 2, y: centerY - size / 2,
-      width: size, height: size, rotation: centerY > CARD.height / 2 ? 180 : 0
+  const pieces = { topRank: corners.topRank };
+  if (card.value === 1) {
+    pieces.topValue = {
+      type: "rank", textSource: "value", label: "Top numerical value", text: card.cornerValue,
+      x: 490, y: 270, visualHeight: 90, rotation: 0
     };
-  });
+  }
+  pieces.topSuit = corners.topSuit;
+  if (card.value === 1 && card.aceHref) {
+    pieces.centralAce = {
+      type: "image", label: "Ace centerpiece", href: card.aceHref,
+      x: 372, y: 672, width: 900, height: 900, rotation: 0
+    };
+  } else {
+    pipPositions[card.value].forEach(([nx, ny], index) => {
+      const centerX = 458 + nx * 728;
+      const centerY = 300 + ny * 1600;
+      pieces[`pip${index + 1}`] = {
+        type: "image", label: `Pip ${index + 1}`, href: card.suitHref,
+        x: centerX - size / 2, y: centerY - size / 2,
+        width: size, height: size, rotation: centerY > CARD.height / 2 ? 180 : 0
+      };
+    });
+  }
   pieces.bottomRank = corners.bottomRank;
+  if (card.value === 1) {
+    pieces.bottomValue = {
+      type: "rank", textSource: "value", label: "Bottom numerical value", text: card.cornerValue,
+      x: 1154, y: 1974, visualHeight: 90, rotation: 180
+    };
+  }
   pieces.bottomSuit = corners.bottomSuit;
   return pieces;
 }
@@ -274,6 +322,7 @@ let currentCardId = "wheat-7";
 let currentSuitId = "wheat";
 let currentInsetMode = "suit";
 let currentNomenklatura = false;
+let currentViewMode = "front";
 let layouts = {};
 let pieces = defaultsFor(currentCardId);
 let sharedCorners = null;
@@ -290,14 +339,24 @@ const svg = document.querySelector("#card");
 const piecesLayer = document.querySelector("#pieces");
 const upperInsetArtwork = document.querySelector("#upperInsetArtwork");
 const lowerInsetArtwork = document.querySelector("#lowerInsetArtwork");
+const cardBackArtwork = document.querySelector("#cardBackArtwork");
 const list = document.querySelector("#componentList");
 const cardPicker = document.querySelector("#cardPicker");
 const suitPicker = document.querySelector("#suitPicker");
+const viewPicker = document.querySelector("#viewPicker");
 const trumpInset = document.querySelector("#trumpInset");
 const nomenklaturaToggle = document.querySelector("#nomenklatura");
+const darkCardToggle = document.querySelector("#darkCard");
+const frontEditorControls = document.querySelector("#frontEditorControls");
+const frontEditorHelp = document.querySelector("#frontEditorHelp");
+const cardBackInspector = document.querySelector("#cardBackInspector");
+const sidebarTitle = document.querySelector("#sidebarTitle");
+const sidebarHelp = document.querySelector("#sidebarHelp");
+const frontToolbarControls = [...document.querySelectorAll(".front-toolbar-control")];
 const fields = {
   x: document.querySelector("#fieldX"), y: document.querySelector("#fieldY"),
   width: document.querySelector("#fieldWidth"), height: document.querySelector("#fieldHeight"),
+  scale: document.querySelector("#fieldScale"),
   rotation: document.querySelector("#fieldRotation"), visualHeight: document.querySelector("#fieldFontSize")
 };
 
@@ -375,6 +434,39 @@ function applySharedCorners(target) {
   return target;
 }
 
+function synchronizeRankGeometry(cardId, sourcePieces) {
+  const card = cardById[cardId];
+  if (!card || card.suit === "all") return;
+  for (const suit of suitDefinitions) {
+    const targetId = `${suit.id}-${card.rankKey}`;
+    if (targetId === cardId) continue;
+    const target = clone(layouts[targetId] || defaultsFor(targetId));
+    for (const [pieceId, source] of Object.entries(sourcePieces)) {
+      const destination = target[pieceId];
+      if (!destination || destination.type !== source.type) continue;
+      for (const key of geometryKeys) {
+        if (source[key] !== undefined) destination[key] = source[key];
+      }
+    }
+    layouts[targetId] = target;
+  }
+}
+
+function synchronizeAllSuitLayouts() {
+  const currentCard = cardById[currentCardId];
+  for (const card of ordinaryCardDefinitions.filter(card => card.suit === "wheat")) {
+    const sourceId = currentCard?.suit !== "all" && currentCard?.rankKey === card.rankKey
+      ? currentCardId
+      : card.id;
+    synchronizeRankGeometry(sourceId, layouts[sourceId] || defaultsFor(sourceId));
+  }
+}
+
+function storeCurrentLayout() {
+  layouts[currentCardId] = clone(pieces);
+  synchronizeRankGeometry(currentCardId, layouts[currentCardId]);
+}
+
 function captureSharedCorners() {
   sharedCorners = { ...sharedCorners, ...extractSharedCorners(pieces) };
 }
@@ -387,9 +479,8 @@ function ensureSharedFaceValues() {
 }
 
 function load() {
-  const darkCard = document.querySelector("#darkCard");
-  darkCard.checked = localStorage.getItem(DARK_PREVIEW_STORAGE_KEY) === "true";
-  svg.classList.toggle("dark-card", darkCard.checked);
+  darkCardToggle.checked = localStorage.getItem(DARK_PREVIEW_STORAGE_KEY) === "true";
+  currentViewMode = localStorage.getItem(VIEW_PREVIEW_STORAGE_KEY) === "back" ? "back" : "front";
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     loadedStorageVersion = saved?.version || 1;
@@ -419,9 +510,33 @@ function load() {
   if (loadedCard?.suit !== "all") currentSuitId = loadedCard.suit;
   if (!sharedCorners) sharedCorners = extractSharedCorners(defaultsFor("wheat-7"));
   ensureSharedFaceValues();
+  synchronizeAllSuitLayouts();
   pieces = applySharedCorners(clone(layouts[currentCardId] || defaultsFor(currentCardId)));
+  applyPreviewMode();
   syncPickers();
   mirrorCorners();
+}
+
+function applyPreviewMode() {
+  const showingBack = currentViewMode === "back";
+  svg.classList.toggle("back-view", showingBack);
+  svg.classList.toggle("dark-card", darkCardToggle.checked);
+  viewPicker.value = currentViewMode;
+  cardBackArtwork.setAttribute("href", darkCardToggle.checked ? cardBackHrefs.dark : cardBackHrefs.light);
+  for (const control of frontToolbarControls) control.hidden = showingBack;
+  frontEditorControls.hidden = showingBack;
+  frontEditorHelp.hidden = showingBack;
+  cardBackInspector.hidden = !showingBack;
+  sidebarTitle.textContent = showingBack ? "Card back proof" : "Position pieces";
+  sidebarHelp.textContent = showingBack
+    ? `${darkCardToggle.checked ? "Night" : "Day"} back · production guides`
+    : "Drag directly on the card or enter exact production coordinates. Every rank is fitted into the same visible-height box, so its X/Y position and top/bottom edges stay consistent between cards. Orange is selected; red is the trim line; blue is the conservative safe area.";
+  svg.setAttribute(
+    "aria-label",
+    showingBack
+      ? `${darkCardToggle.checked ? "Night" : "Day"} card back with production guides`
+      : `Editable ${cardById[currentCardId].label} card`
+  );
 }
 
 function rankFontFamily(text) {
@@ -539,6 +654,73 @@ function imageSelectionBox(piece) {
   };
 }
 
+function updateCenterGuides() {
+  const piece = pieces[selectedId];
+  if (!piece) {
+    svg.classList.remove("centered-x", "centered-y");
+    return;
+  }
+  const center = isCenteredHeightPiece(piece)
+    ? { x: piece.x, y: piece.y }
+    : (() => {
+        const box = imageSelectionBox(piece);
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      })();
+  const tolerance = 3;
+  svg.classList.toggle("centered-x", Math.abs(center.x - CARD.width / 2) <= tolerance);
+  svg.classList.toggle("centered-y", Math.abs(center.y - CARD.height / 2) <= tolerance);
+}
+
+function pieceVisualCenter(piece) {
+  if (isCenteredHeightPiece(piece)) return { x: piece.x, y: piece.y };
+  const box = imageSelectionBox(piece);
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+function updateCornerAlignmentGuides() {
+  const topCenter = pieces.topRank ? pieceVisualCenter(pieces.topRank) : null;
+  const bottomCenter = pieces.bottomRank ? pieceVisualCenter(pieces.bottomRank) : null;
+  const reach = 340;
+  const topVertical = document.querySelector("#topCornerVerticalGuide");
+  const topHorizontal = document.querySelector("#topCornerHorizontalGuide");
+  const bottomVertical = document.querySelector("#bottomCornerVerticalGuide");
+  const bottomHorizontal = document.querySelector("#bottomCornerHorizontalGuide");
+  topVertical.setAttribute(
+    "d",
+    topCenter ? `M${topCenter.x} ${topCenter.y} V${Math.min(2172, topCenter.y + reach)}` : ""
+  );
+  topHorizontal.setAttribute(
+    "d",
+    topCenter ? `M${topCenter.x} ${topCenter.y} H${Math.min(1572, topCenter.x + reach)}` : ""
+  );
+  bottomVertical.setAttribute(
+    "d",
+    bottomCenter ? `M${bottomCenter.x} ${bottomCenter.y} V${Math.max(72, bottomCenter.y - reach)}` : ""
+  );
+  bottomHorizontal.setAttribute(
+    "d",
+    bottomCenter ? `M${bottomCenter.x} ${bottomCenter.y} H${Math.max(72, bottomCenter.x - reach)}` : ""
+  );
+
+  for (const guide of [topVertical, topHorizontal, bottomVertical, bottomHorizontal]) {
+    guide.classList.remove("aligned");
+  }
+  const selected = pieces[selectedId];
+  const referenceCenter = ["topValue", "topSuit"].includes(selectedId)
+    ? topCenter
+    : ["bottomValue", "bottomSuit"].includes(selectedId)
+      ? bottomCenter
+      : null;
+  if (!selected || !referenceCenter) return;
+
+  const selectedCenter = pieceVisualCenter(selected);
+  const vertical = selectedId.startsWith("top") ? topVertical : bottomVertical;
+  const horizontal = selectedId.startsWith("top") ? topHorizontal : bottomHorizontal;
+  const tolerance = 3;
+  vertical.classList.toggle("aligned", Math.abs(selectedCenter.x - referenceCenter.x) <= tolerance);
+  horizontal.classList.toggle("aligned", Math.abs(selectedCenter.y - referenceCenter.y) <= tolerance);
+}
+
 function renderPieces() {
   mirrorCorners();
   captureSharedCorners();
@@ -576,7 +758,7 @@ function renderPieces() {
     upperInset.style.pointerEvents = "none";
     lowerInset.style.pointerEvents = "none";
   }
-  svg.setAttribute("aria-label", `Editable ${card.label} card`);
+  if (currentViewMode === "front") svg.setAttribute("aria-label", `Editable ${card.label} card`);
   piecesLayer.replaceChildren();
   for (const [id, piece] of Object.entries(pieces)) {
     if (piece.type === "inset" && currentInsetMode !== "trump") continue;
@@ -634,6 +816,8 @@ function renderPieces() {
     }));
     g.addEventListener("pointerdown", startDrag);
   }
+  updateCenterGuides();
+  updateCornerAlignmentGuides();
   updatePanel();
   scheduleSave();
 }
@@ -702,7 +886,7 @@ function buildList() {
 
 function switchCard(cardId) {
   captureSharedCorners();
-  layouts[currentCardId] = clone(pieces);
+  storeCurrentLayout();
   currentCardId = cardId;
   if (cardById[cardId].suit !== "all") currentSuitId = cardById[cardId].suit;
   pieces = applySharedCorners(clone(layouts[cardId] || defaultsFor(cardId)));
@@ -723,8 +907,13 @@ function updatePanel() {
   if (!piece) return;
   document.querySelector("#selectionTitle").textContent = piece.label;
   for (const key of ["x", "y", "width", "height", "rotation", "visualHeight"]) fields[key].value = piece[key] ?? "";
+  const defaultPiece = defaultsFor(currentCardId)[selectedId];
+  fields.scale.value = !isCenteredHeightPiece(piece) && validPieceNumber("width", defaultPiece?.width)
+    ? round(piece.width / defaultPiece.width * 100)
+    : "";
   document.querySelector("#widthLabel").hidden = isCenteredHeightPiece(piece);
   document.querySelector("#heightLabel").hidden = isCenteredHeightPiece(piece);
+  document.querySelector("#scaleLabel").hidden = isCenteredHeightPiece(piece);
   document.querySelector("#fontLabel").hidden = !isCenteredHeightPiece(piece);
   for (const button of list.querySelectorAll("button")) button.classList.toggle("active", button.dataset.id === selectedId);
   document.querySelector("#readout").textContent = JSON.stringify({ [selectedId]: exportPiece(selectedId) }, null, 2);
@@ -796,6 +985,10 @@ function editField(key, rawValue) {
     return;
   }
   const value = Number(rawValue);
+  if (key === "scale" && (!Number.isFinite(value) || value < 1)) {
+    updatePanel();
+    return;
+  }
   if (!validPieceNumber(key, value)) {
     updatePanel();
     return;
@@ -813,6 +1006,14 @@ function editField(key, rawValue) {
       if (key === "width") piece.height = value / aspectRatio;
       else piece.width = value * aspectRatio;
     }
+  } else if (key === "scale" && (piece.type === "image" || piece.type === "inset")) {
+    const defaultPiece = defaultsFor(currentCardId)[selectedId];
+    const centerX = piece.x + piece.width / 2;
+    const centerY = piece.y + piece.height / 2;
+    piece.width = round(defaultPiece.width * value / 100);
+    piece.height = round(defaultPiece.height * value / 100);
+    piece.x = round(centerX - piece.width / 2);
+    piece.y = round(centerY - piece.height / 2);
   } else {
     piece[key] = value;
   }
@@ -841,7 +1042,7 @@ function layoutPayload() {
 
 function allLayoutsPayload() {
   captureSharedCorners();
-  layouts[currentCardId] = clone(pieces);
+  storeCurrentLayout();
   const exportedLayouts = {};
   for (const card of cardDefinitions) {
     const layout = applySharedCorners(
@@ -904,7 +1105,7 @@ function scheduleSave() {
   document.querySelector("#saveStatus").textContent = "Saving…";
   saveTimer = setTimeout(() => {
     captureSharedCorners();
-    layouts[currentCardId] = clone(pieces);
+    storeCurrentLayout();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       version: 16,
       currentCardId,
@@ -993,10 +1194,15 @@ nomenklaturaToggle.addEventListener("change", () => {
   refreshVariantContent();
   renderPieces();
 });
-document.querySelector("#darkCard").addEventListener("change", event => {
+viewPicker.addEventListener("change", event => {
+  currentViewMode = event.currentTarget.value === "back" ? "back" : "front";
+  localStorage.setItem(VIEW_PREVIEW_STORAGE_KEY, currentViewMode);
+  applyPreviewMode();
+});
+darkCardToggle.addEventListener("change", event => {
   const enabled = event.currentTarget.checked;
-  svg.classList.toggle("dark-card", enabled);
   localStorage.setItem(DARK_PREVIEW_STORAGE_KEY, String(enabled));
+  applyPreviewMode();
 });
 document.querySelector("#mirrorCorners").addEventListener("change", () => { mirrorCorners(); renderPieces(); });
 document.querySelector("#toggleGuides").addEventListener("click", event => {

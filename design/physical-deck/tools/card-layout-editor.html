@@ -117,12 +117,36 @@
     #card .selection { pointer-events: none; fill: none; stroke: #e94225; stroke-width: 7; stroke-dasharray: 18 12; vector-effect: non-scaling-stroke; }
     #card .piece:not(.selected) .selection { display: none; }
     #card .guide { pointer-events: none; fill: none; vector-effect: non-scaling-stroke; }
+    #card .center-guide { transition: stroke 90ms ease, opacity 90ms ease, stroke-width 90ms ease, filter 90ms ease; }
+    #card.centered-x #verticalCenterGuide,
+    #card.centered-y #horizontalCenterGuide {
+      stroke: #f4c85a;
+      stroke-width: 4;
+      opacity: 1;
+      filter: drop-shadow(0 0 5px #f4c85a) drop-shadow(0 0 12px #e94225);
+    }
+    #card .corner-guide {
+      stroke: #ef8b45;
+      stroke-width: 1.5;
+      opacity: .72;
+      transition: stroke 90ms ease, opacity 90ms ease, filter 90ms ease;
+    }
+    #card .corner-guide.aligned {
+      stroke: #ffd06a;
+      opacity: 1;
+      filter: drop-shadow(0 0 4px #ffd06a) drop-shadow(0 0 9px #ef8b45);
+    }
     #card.guides-off .guide { display: none; }
     #card .card-paper { fill: #f6edcf; transition: fill 160ms ease; }
     #card .card-frame { stroke: #33434a; transition: stroke 160ms ease; }
     #card.dark-card .card-paper { fill: #171b1a; }
     #card.dark-card .card-frame { stroke: #f5d19a; }
     #card.dark-card .piece text { fill: #f5d19a; }
+    #card .card-back-artwork { display: none; }
+    #card.back-view .card-back-artwork { display: block; }
+    #card.back-view .front-only,
+    #card.back-view .center-guide,
+    #card.back-view .corner-guide { display: none; }
 
     .sidebar {
       position: relative;
@@ -169,6 +193,12 @@
       white-space: pre-wrap;
       word-break: break-word;
     }
+    .guide-legend { display: grid; gap: 10px; margin-top: 18px; }
+    .guide-legend-row { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+    .guide-swatch { height: 0; border-top: 2px dashed; }
+    .guide-swatch.trim { border-color: #e94225; }
+    .guide-swatch.safe { border-color: #2c7f9e; }
+    .guide-swatch.bleed { border-color: #edf1e7; border-top-style: solid; }
     .kbd { display: inline-block; border: 1px solid #4a5956; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: #d8dfd5; background: #293331; }
 
     @media (max-width: 850px) {
@@ -184,13 +214,19 @@
     <section class="stage-column">
       <div class="toolbar">
         <div class="title">Card Layout Editor</div>
-        <label class="card-picker">Suit <select id="suitPicker" aria-label="Suit"></select></label>
-        <label class="card-picker">Card <select id="cardPicker" aria-label="Card"></select></label>
-        <label class="check toolbar-check">
+        <label class="card-picker">View
+          <select id="viewPicker" aria-label="Card view">
+            <option value="front">Front</option>
+            <option value="back">Card back</option>
+          </select>
+        </label>
+        <label class="card-picker front-toolbar-control">Suit <select id="suitPicker" aria-label="Suit"></select></label>
+        <label class="card-picker front-toolbar-control">Card <select id="cardPicker" aria-label="Card"></select></label>
+        <label class="check toolbar-check front-toolbar-control">
           <input id="trumpInset" type="checkbox" aria-label="Trump inset">
           Trump
         </label>
-        <label class="check toolbar-check">
+        <label class="check toolbar-check front-toolbar-control">
           <input id="nomenklatura" type="checkbox" aria-label="Nomenklatura face card">
           Nomenklatura
         </label>
@@ -223,32 +259,39 @@
             </filter>
           </defs>
 
-          <rect class="card-paper" width="1644" height="2244" filter="url(#paperTooth)"/>
-          <image id="upperInsetArtwork" href="../proofs/generated-borders/wheat-artwork-plate-v1-mpc.png" width="1644" height="2244" clip-path="url(#upperRightWindow)" preserveAspectRatio="none"/>
-          <image id="lowerInsetArtwork" href="../proofs/generated-borders/wheat-artwork-plate-v1-mpc.png" x="58" width="1644" height="2244" clip-path="url(#lowerLeftWindow)" preserveAspectRatio="none"/>
+          <image id="cardBackArtwork" class="card-back-artwork" href="../backs/exports/card-back-kolkhoz-light-v2-mpc.png" width="1644" height="2244" preserveAspectRatio="none"/>
+          <rect class="card-paper front-only" width="1644" height="2244" filter="url(#paperTooth)"/>
+          <image id="upperInsetArtwork" class="front-only" href="../proofs/generated-borders/wheat-artwork-plate-v1-mpc.png" width="1644" height="2244" clip-path="url(#upperRightWindow)" preserveAspectRatio="none"/>
+          <image id="lowerInsetArtwork" class="front-only" href="../proofs/generated-borders/wheat-artwork-plate-v1-mpc.png" x="58" width="1644" height="2244" clip-path="url(#lowerLeftWindow)" preserveAspectRatio="none"/>
 
-          <g class="card-frame" fill="none" stroke-linejoin="miter" pointer-events="none">
+          <g class="card-frame front-only" fill="none" stroke-linejoin="miter" pointer-events="none">
             <path d="M176 88 H1460 L1520 148 V2096 L1460 2156 H184 L124 2096 V148 Z" stroke-width="15"/>
             <path d="M204 116 H1440 L1492 168 V2076 L1440 2128 H204 L152 2076 V168 Z" stroke-width="9"/>
             <use href="#cornerRail" stroke-width="9"/>
             <use href="#cornerRail" stroke-width="9" transform="rotate(180 822 1122)"/>
           </g>
 
-          <g id="pieces"></g>
+          <g id="pieces" class="front-only"></g>
 
           <g id="guides">
             <rect class="guide" x="72" y="72" width="1500" height="2100" stroke="#e94225" stroke-width="2" stroke-dasharray="12 10" opacity=".72"/>
             <rect class="guide" x="144" y="144" width="1356" height="1956" stroke="#2c7f9e" stroke-width="2" stroke-dasharray="10 10" opacity=".72"/>
-            <path class="guide" d="M822 72 V2172 M72 1122 H1572" stroke="#2c7f9e" stroke-width="1.5" opacity=".5"/>
+            <path id="verticalCenterGuide" class="guide center-guide" d="M822 72 V2172" stroke="#2c7f9e" stroke-width="1.5" opacity=".5"/>
+            <path id="horizontalCenterGuide" class="guide center-guide" d="M72 1122 H1572" stroke="#2c7f9e" stroke-width="1.5" opacity=".5"/>
+            <path id="topCornerVerticalGuide" class="guide corner-guide"/>
+            <path id="topCornerHorizontalGuide" class="guide corner-guide"/>
+            <path id="bottomCornerVerticalGuide" class="guide corner-guide"/>
+            <path id="bottomCornerHorizontalGuide" class="guide corner-guide"/>
           </g>
         </svg>
       </div>
     </section>
 
     <aside class="sidebar">
-      <h2>Position pieces</h2>
-      <p class="help">Drag directly on the card or enter exact production coordinates. Every rank is fitted into the same visible-height box, so its X/Y position and top/bottom edges stay consistent between cards. Orange is selected; red is the trim line; blue is the conservative safe area.</p>
+      <h2 id="sidebarTitle">Position pieces</h2>
+      <p class="help" id="sidebarHelp">Drag directly on the card or enter exact production coordinates. Every rank is fitted into the same visible-height box, so its X/Y position and top/bottom edges stay consistent between cards. Orange is selected; red is the trim line; blue is the conservative safe area.</p>
 
+      <div id="frontEditorControls">
       <div class="component-list" id="componentList"></div>
 
       <h3 id="selectionTitle">Top rank</h3>
@@ -257,6 +300,7 @@
         <label>Y <input id="fieldY" type="number" step="1"></label>
         <label id="widthLabel">Width <input id="fieldWidth" type="number" min="20" step="1"></label>
         <label id="heightLabel">Height <input id="fieldHeight" type="number" min="20" step="1"></label>
+        <label id="scaleLabel">Scale (%) <input id="fieldScale" type="number" min="1" step="1"></label>
         <label>Rotation <input id="fieldRotation" type="number" step="1"></label>
         <label id="fontLabel">Visible height <input id="fieldFontSize" type="number" min="40" step="1"></label>
       </div>
@@ -277,8 +321,18 @@
       </div>
 
       <div class="readout" id="readout"></div>
+      </div>
+
+      <section id="cardBackInspector" hidden>
+        <p class="help">Preview the production back beneath the same print guides used by the fronts. Artwork continues to the canvas edge so normal cutting variance cannot expose an unprinted strip.</p>
+        <div class="guide-legend">
+          <div class="guide-legend-row"><span class="guide-swatch bleed"></span><span>Canvas edge · full bleed artwork</span></div>
+          <div class="guide-legend-row"><span class="guide-swatch trim"></span><span>Red dashed line · final trim</span></div>
+          <div class="guide-legend-row"><span class="guide-swatch safe"></span><span>Blue dashed line · conservative safe area</span></div>
+        </div>
+      </section>
       <textarea id="allLayoutExport" hidden aria-label="All layout export"></textarea>
-      <p class="help">Nudge with <span class="kbd">arrow keys</span>; hold <span class="kbd">Shift</span> for 10 px. Changes are stored in this browser immediately and synced into Flutter every 30 seconds while this editor server is running.</p>
+      <p class="help" id="frontEditorHelp">Nudge with <span class="kbd">arrow keys</span>; hold <span class="kbd">Shift</span> for 10 px. Changes are stored in this browser immediately and synced into Flutter every 30 seconds while this editor server is running.</p>
     </aside>
   </main>
 
@@ -549,6 +603,6 @@
     buildList();
     renderPieces();
   </script>
-  <script src="card-layout-editor.js?v=20260724-nomenklatura-faces"></script>
+  <script src="card-layout-editor.js?v=20260727-proportional-scale"></script>
 </body>
 </html>

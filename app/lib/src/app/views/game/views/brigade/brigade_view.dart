@@ -2702,7 +2702,7 @@ class PlayerCardBackThumbnail extends StatelessWidget {
           ),
         ),
         child: Image.asset(
-          cardBack.displayedIconAssetPath,
+          cardBack.displayedIconAssetPathFor(dark: !tokens.usesLightAppearance),
           fit: BoxFit.cover,
           filterQuality: FilterQuality.medium,
         ),

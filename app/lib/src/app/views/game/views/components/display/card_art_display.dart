@@ -120,6 +120,9 @@ String suitAssetPath(String suit, {bool mip = false}) {
   return 'assets/ui/Icons/icon-$suit.png';
 }
 
+String? aceAssetPath(TableCard card) =>
+    card.value == 1 ? fieldPlanCardAceAssetPath(card.suit) : null;
+
 String genericFaceAssetPath(TableCard card) {
   if (card.suit == wreckerSuit) {
     return 'assets/ui/Cards/face-wrecker.png';
@@ -141,7 +144,7 @@ String faceRankName(TableCard card) {
 }
 
 bool cardShowsFaceNumericValue(TableCard card) {
-  return card.suit == wreckerSuit || card.value >= 11;
+  return card.suit == wreckerSuit || card.value == 1 || card.value >= 11;
 }
 
 String cardRankDisplayLabel(TableCard card) {

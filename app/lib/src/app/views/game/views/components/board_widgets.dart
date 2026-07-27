@@ -829,9 +829,11 @@ class PhysicalDeckCardContent extends StatelessWidget {
         continue;
       }
 
-      final path = id == 'centralFace'
-          ? faceAssetPath(card)
-          : suitAssetPath(card.suit);
+      final path = switch (id) {
+        'centralFace' => faceAssetPath(card),
+        'centralAce' => aceAssetPath(card) ?? suitAssetPath(card.suit),
+        _ => suitAssetPath(card.suit),
+      };
       result.add(
         _positionedImage(
           path: path,
@@ -967,6 +969,21 @@ class PhysicalDeckCardContent extends StatelessWidget {
   }
 
   List<Widget> _numberPips({required double scaleX, required double scaleY}) {
+    final acePath = aceAssetPath(card);
+    if (acePath != null) {
+      return [
+        _imagePiece(
+          path: acePath,
+          x: 372,
+          y: 672,
+          width: 900,
+          height: 900,
+          scaleX: scaleX,
+          scaleY: scaleY,
+          rotate: false,
+        ),
+      ];
+    }
     if (card.value == 7) {
       const pips = <(double, double, bool)>[
         (470, 365, false),
