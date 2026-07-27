@@ -1225,17 +1225,16 @@ class BoardPlayArea extends StatelessWidget {
                 );
           final handTrayHeight = gameOver
               ? 0.0
-              : fullBleedHandTrayHeight != null
-              ? fullBleedHandTrayHeight
-              : preferredPanelHeight == null
-              ? metrics.handTrayLayoutHeightForBoardHeight(
-                  constraints.maxHeight,
-                )
-              : clampDouble(
-                  remainingHeight - panelHeight!,
-                  metrics.handTrayHeight,
-                  handTrayLayoutHeightMax,
-                );
+              : fullBleedHandTrayHeight ??
+                    (preferredPanelHeight == null
+                        ? metrics.handTrayLayoutHeightForBoardHeight(
+                            constraints.maxHeight,
+                          )
+                        : clampDouble(
+                            remainingHeight - panelHeight!,
+                            metrics.handTrayHeight,
+                            handTrayLayoutHeightMax,
+                          ));
           final handTrayVisibleHeight = gameOver
               ? 0.0
               : metrics.handTrayVisibleHeightForLayoutHeight(handTrayHeight);

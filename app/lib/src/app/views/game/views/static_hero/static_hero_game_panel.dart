@@ -1613,7 +1613,6 @@ class _PosterPlacard extends StatelessWidget {
     this.active = false,
     this.complete = false,
     this.scale = 1,
-    this.fitText = false,
     super.key,
   });
 
@@ -1622,7 +1621,6 @@ class _PosterPlacard extends StatelessWidget {
   final bool active;
   final bool complete;
   final double scale;
-  final bool fitText;
 
   @override
   Widget build(BuildContext context) {
@@ -1681,7 +1679,7 @@ class _PosterPlacard extends StatelessWidget {
         active || complete ? const Color(0xffffecc2) : const Color(0xff20231f),
       ),
     );
-    return fitText ? FittedBox(fit: BoxFit.scaleDown, child: label) : label;
+    return label;
   }
 }
 
