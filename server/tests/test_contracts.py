@@ -199,6 +199,40 @@ class ProjectionContractTests(unittest.TestCase):
             self.engine.free_engine(pointer)
         self.assertEqual(viewed["exiledPlayers"][2], {"suit": 2, "values": [1, 3]})
 
+    def test_snapshot_reveals_every_cellar_only_after_game_over(self) -> None:
+        pointer = self.engine.new_engine(
+            655,
+            variants=variants_native(normalize_variants(None)),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = ctypes.cast(pointer, ctypes.POINTER(KCEngineSnapshot)).contents
+            opponent = state.players[1]
+            opponent.plot_hidden.cards[0] = KCCard(1, 10)
+            opponent.plot_hidden.count = 1
+            opponent.stacks[0].hidden[0] = KCCard(3, 7)
+            opponent.stacks[0].hidden_count = 1
+            opponent.stack_count = 1
+
+            active = snapshot_json(self.engine, pointer, 0)
+            state.phase = 5
+            finished = snapshot_json(self.engine, pointer, 0)
+        finally:
+            self.engine.free_engine(pointer)
+
+        self.assertEqual(active["players"][1]["hiddenPlot"], [])
+        self.assertEqual(active["players"][1]["hiddenPlotCount"], 1)
+        self.assertEqual(active["players"][1]["stacks"][0]["hidden"], [])
+        self.assertEqual(active["players"][1]["stacks"][0]["hiddenCount"], 1)
+        self.assertEqual(
+            finished["players"][1]["hiddenPlot"],
+            [{"suit": 1, "value": 10}],
+        )
+        self.assertEqual(
+            finished["players"][1]["stacks"][0]["hidden"],
+            [{"suit": 3, "value": 7}],
+        )
+
     def test_listing_keeps_flutter_envelope_names(self) -> None:
         listing = listing_json(
             session_id="s",
