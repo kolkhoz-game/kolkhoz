@@ -315,6 +315,46 @@ void main() {
     }
   });
 
+  testWidgets('poster fans accept duplicate card faces', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _loadFonts(tester);
+    await _precacheHeroUnderlays(tester);
+
+    final base = _scenario('assignment_jobs').model;
+    final wheat = base.table.jobs.firstWhere((job) => job.suit == 'wheat');
+    final duplicate = wheat.assignedCards.first;
+    final model = _withViewer(
+      base,
+      base.viewer.seatID ?? 0,
+      jobs: [
+        Job(
+          suit: wheat.suit,
+          hours: wheat.hours,
+          requiredHours: wheat.requiredHours,
+          claimed: wheat.claimed,
+          reward: wheat.reward,
+          assignedCards: [duplicate, duplicate],
+          validAssignmentTarget: wheat.validAssignmentTarget,
+          highlighted: wheat.highlighted,
+        ),
+        ...base.table.jobs.where((job) => job.suit != 'wheat'),
+      ],
+    );
+
+    await _pumpBoard(tester, model, settle: false);
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(ValueKey('poster-fan-layer-${duplicate.id}')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(ValueKey('poster-fan-layer-${duplicate.id}-1')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('field jobs fill the illustrated plots on desktop', (
     tester,
   ) async {
@@ -501,6 +541,7 @@ TableViewModel _withViewer(
   Map<int, int> medalsBySeat = const {},
   Map<int, String> namesBySeat = const {},
   Map<int, PlotState> plotsBySeat = const {},
+  List<Job>? jobs,
   SelectionState? selection,
 }) {
   return TableViewModel(
@@ -534,7 +575,7 @@ TableViewModel _withViewer(
             statusText: seat.statusText,
           ),
       ],
-      jobs: model.table.jobs,
+      jobs: jobs ?? model.table.jobs,
       trick: model.table.trick,
       lastTrick: model.table.lastTrick,
       requisitionEvents: model.table.requisitionEvents,

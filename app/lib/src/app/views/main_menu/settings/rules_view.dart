@@ -1,12 +1,44 @@
 part of 'settings_view.dart';
 
-const _leafletPaper = Color(0xfff5d19a);
-const _leafletPaperLight = Color(0xffffedc5);
-const _leafletInk = Color(0xff120e08);
-const _leafletRed = Color(0xffe13212);
-const _leafletGold = Color(0xffe9b353);
-const _leafletOlive = Color(0xffb7b34a);
-const _leafletSlate = Color(0xff58595b);
+class _RulesPalette extends InheritedWidget {
+  _RulesPalette({required this.tokens, required super.child})
+    : surface = tokens.colors.panel,
+      raisedSurface = tokens.colors.iron,
+      text = tokens.colors.cream,
+      accent = tokens.colors.red,
+      onAccent = tokens.colors.onAccent,
+      highlight = tokens.colors.gold,
+      onHighlight = tokens.usesLightAppearance
+          ? tokens.colors.onAccent
+          : tokens.colors.black,
+      mutedSurface = tokens.colors.steel,
+      onMutedSurface = tokens.usesLightAppearance
+          ? tokens.colors.onAccent
+          : tokens.colors.cream,
+      deepSurface = tokens.colors.black,
+      onDeepSurface = tokens.colors.cream;
+
+  final DesignTokens tokens;
+  final Color surface;
+  final Color raisedSurface;
+  final Color text;
+  final Color accent;
+  final Color onAccent;
+  final Color highlight;
+  final Color onHighlight;
+  final Color mutedSurface;
+  final Color onMutedSurface;
+  final Color deepSurface;
+  final Color onDeepSurface;
+
+  static _RulesPalette of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<_RulesPalette>()!;
+  }
+
+  @override
+  bool updateShouldNotify(_RulesPalette oldWidget) =>
+      tokens != oldWidget.tokens;
+}
 
 enum _RulesViewTab { howToPlay, rules }
 
@@ -16,11 +48,15 @@ class RulesView extends StatefulWidget {
     required this.tokens,
     required this.language,
     required this.onTutorialPressed,
+    this.hasTutorialProgress = false,
+    this.onRestartTutorialPressed,
   });
 
   final DesignTokens tokens;
   final KolkhozLanguage language;
   final VoidCallback onTutorialPressed;
+  final bool hasTutorialProgress;
+  final VoidCallback? onRestartTutorialPressed;
 
   @override
   State<RulesView> createState() => _RulesViewState();
@@ -32,75 +68,102 @@ class _RulesViewState extends State<RulesView> {
   @override
   Widget build(BuildContext context) {
     final strings = widget.language.strings;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _RulesTabButton(
-                key: const Key('how-to-play-tab'),
-                label: strings.boardOptionspanelHowToPlay,
-                iconPath: fieldPlanHowToPlayPictogram.fieldPlanPath,
-                selected: selectedTab == _RulesViewTab.howToPlay,
-                tokens: widget.tokens,
-                onPressed: () {
-                  setState(() => selectedTab = _RulesViewTab.howToPlay);
-                },
+    final colors = widget.tokens.colors;
+    return _RulesPalette(
+      tokens: widget.tokens,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _RulesTabButton(
+                  key: const Key('how-to-play-tab'),
+                  label: strings.boardOptionspanelHowToPlay,
+                  iconPath: fieldPlanHowToPlayPictogram.fieldPlanPath,
+                  selected: selectedTab == _RulesViewTab.howToPlay,
+                  tokens: widget.tokens,
+                  onPressed: () {
+                    setState(() => selectedTab = _RulesViewTab.howToPlay);
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _RulesTabButton(
-                key: const Key('rules-tab'),
-                label: strings.boardOptionspanelRules,
-                iconPath: 'assets/ui/Icons/icon-rules-scroll.png',
-                selected: selectedTab == _RulesViewTab.rules,
-                tokens: widget.tokens,
-                onPressed: () {
-                  setState(() => selectedTab = _RulesViewTab.rules);
-                },
+              const SizedBox(width: 8),
+              Expanded(
+                child: _RulesTabButton(
+                  key: const Key('rules-tab'),
+                  label: strings.boardOptionspanelRules,
+                  iconPath: 'assets/ui/Icons/icon-rules-scroll.png',
+                  selected: selectedTab == _RulesViewTab.rules,
+                  tokens: widget.tokens,
+                  onPressed: () {
+                    setState(() => selectedTab = _RulesViewTab.rules);
+                  },
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border.all(color: _leafletGold, width: 2),
-              ),
-              child: PrintedPaperSurface(
-                tokens: widget.tokens,
-                color: _leafletPaper,
-                textureOpacity: 0.08,
-                child: switch (selectedTab) {
-                  _RulesViewTab.howToPlay => const _HowToPlayPage(),
-                  _RulesViewTab.rules => const _CompleteRulesPage(),
-                },
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: colors.gold, width: 2),
+                ),
+                child: PrintedPaperSurface(
+                  tokens: widget.tokens,
+                  color: colors.panel,
+                  textureOpacity: 0.08,
+                  child: switch (selectedTab) {
+                    _RulesViewTab.howToPlay => const _HowToPlayPage(),
+                    _RulesViewTab.rules => const _CompleteRulesPage(),
+                  },
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerRight,
-          child: SizedBox(
-            width: 220,
-            height: 44,
-            child: ChromeAssetButton.command(
-              label: strings.kolkhozappTutorial,
-              prominent: true,
-              tokens: widget.tokens,
-              onPressed: widget.onTutorialPressed,
-              iconAsset: fieldPlanHowToPlayPictogram.fieldPlanPath,
-              iconSize: 22,
-            ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            spacing: 8,
+            children: [
+              if (widget.hasTutorialProgress &&
+                  widget.onRestartTutorialPressed != null)
+                SizedBox(
+                  width: 190,
+                  height: 44,
+                  child: ChromeAssetButton.command(
+                    label: widget.language == KolkhozLanguage.ru
+                        ? 'НАЧАТЬ ЗАНОВО'
+                        : 'RESTART TUTORIAL',
+                    tokens: widget.tokens,
+                    prominent: false,
+                    onPressed: widget.onRestartTutorialPressed!,
+                    iconAsset: fieldPlanToolbarUndoIconPath,
+                    iconSize: 20,
+                  ),
+                ),
+              SizedBox(
+                width: 220,
+                height: 44,
+                child: ChromeAssetButton.command(
+                  label: widget.hasTutorialProgress
+                      ? (widget.language == KolkhozLanguage.ru
+                            ? 'ПРОДОЛЖИТЬ ОБУЧЕНИЕ'
+                            : 'RESUME TUTORIAL')
+                      : strings.kolkhozappTutorial,
+                  prominent: true,
+                  tokens: widget.tokens,
+                  onPressed: widget.onTutorialPressed,
+                  iconAsset: fieldPlanHowToPlayPictogram.fieldPlanPath,
+                  iconSize: 22,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -123,13 +186,13 @@ class _RulesTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? _leafletPaperLight : tokens.colors.gold;
+    final foreground = selected ? tokens.colors.onAccent : tokens.colors.gold;
     return Semantics(
       button: true,
       selected: selected,
       label: label,
       child: Material(
-        color: selected ? _leafletRed : tokens.colors.iron,
+        color: selected ? tokens.colors.red : tokens.colors.iron,
         child: InkWell(
           onTap: onPressed,
           child: Container(
@@ -138,7 +201,7 @@ class _RulesTabButton extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border.all(
                 color: selected
-                    ? _leafletPaperLight
+                    ? tokens.colors.onAccent
                     : tokens.colors.gold.withValues(alpha: 0.66),
               ),
             ),
@@ -208,10 +271,11 @@ class _HowToPlayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: _leafletInk, width: 3)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: palette.text, width: 3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -229,7 +293,7 @@ class _HowToPlayHeader extends StatelessWidget {
                 Text(
                   'THE FIVE-YEAR PLAN',
                   style: fieldPlanDisplayTextStyle.copyWith(
-                    color: _leafletRed,
+                    color: palette.accent,
                     fontSize: 18,
                     letterSpacing: 2,
                   ),
@@ -237,9 +301,9 @@ class _HowToPlayHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'One year at a glance',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Podkova',
-                    color: _leafletInk,
+                    color: palette.text,
                     fontSize: 34,
                     height: 1,
                     fontWeight: FontWeight.w800,
@@ -271,13 +335,14 @@ class _LeafletBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      color: _leafletOlive,
+      color: palette.highlight,
       child: Text(
         label,
         style: fieldPlanDisplayTextStyle.copyWith(
-          color: _leafletInk,
+          color: palette.onHighlight,
           fontSize: 13,
           letterSpacing: 0.8,
         ),
@@ -291,6 +356,7 @@ class _SetupOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return _LeafletSection(
       eyebrow: 'BEFORE YEAR ONE',
       title: 'Set up the collective',
@@ -300,7 +366,7 @@ class _SetupOverview extends StatelessWidget {
           Text(
             'Build four reward piles—one for each crop.',
             style: fieldPlanBodyStrongTextStyle.copyWith(
-              color: _leafletInk,
+              color: palette.text,
               fontSize: 18,
             ),
           ),
@@ -395,6 +461,7 @@ class _CropSetupIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return SizedBox(
       width: 118,
       child: Column(
@@ -405,7 +472,7 @@ class _CropSetupIcon extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: fieldPlanDisplayTextStyle.copyWith(
-              color: _leafletInk,
+              color: palette.text,
               fontSize: 14,
             ),
           ),
@@ -428,12 +495,13 @@ class _SetupChecklistItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return Container(
       constraints: const BoxConstraints(minHeight: 86),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _leafletPaperLight.withValues(alpha: 0.56),
-        border: Border.all(color: _leafletGold),
+        color: palette.raisedSurface.withValues(alpha: 0.56),
+        border: Border.all(color: palette.highlight),
       ),
       child: Row(
         children: [
@@ -456,7 +524,7 @@ class _SetupChecklistItem extends StatelessWidget {
                 Text(
                   title,
                   style: fieldPlanDisplayTextStyle.copyWith(
-                    color: _leafletRed,
+                    color: palette.accent,
                     fontSize: 15,
                   ),
                 ),
@@ -464,7 +532,7 @@ class _SetupChecklistItem extends StatelessWidget {
                 Text(
                   body,
                   style: fieldPlanBodyTextStyle.copyWith(
-                    color: _leafletInk,
+                    color: palette.text,
                     fontSize: 15,
                   ),
                 ),
@@ -513,6 +581,7 @@ class _YearOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return _LeafletSection(
       eyebrow: 'THE FIVE-YEAR PLAN',
       title: 'Play one year',
@@ -523,23 +592,23 @@ class _YearOverview extends StatelessWidget {
             if (i != steps.length - 1) const SizedBox(height: 8),
           ],
           const SizedBox(height: 12),
-          const Row(
+          Row(
             children: [
               Expanded(
                 child: _YearCountCard(
                   title: 'YEARS 1–4',
                   body: '5 cards • 4 tricks',
-                  color: _leafletOlive,
-                  foreground: _leafletInk,
+                  color: palette.highlight,
+                  foreground: palette.onHighlight,
                 ),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Expanded(
                 child: _YearCountCard(
                   title: 'YEAR 5: FAMINE',
                   body: '4 cards • 3 tricks',
-                  color: _leafletSlate,
-                  foreground: _leafletPaperLight,
+                  color: palette.mutedSurface,
+                  foreground: palette.onMutedSurface,
                 ),
               ),
             ],
@@ -570,11 +639,12 @@ class _HowStepRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 14, 9),
       decoration: BoxDecoration(
-        color: _leafletPaperLight.withValues(alpha: 0.58),
-        border: const Border(left: BorderSide(color: _leafletRed, width: 7)),
+        color: palette.raisedSurface.withValues(alpha: 0.58),
+        border: Border(left: BorderSide(color: palette.accent, width: 7)),
       ),
       child: Row(
         children: [
@@ -591,14 +661,14 @@ class _HowStepRow extends StatelessWidget {
                     width: 24,
                     height: 24,
                     alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: _leafletRed,
+                    decoration: BoxDecoration(
+                      color: palette.accent,
                       shape: BoxShape.circle,
                     ),
                     child: Text(
                       '$number',
                       style: fieldPlanDisplayTextStyle.copyWith(
-                        color: _leafletPaperLight,
+                        color: palette.onAccent,
                         fontSize: 14,
                       ),
                     ),
@@ -615,7 +685,7 @@ class _HowStepRow extends StatelessWidget {
                 Text(
                   step.title,
                   style: fieldPlanDisplayTextStyle.copyWith(
-                    color: _leafletInk,
+                    color: palette.text,
                     fontSize: 17,
                   ),
                 ),
@@ -623,7 +693,7 @@ class _HowStepRow extends StatelessWidget {
                 Text(
                   step.body,
                   style: fieldPlanBodyTextStyle.copyWith(
-                    color: _leafletInk,
+                    color: palette.text,
                     fontSize: 15,
                   ),
                 ),
@@ -713,9 +783,10 @@ class _QuickReferenceOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
-      color: _leafletSlate,
+      color: palette.mutedSurface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -728,16 +799,16 @@ class _QuickReferenceOverview extends StatelessWidget {
                     Text(
                       'KEEP THIS VISIBLE',
                       style: fieldPlanDisplayTextStyle.copyWith(
-                        color: _leafletGold,
+                        color: palette.highlight,
                         fontSize: 14,
                         letterSpacing: 1.6,
                       ),
                     ),
                     Text(
                       'Quick reference',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Podkova',
-                        color: _leafletPaperLight,
+                        color: palette.onMutedSurface,
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                       ),
@@ -749,13 +820,13 @@ class _QuickReferenceOverview extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 9),
-          Container(height: 2, color: _leafletGold),
+          Container(height: 2, color: palette.highlight),
           const SizedBox(height: 8),
           for (final entry in entries) _QuickReferenceRow(entry: entry),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            color: _leafletInk,
+            color: palette.deepSurface,
             child: Row(
               children: [
                 const _LeafletIcon(
@@ -768,7 +839,7 @@ class _QuickReferenceOverview extends StatelessWidget {
                   child: Text(
                     'SABOTEUR: 0 hours • every suit • its field fails.',
                     style: fieldPlanDisplayTextStyle.copyWith(
-                      color: _leafletPaperLight,
+                      color: palette.onDeepSurface,
                       fontSize: 15,
                     ),
                   ),
@@ -801,10 +872,11 @@ class _QuickReferenceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: _leafletRed, width: 6)),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: palette.accent, width: 6)),
       ),
       child: Row(
         children: [
@@ -817,14 +889,14 @@ class _QuickReferenceRow extends StatelessWidget {
                 Text(
                   entry.title,
                   style: fieldPlanDisplayTextStyle.copyWith(
-                    color: _leafletGold,
+                    color: palette.highlight,
                     fontSize: 15,
                   ),
                 ),
                 Text(
                   entry.body,
                   style: fieldPlanBodyTextStyle.copyWith(
-                    color: _leafletPaperLight,
+                    color: palette.onMutedSurface,
                     fontSize: 14,
                   ),
                 ),
@@ -872,11 +944,14 @@ class _RulebookHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: _leafletGold,
-        border: Border(bottom: BorderSide(color: _leafletInk, width: 3)),
+      decoration: BoxDecoration(
+        color: palette.highlight,
+        border: Border(
+          bottom: BorderSide(color: palette.onHighlight, width: 3),
+        ),
       ),
       child: Row(
         children: [
@@ -888,9 +963,9 @@ class _RulebookHeading extends StatelessWidget {
               children: [
                 Text(
                   kolkhozBaseRulebookTitle.toUpperCase(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Podkova',
-                    color: _leafletInk,
+                    color: palette.onHighlight,
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
                   ),
@@ -899,7 +974,7 @@ class _RulebookHeading extends StatelessWidget {
                 Text(
                   kolkhozBaseRulebookPlayerCount,
                   style: fieldPlanBodyStrongTextStyle.copyWith(
-                    color: _leafletInk,
+                    color: palette.onHighlight,
                     fontSize: 14,
                   ),
                 ),
@@ -954,17 +1029,19 @@ class _VisualRulebookSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
+    final emphasized = index == 1;
     return Container(
       decoration: BoxDecoration(
-        color: _leafletPaperLight.withValues(alpha: 0.66),
-        border: Border.all(color: _leafletGold),
+        color: palette.raisedSurface.withValues(alpha: 0.66),
+        border: Border.all(color: palette.highlight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            color: index == 1 ? _leafletOlive : _leafletGold,
+            color: emphasized ? palette.accent : palette.highlight,
             child: Row(
               children: [
                 _LeafletIcon(icons[index.clamp(0, icons.length - 1)], size: 48),
@@ -973,7 +1050,9 @@ class _VisualRulebookSection extends StatelessWidget {
                   child: Text(
                     section.title,
                     style: fieldPlanDisplayTextStyle.copyWith(
-                      color: _leafletInk,
+                      color: emphasized
+                          ? palette.onAccent
+                          : palette.onHighlight,
                       fontSize: 19,
                     ),
                   ),
@@ -1006,8 +1085,9 @@ class _VisualRulebookBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     final bodyStyle = fieldPlanBodyTextStyle.copyWith(
-      color: _leafletInk,
+      color: palette.text,
       fontSize: 15,
       height: 1.28,
     );
@@ -1015,9 +1095,9 @@ class _VisualRulebookBlock extends StatelessWidget {
       RulebookBlockKind.sectionTitle => const SizedBox.shrink(),
       RulebookBlockKind.subsectionTitle => Container(
         padding: const EdgeInsets.fromLTRB(10, 7, 10, 6),
-        decoration: const BoxDecoration(
-          color: _leafletSlate,
-          border: Border(left: BorderSide(color: _leafletRed, width: 6)),
+        decoration: BoxDecoration(
+          color: palette.mutedSurface,
+          border: Border(left: BorderSide(color: palette.accent, width: 6)),
         ),
         child: Row(
           children: [
@@ -1027,7 +1107,7 @@ class _VisualRulebookBlock extends StatelessWidget {
               child: Text(
                 block.text,
                 style: fieldPlanDisplayTextStyle.copyWith(
-                  color: _leafletPaperLight,
+                  color: palette.onMutedSurface,
                   fontSize: 16,
                 ),
               ),
@@ -1039,11 +1119,11 @@ class _VisualRulebookBlock extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-          color: _leafletOlive,
+          color: palette.highlight,
           child: Text(
             block.text.toUpperCase(),
             style: fieldPlanDisplayTextStyle.copyWith(
-              color: _leafletInk,
+              color: palette.onHighlight,
               fontSize: 14,
             ),
           ),
@@ -1057,7 +1137,7 @@ class _VisualRulebookBlock extends StatelessWidget {
             width: 7,
             height: 7,
             margin: const EdgeInsets.only(top: 6, right: 10),
-            color: _leafletRed,
+            color: palette.accent,
           ),
           Expanded(child: Text(block.text, style: bodyStyle)),
         ],
@@ -1096,11 +1176,12 @@ class _LeafletSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = _RulesPalette.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _leafletPaper.withValues(alpha: 0.72),
-        border: Border.all(color: _leafletGold),
+        color: palette.surface.withValues(alpha: 0.72),
+        border: Border.all(color: palette.highlight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1108,7 +1189,7 @@ class _LeafletSection extends StatelessWidget {
           Text(
             eyebrow,
             style: fieldPlanDisplayTextStyle.copyWith(
-              color: _leafletRed,
+              color: palette.accent,
               fontSize: 15,
               letterSpacing: 1.6,
             ),
@@ -1116,15 +1197,15 @@ class _LeafletSection extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Podkova',
-              color: _leafletInk,
+              color: palette.text,
               fontSize: 28,
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 8),
-          Container(height: 2, color: _leafletInk),
+          Container(height: 2, color: palette.text),
           const SizedBox(height: 12),
           child,
         ],

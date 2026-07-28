@@ -2374,6 +2374,74 @@ void registerStoreAndOnlineTests() {
     expect(result, 0);
   }, tags: 'neural-policy');
 
+  test('bundled neural policy obeys tutorial legal actions', () async {
+    final policy = await KolkhozNativePolicyModel.loadAsset(
+      defaultNeuralPolicyAsset,
+    );
+    addTearDown(policy.dispose);
+    final bridge = KolkhozCEngineBridge();
+    final engine = NativeGameEngine(
+      bridge: bridge,
+      seed: 20260728,
+      variants: KolkhozGameVariants.kolkhoz,
+      controllers: KolkhozPlayerController.defaultControllers,
+      tutorial: true,
+    );
+    addTearDown(engine.dispose);
+
+    bool sameAction(CEngineActionValue lhs, CEngineActionValue rhs) {
+      bool sameCard(EngineCardValue a, EngineCardValue b) =>
+          a.suit == b.suit && a.value == b.value;
+      return lhs.kind == rhs.kind &&
+          lhs.playerID == rhs.playerID &&
+          lhs.suit == rhs.suit &&
+          sameCard(lhs.card, rhs.card) &&
+          sameCard(lhs.handCard, rhs.handCard) &&
+          sameCard(lhs.plotCard, rhs.plotCard) &&
+          lhs.plotZone == rhs.plotZone &&
+          lhs.targetSuit == rhs.targetSuit;
+    }
+
+    var reachedLearnerTrick = false;
+    for (var step = 0; step < 120; step += 1) {
+      final currentTrickCount = engine.readNative(
+        (bridge, pointer) => bridge.currentTrickCount(pointer),
+      );
+      if (engine.phase == kcPhaseTrick &&
+          engine.currentPlayer == 0 &&
+          currentTrickCount > 0) {
+        expect(engine.legalActions, isNotEmpty);
+        reachedLearnerTrick = true;
+        break;
+      }
+
+      final legal = engine.legalActions;
+      if (legal.isEmpty) {
+        expect(engine.stepAutomatic(), 0);
+        continue;
+      }
+      if (engine.currentPlayer == 0) {
+        expect(engine.applyManual(legal.first), 0);
+        continue;
+      }
+
+      final selected = engine.policyAction(policy);
+      expect(selected, isNotNull);
+      expect(
+        legal.any((action) => sameAction(action, selected!)),
+        isTrue,
+        reason: 'Tutorial AI must choose from the scripted legal set',
+      );
+      expect(engine.applyAIAction(selected!), 0);
+    }
+
+    expect(
+      reachedLearnerTrick,
+      isTrue,
+      reason: 'The tutorial should reach a playable learner trick',
+    );
+  }, tags: 'neural-policy');
+
   test('policy model accepts flexible hidden layer sizes', () {
     final policy = KolkhozNativePolicyModel.fromJson({
       'backend': 'c-mlp',
@@ -3457,6 +3525,7 @@ void registerStoreAndOnlineTests() {
         KolkhozPlayerController.neuralAI,
         KolkhozPlayerController.human,
       ],
+      tutorial: true,
       actions: [
         EngineAction(kind: actionSetTrump, playerID: 0, suit: 'wheat'),
         EngineAction(
@@ -3477,7 +3546,8 @@ void registerStoreAndOnlineTests() {
 
     final decoded = KolkhozSavedGamePayload.fromJson(payload.toJson());
 
-    expect(decoded.version, 1);
+    expect(decoded.version, 2);
+    expect(decoded.tutorial, isTrue);
     expect(decoded.seed, 20260703);
     expect(decoded.variants.deckType, 36);
     expect(decoded.variants.maxYears, 5);
@@ -3562,6 +3632,94 @@ void registerStoreAndOnlineTests() {
 
     file.writeAsStringSync('{not-json');
     expect(store.load(), isNull);
+  });
+
+  test('tutorial autosave replays omitted automatic year transitions', () {
+    final directory = Directory.systemTemp.createTempSync(
+      'kolkhoz-tutorial-restore-test-',
+    );
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final tutorialStore = KolkhozAutosaveStore(
+      File('${directory.path}/tutorial.json'),
+    );
+    final bridge = KolkhozCEngineBridge();
+    final source = NativeGameEngine(
+      bridge: bridge,
+      seed: 20260728,
+      variants: KolkhozGameVariants.kolkhoz,
+      controllers: KolkhozPlayerController.defaultControllers,
+      tutorial: true,
+    );
+    addTearDown(source.dispose);
+    final actions = <EngineAction>[];
+
+    for (var step = 0; step < 400; step += 1) {
+      final year = source.readNative((bridge, pointer) => bridge.year(pointer));
+      if (year == 2 && source.phase != kcPhaseRequisition) {
+        break;
+      }
+      if (source.phase == kcPhaseRequisition && source.legalActions.isEmpty) {
+        expect(source.stepAutomatic(), greaterThanOrEqualTo(0));
+        continue;
+      }
+      final action = source.heuristicAction() ?? source.legalActions.first;
+      final usesAI =
+          action.playerID >= 0 &&
+          action.playerID < KolkhozPlayerController.defaultControllers.length &&
+          KolkhozPlayerController.defaultControllers[action.playerID] !=
+              KolkhozPlayerController.human;
+      expect(
+        usesAI ? source.applyAIAction(action) : source.applyManual(action),
+        0,
+      );
+      actions.add(engineActionFromCValue(action));
+    }
+    expect(source.readNative((bridge, pointer) => bridge.year(pointer)), 2);
+    tutorialStore.save(
+      KolkhozSavedGamePayload(
+        seed: 20260728,
+        variants: KolkhozGameVariants.kolkhoz,
+        controllers: KolkhozPlayerController.defaultControllers,
+        actions: actions,
+        tutorial: true,
+      ),
+    );
+
+    final factory = LocalGameEngineFactory(
+      autosaveStore: KolkhozAutosaveStore(
+        File('${directory.path}/normal.json'),
+      ),
+      tutorialAutosaveStore: tutorialStore,
+      mediumPolicyLoader: Completer<KolkhozNativePolicyModel>().future,
+      neuralPolicyLoader: Completer<KolkhozNativePolicyModel>().future,
+    );
+    addTearDown(factory.dispose);
+    final restored = factory.restoreTutorial(
+      LocalGameEngineBindings(
+        players: () => const [],
+        lobby: () => throw UnimplementedError(),
+        animationSpeed: () => GameAnimationSpeed.instant,
+        uiState: () => const GameUiState(),
+        setUiState: (_) {},
+        revealedPlayerID: () => null,
+        setRevealedPlayerID: (_) {},
+        lastSyncedPhase: () => null,
+        setLastSyncedPhase: (_) {},
+        onGameUpdate: (_) {},
+        onStateChanged: () {},
+        onError: (_) {},
+        onPersist: () {},
+      ),
+    );
+    addTearDown(() => restored?.engine.dispose());
+
+    expect(restored, isNotNull);
+    expect(
+      restored!.engine.engine.readNative(
+        (bridge, pointer) => bridge.year(pointer),
+      ),
+      2,
+    );
   });
 
   test('online update json projects to the table model', () {

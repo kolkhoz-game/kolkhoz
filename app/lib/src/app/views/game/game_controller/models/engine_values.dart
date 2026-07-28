@@ -205,6 +205,9 @@ const kcActionUndoSwap = 8;
 const kcActionPassCard = 9;
 const kcActionRevealReward = 10;
 const kcActionRevealTrump = 11;
+const kcActionCompleteTutorialOrientation = 12;
+const kcActionCompleteTutorialRewardLesson = 13;
+const kcActionCompleteTutorialSaboteurFollowLesson = 14;
 
 const kcPhasePlanning = 0;
 const kcPhaseSwap = 1;

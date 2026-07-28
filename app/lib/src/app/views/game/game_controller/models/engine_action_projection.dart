@@ -122,6 +122,10 @@ String actionKindName(int kind) {
     kcActionPassCard => actionPassCard,
     kcActionRevealReward => actionRevealReward,
     kcActionRevealTrump => actionRevealTrump,
+    kcActionCompleteTutorialOrientation => actionCompleteTutorialOrientation,
+    kcActionCompleteTutorialRewardLesson => actionCompleteTutorialRewardLesson,
+    kcActionCompleteTutorialSaboteurFollowLesson =>
+      actionCompleteTutorialSaboteurFollowLesson,
     _ => actionUnknown,
   };
 }
@@ -139,6 +143,10 @@ int? actionKindCode(String kind) {
     actionPassCard => kcActionPassCard,
     actionRevealReward => kcActionRevealReward,
     actionRevealTrump => kcActionRevealTrump,
+    actionCompleteTutorialOrientation => kcActionCompleteTutorialOrientation,
+    actionCompleteTutorialRewardLesson => kcActionCompleteTutorialRewardLesson,
+    actionCompleteTutorialSaboteurFollowLesson =>
+      kcActionCompleteTutorialSaboteurFollowLesson,
     _ => null,
   };
 }
@@ -156,6 +164,9 @@ String actionLabel(int kind) {
     kcActionPassCard => 'Pass',
     kcActionRevealReward => 'Reveal reward',
     kcActionRevealTrump => 'Reveal trump',
+    kcActionCompleteTutorialOrientation => 'Begin Year 1',
+    kcActionCompleteTutorialRewardLesson => 'Continue to trump',
+    kcActionCompleteTutorialSaboteurFollowLesson => 'Continue the trick',
     _ => 'Action',
   };
 }

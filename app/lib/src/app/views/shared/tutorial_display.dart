@@ -11,12 +11,59 @@ import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
-import 'package:kolkhoz_app/src/app/views/shared/rule_content.dart';
+import 'package:kolkhoz_app/src/app/views/shared/tutorial_content.dart';
 
 bool _trickHasViewerPlay(Trick trick, int? viewerSeatID) {
   return trick.plays.any(
     (play) => viewerSeatID == null || play.seatID == viewerSeatID,
   );
+}
+
+bool _learnerWonThirdTrick(TableViewModel model) {
+  final table = model.table;
+  final viewerSeatID = model.viewer.seatID;
+  if (table.year != 1 ||
+      table.phase != phaseAssignment ||
+      viewerSeatID == null ||
+      table.lastTrick.winnerSeatID != viewerSeatID) {
+    return false;
+  }
+  return table.jobs
+      .expand((job) => job.assignedCards)
+      .any((card) => card.assignmentRound == 2);
+}
+
+bool _learnerAssignedThirdTrick(TableViewModel model) {
+  return model.table.year == 1 &&
+      model.table.phase != phaseAssignment &&
+      model.table.jobs
+          .expand((job) => job.assignedCards)
+          .any((card) => card.assignmentRound == 3);
+}
+
+bool _learnerWonYearTwoAssignmentAfterRound(
+  TableViewModel model,
+  int completedRound,
+) {
+  final table = model.table;
+  final viewerSeatID = model.viewer.seatID;
+  if (table.year != 2 ||
+      table.phase != phaseAssignment ||
+      viewerSeatID == null ||
+      table.lastTrick.winnerSeatID != viewerSeatID) {
+    return false;
+  }
+  return table.jobs
+      .expand((job) => job.assignedCards)
+      .any((card) => card.assignmentRound == completedRound);
+}
+
+int _viewerMedals(TableViewModel model) {
+  final viewerSeatID = model.viewer.seatID;
+  if (viewerSeatID == null) {
+    return 0;
+  }
+  return model.table.seats.firstWhere((seat) => seat.id == viewerSeatID).medals;
 }
 
 /// Returns true when the live game state satisfies a step's advance event.
@@ -28,28 +75,59 @@ bool tutorialStepSatisfied(TutorialAdvance advance, TableViewModel? model) {
   switch (advance) {
     case TutorialAdvance.manual:
       return false;
+    case TutorialAdvance.rewardsRevealed:
+      return model.legalActions.any(
+        (action) => action.kind == actionCompleteTutorialRewardLesson,
+      );
     case TutorialAdvance.trumpChosen:
       return table.trump != null || table.phase != phasePlanning;
     case TutorialAdvance.cardPlayed:
       return _trickHasViewerPlay(table.trick, model.viewer.seatID) ||
           _trickHasViewerPlay(table.lastTrick, model.viewer.seatID);
-    case TutorialAdvance.trickTaken:
-      return table.lastTrick.plays.isNotEmpty ||
-          table.seats.any((seat) => seat.medals > 0);
-    case TutorialAdvance.workAssigned:
-      return table.jobs.any(
-        (job) => job.hours > 0 || job.assignedCards.isNotEmpty,
+    case TutorialAdvance.learnerThirdTrickWon:
+      return _learnerWonThirdTrick(model);
+    case TutorialAdvance.learnerThirdTrickAssigned:
+      return _learnerAssignedThirdTrick(model);
+    case TutorialAdvance.learnerYearTwoFirstMultiSuitWon:
+      return _learnerWonYearTwoAssignmentAfterRound(model, 1);
+    case TutorialAdvance.learnerYearTwoSecondMultiSuitWon:
+      return _learnerWonYearTwoAssignmentAfterRound(model, 3);
+    case TutorialAdvance.saboteurFollowPaused:
+      return model.legalActions.any(
+        (action) => action.kind == actionCompleteTutorialSaboteurFollowLesson,
       );
+    case TutorialAdvance.saboteurAssignmentOpened:
+      return table.year == 3 &&
+          table.phase == phaseAssignment &&
+          table.lastTrick.plays.any((play) => play.card.suit == wreckerSuit);
     case TutorialAdvance.jobCompleted:
       return table.jobs.any(
         (job) => job.claimed || job.hours >= job.requiredHours,
       );
-    case TutorialAdvance.yearEnd:
-      return table.phase == phaseRequisition || table.year > 1;
     case TutorialAdvance.swapPhase:
       return table.phase == phaseSwap || table.year > 1;
+    case TutorialAdvance.yearTwoRequisition:
+      return table.year > 2 ||
+          (table.year == 2 && table.phase == phaseRequisition);
+    case TutorialAdvance.yearThree:
+      return table.year >= 3;
     case TutorialAdvance.famineYear:
       return table.isFamine;
+    case TutorialAdvance.learnerFamineTwoWins:
+      return table.year == 5 && _viewerMedals(model) >= 2;
+    case TutorialAdvance.learnerHeroProtected:
+      final viewerSeatID = model.viewer.seatID;
+      return table.year == 5 &&
+          viewerSeatID != null &&
+          table.phase == phaseRequisition &&
+          table.requisitionEvents.any(
+            (event) =>
+                event.seatID == viewerSeatID &&
+                event.card == null &&
+                event.message == 'Protected from requisition.',
+          );
+    case TutorialAdvance.gameOver:
+      return table.phase == phaseGameOver;
   }
 }
 
@@ -99,17 +177,21 @@ class TutorialWalkthroughOverlay extends StatefulWidget {
   const TutorialWalkthroughOverlay({
     required this.tokens,
     required this.language,
+    required this.content,
     required this.onClose,
+    this.onOrientationComplete,
+    this.onContinueAction,
     this.model,
-    this.steps = tutorialStepContents,
     super.key,
   });
 
   final DesignTokens tokens;
   final KolkhozLanguage language;
+  final TutorialContent content;
   final VoidCallback onClose;
+  final VoidCallback? onOrientationComplete;
+  final ValueChanged<String>? onContinueAction;
   final TableViewModel? model;
-  final List<TutorialStepContent> steps;
 
   @override
   State<TutorialWalkthroughOverlay> createState() =>
@@ -134,8 +216,16 @@ bool tutorialShouldAutoCollapse(TableViewModel? model) {
   return pendingPlay || assigning;
 }
 
+Alignment tutorialPanelAlignment(TutorialFocus focus) {
+  return focus == TutorialFocus.hand
+      ? Alignment.topRight
+      : Alignment.bottomRight;
+}
+
 class _TutorialWalkthroughOverlayState
     extends State<TutorialWalkthroughOverlay> {
+  int orientationIndex = 0;
+  bool orientationComplete = false;
   int stepIndex = 0;
   bool autoAdvanced = false;
   Timer? autoAdvanceTimer;
@@ -144,8 +234,70 @@ class _TutorialWalkthroughOverlayState
   /// that lasts until the auto-collapse condition changes again.
   bool? manualCollapse;
 
-  TutorialStepContent get step => widget.steps[stepIndex];
-  bool get isLastStep => stepIndex == widget.steps.length - 1;
+  TutorialStepContent get step => widget.content.steps[stepIndex];
+  bool get isLastStep => stepIndex == widget.content.steps.length - 1;
+  bool get orientationRequired =>
+      widget.model == null ||
+      widget.model!.legalActions.any(
+        (action) => action.kind == actionCompleteTutorialOrientation,
+      );
+
+  @override
+  void initState() {
+    super.initState();
+    if (!orientationRequired) {
+      orientationComplete = true;
+      stepIndex = _resumeStepIndex(widget.model);
+    }
+  }
+
+  int _resumeStepIndex(TableViewModel? model) {
+    final table = model?.table;
+    if (table == null) return 0;
+    final resumeKey = switch (table.year) {
+      1 => switch (table.phase) {
+        phasePlanning =>
+          model!.legalActions.any(
+                (action) => action.kind == actionCompleteTutorialRewardLesson,
+              )
+              ? 'year1.rewards'
+              : 'year1.planning',
+        phaseTrick => 'year1.trick',
+        phaseAssignment => 'year1.assignment',
+        phaseRequisition => 'year1.requisition',
+        _ => 'year1.planning',
+      },
+      2 => switch (table.phase) {
+        phaseRequisition => 'year2.requisition',
+        phaseAssignment =>
+          table.jobs
+                  .expand((job) => job.assignedCards)
+                  .any((card) => card.assignmentRound == 3)
+              ? 'year2.secondAssignment'
+              : table.jobs
+                    .expand((job) => job.assignedCards)
+                    .any((card) => card.assignmentRound == 1)
+              ? 'year2.firstAssignment'
+              : 'year2.default',
+        _ => 'year2.default',
+      },
+      3 =>
+        model!.legalActions.any(
+              (action) =>
+                  action.kind == actionCompleteTutorialSaboteurFollowLesson,
+            )
+            ? 'year3.follow'
+            : table.phase == phaseAssignment &&
+                  table.lastTrick.plays.any(
+                    (play) => play.card.suit == wreckerSuit,
+                  )
+            ? 'year3.assignment'
+            : 'year3.default',
+      4 => 'year4.default',
+      _ => table.phase == phaseGameOver ? 'gameOver' : 'year5.default',
+    };
+    return widget.content.stepIndexForResumeKey(resumeKey);
+  }
 
   @override
   void dispose() {
@@ -156,11 +308,12 @@ class _TutorialWalkthroughOverlayState
   @override
   void didUpdateWidget(TutorialWalkthroughOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (tutorialShouldAutoCollapse(oldWidget.model) !=
-        tutorialShouldAutoCollapse(widget.model)) {
-      manualCollapse = null;
+    if (!orientationRequired) {
+      orientationComplete = true;
     }
-    if (isLastStep || step.advance == TutorialAdvance.manual) {
+    if (isLastStep ||
+        step.advance == TutorialAdvance.manual ||
+        !step.autoAdvance) {
       return;
     }
     final wasSatisfied = tutorialStepSatisfied(step.advance, oldWidget.model);
@@ -170,6 +323,7 @@ class _TutorialWalkthroughOverlayState
       setState(() {
         stepIndex += 1;
         autoAdvanced = true;
+        manualCollapse = false;
       });
       autoAdvanceTimer = Timer(const Duration(milliseconds: 1600), () {
         if (mounted) {
@@ -190,14 +344,39 @@ class _TutorialWalkthroughOverlayState
   }
 
   void goNext() {
+    if (step.advance != TutorialAdvance.manual &&
+        !tutorialStepSatisfied(step.advance, widget.model)) {
+      setState(() => manualCollapse = true);
+      return;
+    }
     if (isLastStep) {
       widget.onClose();
       return;
     }
+    final continueAction = step.continueAction;
+    final collapseAfterContinue = step.collapseAfterContinue;
+    if (continueAction != null) {
+      widget.onContinueAction?.call(continueAction);
+    }
     setState(() {
       stepIndex += 1;
       autoAdvanced = false;
+      if (collapseAfterContinue) {
+        manualCollapse = true;
+      }
     });
+  }
+
+  void advanceOrientation() {
+    if (orientationIndex < widget.content.orientationStops.length - 1) {
+      setState(() => orientationIndex += 1);
+      return;
+    }
+    setState(() {
+      orientationComplete = true;
+      stepIndex = widget.content.firstMatchStepIndex;
+    });
+    widget.onOrientationComplete?.call();
   }
 
   @override
@@ -216,26 +395,60 @@ class _TutorialWalkthroughOverlayState
                   520,
                 )
                 .toDouble();
+            final showingOrientation =
+                !orientationComplete && orientationRequired;
+            final focus = showingOrientation
+                ? widget.content.orientationStops[orientationIndex].focus
+                : step.focus;
             final glowRect = wide
-                ? tutorialFocusRect(step.focus, constraints, widget.tokens)
+                ? tutorialFocusRect(focus, constraints, widget.tokens)
                 : null;
             final satisfied = tutorialStepSatisfied(step.advance, widget.model);
             return Stack(
               children: [
                 if (glowRect != null)
                   TutorialFocusGlow(rect: glowRect, tokens: widget.tokens),
-                if (collapsed)
+                if (showingOrientation)
+                  Align(
+                    alignment: tutorialPanelAlignment(focus),
+                    child: Padding(
+                      padding: EdgeInsets.all(wide ? 16 : 10),
+                      child: SizedBox(
+                        width: panelWidth,
+                        child: TutorialOrientationPanel(
+                          stop:
+                              widget.content.orientationStops[orientationIndex],
+                          index: orientationIndex,
+                          count: widget.content.orientationStops.length,
+                          header: widget.content.orientationHeader.resolve(
+                            widget.language,
+                          ),
+                          beginLabel: widget.content.orientationBeginLabel
+                              .resolve(widget.language),
+                          tokens: widget.tokens,
+                          language: widget.language,
+                          onBack: orientationIndex == 0
+                              ? null
+                              : () => setState(() => orientationIndex -= 1),
+                          onNext: advanceOrientation,
+                          onClose: widget.onClose,
+                        ),
+                      ),
+                    ),
+                  )
+                else if (collapsed)
                   Positioned(
                     right: 12,
                     bottom: math.min(300, constraints.maxHeight * 0.42),
                     child: TutorialCollapsedBadge(
                       tokens: widget.tokens,
+                      iconPath: step.iconPath,
                       onExpand: () => setState(() => manualCollapse = false),
                     ),
                   )
                 else
                   Align(
-                    alignment: Alignment.bottomRight,
+                    alignment: tutorialPanelAlignment(focus),
                     child: Padding(
                       padding: EdgeInsets.all(wide ? 16 : 10),
                       child: SizedBox(
@@ -243,7 +456,7 @@ class _TutorialWalkthroughOverlayState
                         child: TutorialDialoguePanel(
                           step: step,
                           index: stepIndex,
-                          count: widget.steps.length,
+                          count: widget.content.steps.length,
                           tokens: widget.tokens,
                           language: widget.language,
                           satisfied: satisfied,
@@ -266,15 +479,153 @@ class _TutorialWalkthroughOverlayState
   }
 }
 
+class TutorialOrientationPanel extends StatelessWidget {
+  const TutorialOrientationPanel({
+    required this.stop,
+    required this.index,
+    required this.count,
+    required this.header,
+    required this.beginLabel,
+    required this.tokens,
+    required this.language,
+    required this.onNext,
+    required this.onClose,
+    this.onBack,
+    super.key,
+  });
+
+  final TutorialOrientationStop stop;
+  final int index;
+  final int count;
+  final String header;
+  final String beginLabel;
+  final DesignTokens tokens;
+  final KolkhozLanguage language;
+  final VoidCallback? onBack;
+  final VoidCallback onNext;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return PanelStyleSurface(
+      tokens: tokens,
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        spacing: 12,
+        children: [
+          Image.asset(
+            'assets/ui/Embellishments/art-tutorial-foreman.png',
+            width: 92,
+            height: 110,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.none,
+          ),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 9,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          DisplayText(
+                            header,
+                            size: DisplayTextSize.caption,
+                            variant: DisplayTextWeight.bold,
+                            color: tokens.colors.gold,
+                          ),
+                          Text(
+                            stop.title(language).toUpperCase(),
+                            style: kolkhozFontStyle.copyWith(
+                              color: tokens.colors.cream,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      key: const Key('tutorial-close'),
+                      onTap: onClose,
+                      child: Icon(
+                        Icons.close,
+                        color: tokens.colors.creamDim,
+                        size: 22,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  stop.body(language),
+                  style: kolkhozFontStyle.copyWith(
+                    color: tokens.colors.cream,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    height: 1.25,
+                  ),
+                ),
+                TutorialProgressDots(
+                  index: index,
+                  count: count,
+                  tokens: tokens,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  spacing: 8,
+                  children: [
+                    ChromeAssetButton(
+                      key: const Key('tutorial-back'),
+                      label: language.strings.tutorialdisplayBack,
+                      tokens: tokens,
+                      enabled: onBack != null,
+                      backgroundAsset: chromeButtonSecondaryAsset,
+                      textColor: tokens.colors.cardInk,
+                      textSize: DisplayTextSize.caption,
+                      width: 110,
+                      height: 34,
+                      onPressed: onBack ?? () {},
+                    ),
+                    ChromeAssetButton(
+                      key: const Key('tutorial-next'),
+                      label: index == count - 1
+                          ? beginLabel
+                          : language.strings.tutorialdisplayNext,
+                      tokens: tokens,
+                      backgroundAsset: chromeButtonPrimaryAsset,
+                      textColor: tokens.colors.onAccent,
+                      textSize: DisplayTextSize.caption,
+                      width: 130,
+                      height: 34,
+                      onPressed: onNext,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The folded-away tutorial: a small Misha badge that re-opens the panel.
 class TutorialCollapsedBadge extends StatelessWidget {
   const TutorialCollapsedBadge({
     required this.tokens,
+    required this.iconPath,
     required this.onExpand,
     super.key,
   });
 
   final DesignTokens tokens;
+  final String iconPath;
   final VoidCallback onExpand;
 
   @override
@@ -290,14 +641,14 @@ class TutorialCollapsedBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
-              'assets/ui/Embellishments/art-tutorial-foreman.png',
-              width: 44,
-              height: 52,
+              iconPath,
+              width: 34,
+              height: 34,
               fit: BoxFit.contain,
               filterQuality: FilterQuality.none,
             ),
             DisplayText(
-              '?',
+              '!',
               size: DisplayTextSize.caption,
               variant: DisplayTextWeight.bold,
               color: tokens.colors.gold,

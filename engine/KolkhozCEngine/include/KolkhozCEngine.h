@@ -50,7 +50,10 @@ enum {
     KC_ACTION_UNDO_SWAP = 8,
     KC_ACTION_PASS_CARD = 9,
     KC_ACTION_REVEAL_REWARD = 10,
-    KC_ACTION_REVEAL_TRUMP = 11
+    KC_ACTION_REVEAL_TRUMP = 11,
+    KC_ACTION_COMPLETE_TUTORIAL_ORIENTATION = 12,
+    KC_ACTION_COMPLETE_TUTORIAL_REWARD_LESSON = 13,
+    KC_ACTION_COMPLETE_TUTORIAL_SABOTEUR_FOLLOW_LESSON = 14
 };
 
 enum {
@@ -337,6 +340,13 @@ typedef struct {
 
 typedef struct {
     uint64_t rng_state;
+    bool tutorial_mode;
+    bool tutorial_orientation_complete;
+    bool tutorial_reward_lesson_complete;
+    bool tutorial_saboteur_follow_lesson_complete;
+    int32_t tutorial_famine_trump_suit;
+    int32_t tutorial_famine_off_suit;
+    int32_t tutorial_famine_void_suit;
     KCVariants variants;
     KCPlayer players[KC_PLAYER_COUNT];
     int32_t lead;
@@ -396,6 +406,7 @@ void kc_controllers_set(KCControllers *controllers, int32_t player_id, int32_t c
 void kc_engine_init(KCEngine *engine, uint64_t seed, KCVariants variants);
 void kc_engine_init_with_controllers(KCEngine *engine, uint64_t seed, KCVariants variants, KCControllers controllers);
 void kc_engine_init_with_controllers_stepwise(KCEngine *engine, uint64_t seed, KCVariants variants, KCControllers controllers);
+void kc_engine_init_tutorial_with_controllers_stepwise(KCEngine *engine, uint64_t seed, KCControllers controllers);
 void kc_engine_init_curriculum(KCEngine *engine, uint64_t seed, KCVariants variants, int32_t plot_cards_per_player, double second_year_famine_rate);
 void kc_engine_init_curriculum_rounds(KCEngine *engine, uint64_t seed, KCVariants variants, int32_t plot_cards_per_player, double final_round_famine_rate, int32_t curriculum_rounds);
 KCEngine *kc_engine_alloc(void);
@@ -423,6 +434,7 @@ int32_t kc_engine_object_tokens(const KCEngine *engine, int32_t perspective_play
 int32_t kc_engine_object_token_dense_features(const KCEngine *engine, int32_t perspective_player, KCDenseObjectTokens output);
 bool kc_engine_heuristic_policy_action(const KCEngine *engine, KCAction *selected);
 bool kc_engine_waiting_for_external_action(const KCEngine *engine);
+bool kc_engine_is_tutorial(const KCEngine *engine);
 int32_t kc_engine_waiting_player(const KCEngine *engine);
 int32_t kc_engine_phase(const KCEngine *engine);
 int32_t kc_engine_year(const KCEngine *engine);

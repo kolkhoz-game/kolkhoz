@@ -125,6 +125,7 @@ class GameController extends ChangeNotifier {
       List.unmodifiable(_localEngine?.gameLog ?? const []);
   KolkhozGameVariants currentVariants = KolkhozGameVariants.kolkhoz;
   int currentSeed = 0;
+  bool _isTutorial = false;
   GameEngine? _engine;
   LocalGameEngine? get _localEngine => switch (_engine) {
     final LocalGameEngine engine => engine,
@@ -192,6 +193,7 @@ class GameController extends ChangeNotifier {
     KolkhozGameVariants? variants,
     List<KolkhozPlayerController>? controllers,
     bool persist = true,
+    bool tutorial = false,
   }) {
     try {
       _clearSession();
@@ -200,6 +202,7 @@ class GameController extends ChangeNotifier {
       );
       _replaceLocalPlayers(normalizedControllers);
       currentVariants = variants ?? lobby.variants;
+      _isTutorial = tutorial;
       lobby = _buildLobby(currentVariants, spectators: lobby.spectators);
       if (!lobby.readyToStart) {
         throw StateError('All four seats must be ready before starting');
@@ -215,6 +218,7 @@ class GameController extends ChangeNotifier {
         variants: currentVariants,
         controllers: normalizedControllers,
         bindings: _localEngineBindings,
+        tutorial: tutorial,
       );
       lifecycle = GameControllerLifecycle.playing;
       error = null;
@@ -231,6 +235,23 @@ class GameController extends ChangeNotifier {
       finishedGameLobby = null;
       notifyListeners();
     }
+  }
+
+  void startTutorial({bool restart = false}) {
+    if (isTutorial && !restart) {
+      return;
+    }
+    _clearSession();
+    if (restart) {
+      _localGameEngineFactory.clearAutosave(tutorial: true);
+    } else if (_restoreTutorialAutosave()) {
+      return;
+    }
+    startGame(
+      variants: KolkhozGameVariants.kolkhoz,
+      controllers: KolkhozPlayerController.defaultControllers,
+      tutorial: true,
+    );
   }
 
   void returnToLobby() {
@@ -304,6 +325,9 @@ class GameController extends ChangeNotifier {
   }
 
   bool get isOnlineGame => _engine?.mode == GameEngineMode.remote;
+  bool get isTutorial =>
+      _isTutorial && _engine?.mode == GameEngineMode.local;
+  bool get hasSavedTutorial => _localGameEngineFactory.hasTutorialAutosave;
   bool get hasActiveLocalGame =>
       _engine?.mode == GameEngineMode.local &&
       lifecycle == GameControllerLifecycle.playing;
@@ -978,6 +1002,17 @@ class GameController extends ChangeNotifier {
 
   bool _restoreAutosave() {
     final restored = _localGameEngineFactory.restore(_localEngineBindings);
+    return _adoptRestoredGame(restored);
+  }
+
+  bool _restoreTutorialAutosave() {
+    final restored = _localGameEngineFactory.restoreTutorial(
+      _localEngineBindings,
+    );
+    return _adoptRestoredGame(restored);
+  }
+
+  bool _adoptRestoredGame(RestoredLocalGame? restored) {
     if (restored == null) {
       return false;
     }
@@ -985,6 +1020,7 @@ class GameController extends ChangeNotifier {
     currentVariants = restored.variants;
     lobby = _buildLobby(currentVariants);
     currentSeed = restored.seed;
+    _isTutorial = restored.tutorial;
     uiState = const GameUiState();
     _lastSyncedPhase = null;
     revealedPlayerID = null;
@@ -993,7 +1029,7 @@ class GameController extends ChangeNotifier {
     error = null;
     _sync();
     if (model?.table.phase == phaseGameOver) {
-      _localGameEngineFactory.clearAutosave();
+      _localGameEngineFactory.clearAutosave(tutorial: restored.tutorial);
       _clearSession();
       _model = null;
       finishedGameLobby = null;
@@ -1006,7 +1042,7 @@ class GameController extends ChangeNotifier {
 
   void _saveAutosave() {
     if (model?.table.phase == phaseGameOver) {
-      _localGameEngineFactory.clearAutosave();
+      _localGameEngineFactory.clearAutosave(tutorial: _isTutorial);
       return;
     }
     final engine = _localEngine;
@@ -1016,6 +1052,7 @@ class GameController extends ChangeNotifier {
       variants: currentVariants,
       controllers: controllers,
       engine: engine,
+      tutorial: _isTutorial,
     );
   }
 

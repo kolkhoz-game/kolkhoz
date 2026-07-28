@@ -388,7 +388,274 @@ static void kc_make_worker_deck(KCEngine *engine, KCCardList *deck) {
     kc_shuffle(engine, deck);
 }
 
+static KCCard kc_tutorial_famine_plot_card_for_suit(
+    const KCEngine *engine,
+    int32_t suit
+) {
+    KCCard selected = kc_no_card();
+    const KCPlayer *learner = &engine->players[0];
+    const KCCardList *plots[2] = {
+        &learner->plot_revealed,
+        &learner->plot_hidden
+    };
+    for (int32_t plot_index = 0; plot_index < 2; plot_index++) {
+        const KCCardList *plot = plots[plot_index];
+        for (int32_t index = 0; index < plot->count; index++) {
+            KCCard candidate = plot->cards[index];
+            if (candidate.suit < 0 ||
+                candidate.suit >= KC_SUIT_COUNT ||
+                (suit >= 0 && candidate.suit != suit)) {
+                continue;
+            }
+            if (!kc_card_valid(selected) || candidate.value > selected.value) {
+                selected = candidate;
+            }
+        }
+    }
+    return selected;
+}
+
+static KCCard kc_tutorial_famine_saved_card(
+    const KCEngine *engine,
+    const KCCardList *deck
+) {
+    KCCard selected = kc_no_card();
+    const KCPlayer *learner = &engine->players[0];
+    const KCCardList *plots[2] = {
+        &learner->plot_revealed,
+        &learner->plot_hidden
+    };
+    for (int32_t plot_index = 0; plot_index < 2; plot_index++) {
+        const KCCardList *plot = plots[plot_index];
+        for (int32_t index = 0; index < plot->count; index++) {
+            KCCard candidate = plot->cards[index];
+            if (candidate.suit < 0 || candidate.suit >= KC_SUIT_COUNT) {
+                continue;
+            }
+            int32_t available_cards = 0;
+            for (int32_t deck_index = 0; deck_index < deck->count; deck_index++) {
+                KCCard available = deck->cards[deck_index];
+                if (available.suit == candidate.suit) {
+                    available_cards++;
+                }
+            }
+            if (available_cards >= 1 &&
+                (!kc_card_valid(selected) ||
+                 candidate.value > selected.value)) {
+                selected = candidate;
+            }
+        }
+    }
+    return selected;
+}
+
+static KCCard kc_take_tutorial_card(
+    KCCardList *deck,
+    int32_t suit,
+    bool highest,
+    int32_t below_value
+) {
+    int32_t selected_index = KC_NO_PLAYER;
+    for (int32_t index = 0; index < deck->count; index++) {
+        KCCard candidate = deck->cards[index];
+        if (candidate.suit != suit ||
+            (below_value > 0 && candidate.value >= below_value)) {
+            continue;
+        }
+        if (selected_index < 0 ||
+            (highest && candidate.value > deck->cards[selected_index].value) ||
+            (!highest && candidate.value < deck->cards[selected_index].value)) {
+            selected_index = index;
+        }
+    }
+    return selected_index >= 0
+        ? kc_list_remove_at(deck, selected_index)
+        : kc_no_card();
+}
+
+static KCCard kc_take_tutorial_famine_filler(
+    KCCardList *deck,
+    int32_t trump_suit,
+    int32_t off_suit,
+    int32_t closing_value
+) {
+    int32_t selected_index = KC_NO_PLAYER;
+    for (int32_t index = 0; index < deck->count; index++) {
+        KCCard candidate = deck->cards[index];
+        if (candidate.suit < 0 ||
+            candidate.suit >= KC_SUIT_COUNT ||
+            candidate.suit == trump_suit ||
+            (candidate.suit == off_suit &&
+             candidate.value >= closing_value)) {
+            continue;
+        }
+        if (selected_index < 0 ||
+            candidate.value > deck->cards[selected_index].value) {
+            selected_index = index;
+        }
+    }
+    return selected_index >= 0
+        ? kc_list_remove_at(deck, selected_index)
+        : kc_no_card();
+}
+
+static void kc_deal_tutorial_famine_hands(KCEngine *engine) {
+    KCCardList deck;
+    kc_make_worker_deck(engine, &deck);
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        kc_list_clear(&engine->players[player_id].hand);
+    }
+
+    KCCard saved_off_suit = kc_tutorial_famine_saved_card(engine, &deck);
+    int32_t off_suit = kc_card_valid(saved_off_suit)
+        ? saved_off_suit.suit
+        : KC_SUIT_POTATO;
+    int32_t suit_counts[KC_SUIT_COUNT] = {0};
+    for (int32_t index = 0; index < deck.count; index++) {
+        KCCard candidate = deck.cards[index];
+        if (candidate.suit >= 0 && candidate.suit < KC_SUIT_COUNT) {
+            suit_counts[candidate.suit]++;
+        }
+    }
+    int32_t trump_suit = off_suit == 0 ? 1 : 0;
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        if (suit != off_suit &&
+            suit_counts[suit] > suit_counts[trump_suit]) {
+            trump_suit = suit;
+        }
+    }
+    int32_t void_suit = KC_NO_SUIT;
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        if (suit == off_suit || suit == trump_suit) {
+            continue;
+        }
+        if (void_suit < 0 || suit_counts[suit] > suit_counts[void_suit]) {
+            void_suit = suit;
+        }
+    }
+    int32_t filler_suit = KC_NO_SUIT;
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        if (suit != off_suit &&
+            suit != trump_suit &&
+            suit != void_suit) {
+            filler_suit = suit;
+            break;
+        }
+    }
+    engine->tutorial_famine_trump_suit = trump_suit;
+    engine->tutorial_famine_off_suit = off_suit;
+    engine->tutorial_famine_void_suit = void_suit;
+    engine->pending_final_year_trump_card =
+        kc_take_tutorial_card(&deck, trump_suit, false, 0);
+    engine->final_year_trump_card = kc_no_card();
+
+    KCCard learner_cards[4] = {
+        kc_take_tutorial_card(&deck, trump_suit, true, 0),
+        kc_take_tutorial_card(&deck, trump_suit, true, 0),
+        kc_take_tutorial_card(
+            &deck,
+            off_suit,
+            true,
+            0
+        ),
+        kc_take_tutorial_card(&deck, void_suit, false, 0)
+    };
+    for (int32_t index = 0; index < 4; index++) {
+        if (kc_card_valid(learner_cards[index])) {
+            kc_list_append(&engine->players[0].hand, learner_cards[index]);
+        }
+    }
+    int32_t closing_value = learner_cards[2].value;
+    if (kc_card_valid(saved_off_suit) &&
+        saved_off_suit.value > closing_value) {
+        closing_value = saved_off_suit.value;
+    }
+
+    int32_t wrecker_index = kc_list_find(
+        &deck,
+        (KCCard){ .suit = KC_SUIT_WRECKER, .value = KC_WRECKER_VALUE }
+    );
+    KCCard wrecker = wrecker_index >= 0
+        ? kc_list_remove_at(&deck, wrecker_index)
+        : kc_no_card();
+    for (int32_t player_id = 1; player_id < KC_PLAYER_COUNT; player_id++) {
+        KCCard void_card =
+            kc_take_tutorial_card(&deck, void_suit, true, 0);
+        KCCard trump_card = player_id == 1 && kc_card_valid(wrecker)
+            ? wrecker
+            : kc_take_tutorial_card(&deck, trump_suit, true, 0);
+        if (kc_card_valid(void_card)) {
+            kc_list_append(&engine->players[player_id].hand, void_card);
+        }
+        if (kc_card_valid(trump_card)) {
+            kc_list_append(&engine->players[player_id].hand, trump_card);
+        }
+    }
+    for (int32_t player_id = 1; player_id < KC_PLAYER_COUNT; player_id++) {
+        while (engine->players[player_id].hand.count < 4) {
+            KCCard card =
+                kc_take_tutorial_card(&deck, filler_suit, true, 0);
+            if (!kc_card_valid(card)) {
+                card = kc_take_tutorial_card(&deck, void_suit, true, 0);
+            }
+            if (!kc_card_valid(card)) {
+                card = kc_take_tutorial_famine_filler(
+                    &deck,
+                    trump_suit,
+                    off_suit,
+                    closing_value
+                );
+            }
+            if (kc_card_valid(card)) {
+                kc_list_append(&engine->players[player_id].hand, card);
+            } else {
+                break;
+            }
+        }
+    }
+}
+
+static void kc_deal_tutorial_hands(KCEngine *engine) {
+    static const KCCard year_one[KC_PLAYER_COUNT][5] = {
+        {{KC_SUIT_WHEAT, 6}, {KC_SUIT_SUNFLOWER, 11}, {KC_SUIT_POTATO, 13}, {KC_SUIT_BEET, 11}, {KC_SUIT_WHEAT, 10}},
+        {{KC_SUIT_WHEAT, 11}, {KC_SUIT_SUNFLOWER, 10}, {KC_SUIT_POTATO, 12}, {KC_SUIT_BEET, 12}, {KC_SUIT_SUNFLOWER, 6}},
+        {{KC_SUIT_WHEAT, 12}, {KC_SUIT_SUNFLOWER, 12}, {KC_SUIT_POTATO, 10}, {KC_SUIT_BEET, 13}, {KC_SUIT_POTATO, 6}},
+        {{KC_SUIT_WHEAT, 13}, {KC_SUIT_SUNFLOWER, 13}, {KC_SUIT_POTATO, 11}, {KC_SUIT_BEET, 10}, {KC_SUIT_BEET, 6}}
+    };
+    static const KCCard year_two[KC_PLAYER_COUNT][5] = {
+        {{KC_SUIT_WHEAT, 13}, {KC_SUIT_SUNFLOWER, 13}, {KC_SUIT_POTATO, 10}, {KC_SUIT_SUNFLOWER, 9}, {KC_SUIT_BEET, 13}},
+        {{KC_SUIT_BEET, 8}, {KC_SUIT_SUNFLOWER, 10}, {KC_SUIT_POTATO, 11}, {KC_SUIT_POTATO, 9}, {KC_SUIT_BEET, 10}},
+        {{KC_SUIT_WHEAT, 11}, {KC_SUIT_SUNFLOWER, 11}, {KC_SUIT_POTATO, 13}, {KC_SUIT_WHEAT, 9}, {KC_SUIT_BEET, 11}},
+        {{KC_SUIT_WHEAT, 12}, {KC_SUIT_SUNFLOWER, 12}, {KC_SUIT_POTATO, 12}, {KC_SUIT_BEET, 9}, {KC_SUIT_BEET, 12}}
+    };
+    static const KCCard year_three[KC_PLAYER_COUNT][5] = {
+        {{KC_SUIT_POTATO, 13}, {KC_SUIT_SUNFLOWER, 10}, {KC_SUIT_BEET, 10}, {KC_SUIT_WRECKER, KC_WRECKER_VALUE}, {KC_SUIT_BEET, 8}},
+        {{KC_SUIT_POTATO, 12}, {KC_SUIT_SUNFLOWER, 11}, {KC_SUIT_BEET, 11}, {KC_SUIT_POTATO, 7}, {KC_SUIT_SUNFLOWER, 8}},
+        {{KC_SUIT_WHEAT, 12}, {KC_SUIT_SUNFLOWER, 12}, {KC_SUIT_BEET, 12}, {KC_SUIT_SUNFLOWER, 7}, {KC_SUIT_POTATO, 11}},
+        {{KC_SUIT_WHEAT, 13}, {KC_SUIT_SUNFLOWER, 13}, {KC_SUIT_BEET, 13}, {KC_SUIT_POTATO, 10}, {KC_SUIT_WHEAT, 9}}
+    };
+    const KCCard (*hands)[5] = engine->year == 1
+        ? year_one
+        : (engine->year == 2 ? year_two : year_three);
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        kc_list_clear(&engine->players[player_id].hand);
+        for (int32_t card_index = 0; card_index < 5; card_index++) {
+            kc_list_append(&engine->players[player_id].hand, hands[player_id][card_index]);
+        }
+    }
+    engine->pending_final_year_trump_card = kc_no_card();
+    engine->final_year_trump_card = kc_no_card();
+}
+
 static void kc_deal_hands(KCEngine *engine) {
+    if (engine->tutorial_mode && engine->year <= 3) {
+        kc_deal_tutorial_hands(engine);
+        return;
+    }
+    if (engine->tutorial_mode && engine->year == KC_MAX_YEARS) {
+        kc_deal_tutorial_famine_hands(engine);
+        return;
+    }
     KCCardList deck;
     kc_make_worker_deck(engine, &deck);
     int32_t cards_per_player = engine->is_famine ? 4 : 5;
@@ -427,7 +694,23 @@ static void kc_setup_decks(KCEngine *engine) {
                 int32_t lotto_value = 5 + (int32_t)(kc_next(engine) % 9U);
                 kc_list_append(&engine->job_piles[suit], (KCCard){ .suit = suit, .value = lotto_value });
             }
-            kc_shuffle(engine, &engine->job_piles[suit]);
+            if (engine->tutorial_mode) {
+                static const int32_t tutorial_rewards[KC_SUIT_COUNT][KC_MAX_YEARS] = {
+                    {2, 3, 4, 5, 1},
+                    {5, 1, 2, 3, 4},
+                    {1, 2, 3, 4, 5},
+                    {4, 5, 1, 2, 3}
+                };
+                kc_list_clear(&engine->job_piles[suit]);
+                for (int32_t year = KC_MAX_YEARS - 1; year >= 0; year--) {
+                    kc_list_append(
+                        &engine->job_piles[suit],
+                        (KCCard){ .suit = suit, .value = tutorial_rewards[suit][year] }
+                    );
+                }
+            } else {
+                kc_shuffle(engine, &engine->job_piles[suit]);
+            }
         }
     }
     kc_clear_revealed_jobs(engine);
@@ -435,9 +718,17 @@ static void kc_setup_decks(KCEngine *engine) {
     kc_deal_hands(engine);
 }
 
-static void kc_engine_init_with_controllers_internal(KCEngine *engine, uint64_t seed, KCVariants variants, KCControllers controllers, bool process_automatic) {
+static void kc_engine_init_with_controllers_internal(
+    KCEngine *engine,
+    uint64_t seed,
+    KCVariants variants,
+    KCControllers controllers,
+    bool process_automatic,
+    bool tutorial_mode
+) {
     memset(engine, 0, sizeof(*engine));
     engine->rng_state = seed == 0 ? 1 : seed;
+    engine->tutorial_mode = tutorial_mode;
     variants.final_year_trump = variants.final_year_trump && variants.wrecker;
     variants.lotto_rewards = variants.lotto_rewards && variants.deck_type != 36;
     engine->variants = variants;
@@ -452,27 +743,48 @@ static void kc_engine_init_with_controllers_internal(KCEngine *engine, uint64_t 
     }
     engine->lead = (int32_t)(kc_next(engine) % KC_PLAYER_COUNT);
     engine->trump_selector = (int32_t)(kc_next(engine) % KC_PLAYER_COUNT);
+    if (tutorial_mode) {
+        engine->lead = 1;
+        engine->trump_selector = 1;
+    }
     engine->current_player = engine->trump_selector;
     engine->phase = KC_PHASE_PLANNING;
     kc_reset_year_work(engine);
     kc_setup_decks(engine);
+    if (tutorial_mode) {
+        engine->current_player = 0;
+    }
     if (process_automatic) {
         kc_process_automatic_turns(engine);
     }
 }
 
 void kc_engine_init_with_controllers(KCEngine *engine, uint64_t seed, KCVariants variants, KCControllers controllers) {
-    kc_engine_init_with_controllers_internal(engine, seed, variants, controllers, true);
+    kc_engine_init_with_controllers_internal(engine, seed, variants, controllers, true, false);
 }
 
 void kc_engine_init_with_controllers_stepwise(KCEngine *engine, uint64_t seed, KCVariants variants, KCControllers controllers) {
-    kc_engine_init_with_controllers_internal(engine, seed, variants, controllers, false);
+    kc_engine_init_with_controllers_internal(engine, seed, variants, controllers, false, false);
+}
+
+void kc_engine_init_tutorial_with_controllers_stepwise(
+    KCEngine *engine,
+    uint64_t seed,
+    KCControllers controllers
+) {
+    KCVariants variants;
+    kc_variants_kolkhoz(&variants);
+    kc_engine_init_with_controllers_internal(engine, seed, variants, controllers, false, true);
 }
 
 void kc_engine_init(KCEngine *engine, uint64_t seed, KCVariants variants) {
     KCControllers controllers;
     kc_controllers_all_external(&controllers);
     kc_engine_init_with_controllers(engine, seed, variants, controllers);
+}
+
+bool kc_engine_is_tutorial(const KCEngine *engine) {
+    return engine && engine->tutorial_mode;
 }
 
 KCEngine *kc_engine_alloc(void) {
@@ -1441,7 +1753,15 @@ static void kc_resolve_current_trick(KCEngine *engine) {
         .to_owner = winner,
         .target_suit = KC_NO_SUIT
     });
-    kc_prefill_single_assignment_target(engine);
+    bool tutorial_manual_assignment =
+        engine->tutorial_mode &&
+        winner == 0 &&
+        ((engine->year == 1 && engine->trick_count == 3) ||
+         (engine->year == 2 &&
+          (engine->trick_count == 2 || engine->trick_count == 4)));
+    if (!tutorial_manual_assignment) {
+        kc_prefill_single_assignment_target(engine);
+    }
 }
 
 static int32_t kc_play_card_index(KCEngine *engine, int32_t player_id, int32_t card_index) {
@@ -2125,6 +2445,10 @@ static void kc_transition_to_next_year(KCEngine *engine) {
     engine->last_trick_count = 0;
     engine->last_winner = KC_NO_PLAYER;
     engine->trump = KC_NO_SUIT;
+    if (engine->tutorial_mode &&
+        (engine->year == 3 || engine->year == KC_MAX_YEARS)) {
+        engine->lead = 3;
+    }
     engine->requisition_event_count = 0;
     engine->requisition_plan_count = 0;
     engine->requisition_plan_index = 0;
@@ -2273,6 +2597,45 @@ static void kc_confirm_swap(KCEngine *engine, int32_t player_id) {
 static int32_t kc_engine_apply_action(KCEngine *engine, KCAction action) {
     int32_t player_id = action.player_id;
     switch (action.kind) {
+    case KC_ACTION_COMPLETE_TUTORIAL_ORIENTATION:
+        if (!engine->tutorial_mode ||
+            engine->tutorial_orientation_complete ||
+            engine->year != 1 ||
+            engine->phase != KC_PHASE_PLANNING) {
+            return KC_ERR_WRONG_PHASE;
+        }
+        engine->tutorial_orientation_complete = true;
+        engine->current_player = engine->trump_selector;
+        return 0;
+
+    case KC_ACTION_COMPLETE_TUTORIAL_REWARD_LESSON:
+        if (!engine->tutorial_mode ||
+            !engine->tutorial_orientation_complete ||
+            engine->tutorial_reward_lesson_complete ||
+            engine->year != 1 ||
+            engine->phase != KC_PHASE_PLANNING ||
+            kc_next_reward_to_reveal(engine) != KC_NO_SUIT) {
+            return KC_ERR_WRONG_PHASE;
+        }
+        engine->tutorial_reward_lesson_complete = true;
+        engine->current_player = engine->trump_selector;
+        return 0;
+
+    case KC_ACTION_COMPLETE_TUTORIAL_SABOTEUR_FOLLOW_LESSON:
+        if (!engine->tutorial_mode ||
+            engine->tutorial_saboteur_follow_lesson_complete ||
+            engine->year != 3 ||
+            engine->phase != KC_PHASE_TRICK ||
+            engine->trick_count != 0 ||
+            engine->current_trick_count != 2 ||
+            engine->current_trick[1].player_id != 0 ||
+            !kc_card_is_wrecker(engine->current_trick[1].card)) {
+            return KC_ERR_WRONG_PHASE;
+        }
+        engine->tutorial_saboteur_follow_lesson_complete = true;
+        engine->current_player = 1;
+        return 0;
+
     case KC_ACTION_REVEAL_TRUMP:
         if (engine->phase != KC_PHASE_PLANNING) {
             return KC_ERR_WRONG_PHASE;
@@ -2303,7 +2666,16 @@ static int32_t kc_engine_apply_action(KCEngine *engine, KCAction action) {
         if (action.suit != kc_next_reward_to_reveal(engine)) {
             return KC_ERR_INVALID_CARD;
         }
-        return kc_reveal_job(engine, action.suit) ? 0 : KC_ERR_INVALID_CARD;
+        if (!kc_reveal_job(engine, action.suit)) {
+            return KC_ERR_INVALID_CARD;
+        }
+        if (engine->tutorial_mode &&
+            engine->year == 1 &&
+            !engine->tutorial_reward_lesson_complete &&
+            kc_next_reward_to_reveal(engine) == KC_NO_SUIT) {
+            engine->current_player = 0;
+        }
+        return 0;
 
     case KC_ACTION_SET_TRUMP:
         if (engine->phase != KC_PHASE_PLANNING) {
@@ -2367,7 +2739,17 @@ static int32_t kc_engine_apply_action(KCEngine *engine, KCAction action) {
         if (!kc_is_valid_play(engine, player_id, card_index)) {
             return KC_ERR_INVALID_CARD;
         }
-        return kc_play_card_index(engine, player_id, card_index);
+        int32_t result = kc_play_card_index(engine, player_id, card_index);
+        if (result == 0 &&
+            engine->tutorial_mode &&
+            engine->year == 3 &&
+            engine->trick_count == 0 &&
+            player_id == 0 &&
+            kc_card_is_wrecker(action.card) &&
+            !engine->tutorial_saboteur_follow_lesson_complete) {
+            engine->current_player = 0;
+        }
+        return result;
     }
 
     case KC_ACTION_ASSIGN: {
@@ -2456,8 +2838,275 @@ static void kc_add_action(KCAction *actions, int32_t max_actions, int32_t *count
     *count += 1;
 }
 
+static int32_t kc_tutorial_assignment_target(
+    const KCEngine *engine,
+    int32_t play_index
+) {
+    if (!engine->tutorial_mode || engine->year < 1 || engine->year > 3) {
+        return KC_NO_SUIT;
+    }
+    static const int32_t targets[3][4] = {
+        {KC_SUIT_WHEAT, KC_SUIT_SUNFLOWER, KC_SUIT_POTATO, KC_SUIT_BEET},
+        {KC_SUIT_POTATO, KC_NO_SUIT, KC_SUIT_SUNFLOWER, KC_SUIT_WHEAT},
+        {KC_SUIT_BEET, KC_SUIT_BEET, KC_SUIT_SUNFLOWER, KC_SUIT_POTATO}
+    };
+    if (engine->trick_count < 1 || engine->trick_count > 4) {
+        return KC_NO_SUIT;
+    }
+    if (engine->year == 2 && engine->trick_count == 2) {
+        if (play_index < 0 || play_index >= engine->last_trick_count) {
+            return KC_NO_SUIT;
+        }
+        return engine->last_trick[play_index].card.suit == KC_SUIT_WHEAT
+            ? KC_SUIT_WHEAT
+            : KC_SUIT_BEET;
+    }
+    return targets[engine->year - 1][engine->trick_count - 1];
+}
+
+static int32_t kc_tutorial_famine_off_suit(const KCEngine *engine) {
+    int32_t counts[KC_SUIT_COUNT] = {0};
+    const KCCardList *hand = &engine->players[0].hand;
+    for (int32_t index = 0; index < hand->count; index++) {
+        KCCard card = hand->cards[index];
+        if (card.suit >= 0 &&
+            card.suit < KC_SUIT_COUNT &&
+            card.suit != engine->trump) {
+            counts[card.suit]++;
+        }
+    }
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        if (counts[suit] >= 2) {
+            return suit;
+        }
+    }
+    return KC_NO_SUIT;
+}
+
+static int32_t kc_tutorial_famine_void_suit(const KCEngine *engine) {
+    if (engine->tutorial_famine_void_suit >= 0 &&
+        engine->tutorial_famine_void_suit < KC_SUIT_COUNT) {
+        return engine->tutorial_famine_void_suit;
+    }
+    int32_t off_suit = kc_tutorial_famine_off_suit(engine);
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        if (suit == engine->trump || suit == off_suit) {
+            continue;
+        }
+        bool every_opponent_has_suit = true;
+        for (int32_t player_id = 1; player_id < KC_PLAYER_COUNT; player_id++) {
+            bool found = false;
+            const KCCardList *hand = &engine->players[player_id].hand;
+            for (int32_t index = 0; index < hand->count; index++) {
+                if (hand->cards[index].suit == suit) {
+                    found = true;
+                    break;
+                }
+            }
+            every_opponent_has_suit = every_opponent_has_suit && found;
+        }
+        if (every_opponent_has_suit) {
+            return suit;
+        }
+    }
+    return KC_NO_SUIT;
+}
+
+static bool kc_tutorial_play_allowed(
+    const KCEngine *engine,
+    int32_t player_id,
+    KCCard card
+) {
+    if (!engine->tutorial_mode || engine->year < 1) {
+        return true;
+    }
+    if (engine->year == 4) {
+        const KCCardList *hand = &engine->players[player_id].hand;
+        for (int32_t index = 0; index < hand->count; index++) {
+            if (kc_card_is_wrecker(hand->cards[index])) {
+                return kc_card_is_wrecker(card);
+            }
+        }
+        return true;
+    }
+    if (engine->year == KC_MAX_YEARS) {
+        int32_t trick = engine->trick_count;
+        int32_t off_suit = kc_tutorial_famine_off_suit(engine);
+        int32_t void_suit = engine->current_trick_count > 0
+            ? kc_lead_suit(engine)
+            : kc_tutorial_famine_void_suit(engine);
+        if (trick == 0) {
+            if (player_id != 0) {
+                return card.suit == void_suit;
+            }
+            int32_t lower_trump = 100;
+            const KCCardList *hand = &engine->players[0].hand;
+            for (int32_t index = 0; index < hand->count; index++) {
+                KCCard candidate = hand->cards[index];
+                if (candidate.suit == engine->trump &&
+                    candidate.value < lower_trump) {
+                    lower_trump = candidate.value;
+                }
+            }
+            return card.suit == engine->trump && card.value == lower_trump;
+        }
+        if (trick == 1) {
+            if (player_id == 1) {
+                return kc_card_is_wrecker(card);
+            }
+            return card.suit == engine->trump;
+        }
+        if (trick == 2) {
+            int32_t closing_suit = engine->current_trick_count > 0
+                ? kc_lead_suit(engine)
+                : off_suit;
+            if (player_id != 0) {
+                return true;
+            }
+            int32_t highest_closer = -1;
+            const KCCardList *hand = &engine->players[0].hand;
+            for (int32_t index = 0; index < hand->count; index++) {
+                KCCard candidate = hand->cards[index];
+                if (candidate.suit == closing_suit &&
+                    candidate.value > highest_closer) {
+                    highest_closer = candidate.value;
+                }
+            }
+            return card.suit == closing_suit &&
+                card.value == highest_closer;
+        }
+        return true;
+    }
+    if (engine->year > 3) {
+        return true;
+    }
+    int32_t trick = engine->trick_count;
+    if (trick < 0 || trick >= 4) {
+        return true;
+    }
+    if (engine->year == 2) {
+        static const int32_t suits[4][KC_PLAYER_COUNT] = {
+            {KC_SUIT_POTATO, KC_SUIT_POTATO, KC_SUIT_POTATO, KC_SUIT_POTATO},
+            {KC_SUIT_WHEAT, KC_SUIT_BEET, KC_SUIT_BEET, KC_SUIT_BEET},
+            {KC_SUIT_SUNFLOWER, KC_SUIT_SUNFLOWER, KC_SUIT_SUNFLOWER, KC_SUIT_SUNFLOWER},
+            {KC_SUIT_WHEAT, KC_SUIT_BEET, KC_SUIT_WHEAT, KC_SUIT_BEET}
+        };
+        if (card.suit != suits[trick][player_id]) {
+            return false;
+        }
+        if (trick == 2 && player_id == 0) {
+            return card.value == 9;
+        }
+        if (trick == 3 && player_id == 2) {
+            return card.value == 9;
+        }
+        return true;
+    }
+    if (engine->year == 3) {
+        static const int32_t suits[4][KC_PLAYER_COUNT] = {
+            {KC_SUIT_WRECKER, KC_SUIT_SUNFLOWER, KC_SUIT_WHEAT, KC_SUIT_WHEAT},
+            {KC_SUIT_BEET, KC_SUIT_BEET, KC_SUIT_BEET, KC_SUIT_BEET},
+            {KC_SUIT_SUNFLOWER, KC_SUIT_SUNFLOWER, KC_SUIT_SUNFLOWER, KC_SUIT_SUNFLOWER},
+            {KC_SUIT_POTATO, KC_SUIT_POTATO, KC_SUIT_POTATO, KC_SUIT_POTATO}
+        };
+        return card.suit == suits[trick][player_id];
+    }
+    static const int32_t suits[4] = {
+        KC_SUIT_WHEAT, KC_SUIT_SUNFLOWER, KC_SUIT_POTATO, KC_SUIT_BEET
+    };
+    if (card.suit != suits[trick]) {
+        return false;
+    }
+    if (engine->year == 1 && trick == 0 && player_id == 0) {
+        return card.value == 6;
+    }
+    return true;
+}
+
+static bool kc_tutorial_swap_allowed(
+    const KCEngine *engine,
+    int32_t player_id,
+    KCCard hand_card,
+    KCCard plot_card,
+    int32_t plot_zone
+) {
+    if (!engine->tutorial_mode) {
+        return true;
+    }
+    if (engine->year == KC_MAX_YEARS) {
+        int32_t intended_suit = engine->tutorial_famine_off_suit;
+        KCCard saved_card =
+            kc_tutorial_famine_plot_card_for_suit(engine, intended_suit);
+        return player_id == 0 &&
+            kc_card_valid(saved_card) &&
+            kc_card_equal(plot_card, saved_card) &&
+            hand_card.suit != engine->trump &&
+            hand_card.suit != saved_card.suit;
+    }
+    if (engine->year > 3) {
+        return true;
+    }
+    return engine->year == 2 &&
+        player_id == 0 &&
+        plot_zone == KC_ZONE_HIDDEN &&
+        hand_card.suit == KC_SUIT_BEET &&
+        hand_card.value == 13 &&
+        plot_card.suit == KC_SUIT_WHEAT &&
+        plot_card.value == 10;
+}
+
 int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32_t max_actions) {
     int32_t count = 0;
+    if (engine->tutorial_mode && !engine->tutorial_orientation_complete) {
+        KCAction action = {0};
+        action.kind = KC_ACTION_COMPLETE_TUTORIAL_ORIENTATION;
+        action.player_id = 0;
+        action.suit = -1;
+        action.card = kc_no_card();
+        action.hand_card = kc_no_card();
+        action.plot_card = kc_no_card();
+        action.plot_zone = -1;
+        action.target_suit = -1;
+        kc_add_action(actions, max_actions, &count, action);
+        return count;
+    }
+    if (engine->tutorial_mode &&
+        engine->year == 1 &&
+        engine->phase == KC_PHASE_PLANNING &&
+        !engine->tutorial_reward_lesson_complete &&
+        kc_next_reward_to_reveal(engine) == KC_NO_SUIT) {
+        KCAction action = {0};
+        action.kind = KC_ACTION_COMPLETE_TUTORIAL_REWARD_LESSON;
+        action.player_id = 0;
+        action.suit = -1;
+        action.card = kc_no_card();
+        action.hand_card = kc_no_card();
+        action.plot_card = kc_no_card();
+        action.plot_zone = -1;
+        action.target_suit = -1;
+        kc_add_action(actions, max_actions, &count, action);
+        return count;
+    }
+    if (engine->tutorial_mode &&
+        engine->year == 3 &&
+        engine->phase == KC_PHASE_TRICK &&
+        engine->trick_count == 0 &&
+        !engine->tutorial_saboteur_follow_lesson_complete &&
+        engine->current_trick_count == 2 &&
+        engine->current_trick[1].player_id == 0 &&
+        kc_card_is_wrecker(engine->current_trick[1].card)) {
+        KCAction action = {0};
+        action.kind = KC_ACTION_COMPLETE_TUTORIAL_SABOTEUR_FOLLOW_LESSON;
+        action.player_id = 0;
+        action.suit = -1;
+        action.card = kc_no_card();
+        action.hand_card = kc_no_card();
+        action.plot_card = kc_no_card();
+        action.plot_zone = -1;
+        action.target_suit = -1;
+        kc_add_action(actions, max_actions, &count, action);
+        return count;
+    }
     switch (engine->phase) {
     case KC_PHASE_PLANNING:
         if (kc_next_reward_to_reveal(engine) != KC_NO_SUIT) {
@@ -2484,6 +3133,13 @@ int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32
             kc_add_action(actions, max_actions, &count, action);
         } else if (!engine->is_famine) {
             for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+                if (engine->tutorial_mode && engine->year <= 3) {
+                    int32_t tutorial_trump =
+                        engine->year == 3 ? KC_SUIT_SUNFLOWER : KC_SUIT_WHEAT;
+                    if (suit != tutorial_trump) {
+                        continue;
+                    }
+                }
                 KCAction action = {0};
                 action.kind = KC_ACTION_SET_TRUMP;
                 action.player_id = engine->current_player;
@@ -2504,6 +3160,14 @@ int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32
             const KCPlayer *player = &engine->players[player_id];
             for (int32_t hand_index = 0; hand_index < player->hand.count; hand_index++) {
                 for (int32_t plot_index = 0; plot_index < player->plot_hidden.count; plot_index++) {
+                    if (!kc_tutorial_swap_allowed(
+                            engine,
+                            player_id,
+                            player->hand.cards[hand_index],
+                            player->plot_hidden.cards[plot_index],
+                            KC_ZONE_HIDDEN)) {
+                        continue;
+                    }
                     KCAction action = {0};
                     action.kind = KC_ACTION_SWAP;
                     action.player_id = player_id;
@@ -2516,6 +3180,14 @@ int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32
                     kc_add_action(actions, max_actions, &count, action);
                 }
                 for (int32_t plot_index = 0; plot_index < player->plot_revealed.count; plot_index++) {
+                    if (!kc_tutorial_swap_allowed(
+                            engine,
+                            player_id,
+                            player->hand.cards[hand_index],
+                            player->plot_revealed.cards[plot_index],
+                            KC_ZONE_REVEALED)) {
+                        continue;
+                    }
                     KCAction action = {0};
                     action.kind = KC_ACTION_SWAP;
                     action.player_id = player_id;
@@ -2528,7 +3200,9 @@ int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32
                     kc_add_action(actions, max_actions, &count, action);
                 }
             }
-        } else if (engine->has_last_swap && engine->last_swap_player_id == player_id) {
+        } else if (engine->has_last_swap &&
+                   engine->last_swap_player_id == player_id &&
+                   !(engine->tutorial_mode && engine->year <= 3)) {
             KCAction action = {0};
             action.kind = KC_ACTION_UNDO_SWAP;
             action.player_id = player_id;
@@ -2540,16 +3214,23 @@ int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32
             action.target_suit = -1;
             kc_add_action(actions, max_actions, &count, action);
         }
-        KCAction action = {0};
-        action.kind = KC_ACTION_CONFIRM_SWAP;
-        action.player_id = player_id;
-        action.suit = -1;
-        action.card = kc_no_card();
-        action.hand_card = kc_no_card();
-        action.plot_card = kc_no_card();
-        action.plot_zone = -1;
-        action.target_suit = -1;
-        kc_add_action(actions, max_actions, &count, action);
+        bool tutorial_swap_required =
+            engine->tutorial_mode &&
+            player_id == 0 &&
+            (engine->year == 2 || engine->year == KC_MAX_YEARS) &&
+            !engine->swap_count[player_id];
+        if (!tutorial_swap_required) {
+            KCAction action = {0};
+            action.kind = KC_ACTION_CONFIRM_SWAP;
+            action.player_id = player_id;
+            action.suit = -1;
+            action.card = kc_no_card();
+            action.hand_card = kc_no_card();
+            action.plot_card = kc_no_card();
+            action.plot_zone = -1;
+            action.target_suit = -1;
+            kc_add_action(actions, max_actions, &count, action);
+        }
         break;
     }
 
@@ -2578,7 +3259,8 @@ int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32
         int32_t player_id = engine->current_player;
         const KCCardList *hand = &engine->players[player_id].hand;
         for (int32_t card_index = 0; card_index < hand->count; card_index++) {
-            if (kc_is_valid_play(engine, player_id, card_index)) {
+            if (kc_is_valid_play(engine, player_id, card_index) &&
+                kc_tutorial_play_allowed(engine, player_id, hand->cards[card_index])) {
                 KCAction action = {0};
                 action.kind = KC_ACTION_PLAY_CARD;
                 action.player_id = player_id;
@@ -2613,7 +3295,12 @@ int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32
                     continue;
                 }
                 for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-                    if (kc_assignment_target_legal(engine, suit)) {
+                    int32_t tutorial_target = kc_tutorial_assignment_target(
+                        engine,
+                        play_index
+                    );
+                    if (kc_assignment_target_legal(engine, suit) &&
+                        (tutorial_target == KC_NO_SUIT || suit == tutorial_target)) {
                         KCAction action = {0};
                         action.kind = KC_ACTION_ASSIGN;
                         action.player_id = winner;

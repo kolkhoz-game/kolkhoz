@@ -10,11 +10,12 @@ export 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_seria
 
 class KolkhozSavedGamePayload {
   const KolkhozSavedGamePayload({
-    this.version = 1,
+    this.version = 2,
     required this.seed,
     required this.variants,
     required this.controllers,
     required this.actions,
+    this.tutorial = false,
     this.gameLogActions = const [],
   });
 
@@ -23,6 +24,7 @@ class KolkhozSavedGamePayload {
   final KolkhozGameVariants variants;
   final List<KolkhozPlayerController> controllers;
   final List<EngineAction> actions;
+  final bool tutorial;
   final List<EngineAction> gameLogActions;
 
   Map<String, Object?> toJson() {
@@ -32,13 +34,14 @@ class KolkhozSavedGamePayload {
       'variants': variantsToJson(variants),
       'controllers': controllers.map((controller) => controller.name).toList(),
       'actions': actions.map(engineActionToJson).toList(),
+      'tutorial': tutorial,
       'gameLogActions': gameLogActions.map(engineActionToJson).toList(),
     };
   }
 
   static KolkhozSavedGamePayload fromJson(Map<String, Object?> json) {
     final version = json['version'];
-    if (version != 1) {
+    if (version != 1 && version != 2) {
       throw const FormatException('Unsupported saved game version');
     }
     return KolkhozSavedGamePayload(
@@ -53,6 +56,7 @@ class KolkhozSavedGamePayload {
         for (final value in jsonList(json['actions']))
           engineActionFromJson(jsonObject(value)),
       ],
+      tutorial: json['tutorial'] as bool? ?? false,
       gameLogActions: [
         for (final value in jsonList(json['gameLogActions'] ?? const []))
           engineActionFromJson(jsonObject(value)),
@@ -99,6 +103,11 @@ class KolkhozAutosaveStore {
       }
     }
     return File('${Directory.systemTemp.path}/kolkhoz_flutter_autosave.json');
+  }
+
+  static File defaultTutorialFile() {
+    final normal = defaultFile();
+    return File('${normal.parent.path}/tutorial_autosave_flutter.json');
   }
 
   KolkhozSavedGamePayload? load() {

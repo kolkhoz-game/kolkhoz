@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kolkhoz_app/src/app/app.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
-import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_view.dart';
+import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/printed_underlay.dart';
 import 'package:kolkhoz_app/src/app/views/shared/rule_content.dart';
 
 void main() {
@@ -67,5 +69,81 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('TUTORIAL'));
     expect(tutorialPressed, isTrue);
+  });
+
+  testWidgets('rules panels derive their palette from active design tokens', (
+    tester,
+  ) async {
+    for (final tokens in [defaultDesignTokens, lightDesignTokens]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: kolkhozTheme(tokens),
+          home: SizedBox(
+            width: 844,
+            height: 390,
+            child: RulesView(
+              key: ValueKey(tokens.usesLightAppearance),
+              tokens: tokens,
+              language: KolkhozLanguage.en,
+              onTutorialPressed: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester
+            .widget<PrintedPaperSurface>(find.byType(PrintedPaperSurface))
+            .color,
+        tokens.colors.panel,
+      );
+      expect(
+        tester.widget<Text>(find.text('One year at a glance')).style?.color,
+        tokens.colors.cream,
+      );
+
+      await tester.tap(find.byKey(const Key('rules-tab')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<Text>(find.text(kolkhozBaseRulebookPlayerCount))
+            .style
+            ?.color,
+        tokens.usesLightAppearance
+            ? tokens.colors.onAccent
+            : tokens.colors.black,
+      );
+    }
+  });
+
+  testWidgets('saved tutorial exposes resume and restart actions', (
+    tester,
+  ) async {
+    var resumed = false;
+    var restarted = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 844,
+          height: 390,
+          child: RulesView(
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            hasTutorialProgress: true,
+            onTutorialPressed: () => resumed = true,
+            onRestartTutorialPressed: () => restarted = true,
+          ),
+        ),
+      ),
+    );
+
+    Finder chromeLabel(String label) => find.byWidgetPredicate(
+      (widget) => widget is ChromeScaledLabel && widget.text == label,
+    );
+    await tester.tap(chromeLabel('RESUME TUTORIAL'));
+    await tester.tap(chromeLabel('RESTART TUTORIAL'));
+    expect(resumed, isTrue);
+    expect(restarted, isTrue);
   });
 }

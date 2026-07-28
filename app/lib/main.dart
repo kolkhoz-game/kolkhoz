@@ -6,13 +6,15 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import 'src/app/app.dart';
+import 'src/app/views/shared/tutorial_content.dart';
 
 final _semanticsHandles = <SemanticsHandle>[];
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _semanticsHandles.add(SemanticsBinding.instance.ensureSemantics());
-  runApp(const KolkhozApp());
+  final tutorialContent = await loadBaseTutorialContent();
+  runApp(KolkhozApp(tutorialContent: tutorialContent));
   unawaited(_lockMobileLandscape());
 }
 

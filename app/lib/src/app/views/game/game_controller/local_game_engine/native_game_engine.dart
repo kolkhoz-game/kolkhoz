@@ -9,12 +9,14 @@ class NativeGameEngine {
     required this.seed,
     required this.variants,
     required List<KolkhozPlayerController> controllers,
+    this.tutorial = false,
   }) : _bridge = bridge,
        controllers = List.unmodifiable(controllers),
        _native = bridge.newEngine(
          seed: seed,
          variants: variants,
          controllers: controllers,
+         tutorial: tutorial,
        );
 
   NativeGameEngine._(
@@ -23,12 +25,14 @@ class NativeGameEngine {
     this.seed,
     this.variants,
     this.controllers,
+    this.tutorial,
   );
 
   final KolkhozCEngineBridge _bridge;
   final int seed;
   final KolkhozGameVariants variants;
   final List<KolkhozPlayerController> controllers;
+  final bool tutorial;
   Pointer<KCEngine>? _native;
 
   Pointer<KCEngine> get _pointer {
@@ -41,6 +45,7 @@ class NativeGameEngine {
 
   int get phase => _bridge.phase(_pointer);
   bool get isFamine => _bridge.isFamine(_pointer);
+  bool get isTutorial => _bridge.isTutorial(_pointer);
   int get currentPlayer => _bridge.currentPlayer(_pointer);
   int get lastWinner => _bridge.lastWinner(_pointer);
   int get winnerID => _bridge.winnerID(_pointer);
@@ -90,6 +95,7 @@ class NativeGameEngine {
     seed,
     variants,
     controllers,
+    tutorial,
   );
 
   void dispose() {

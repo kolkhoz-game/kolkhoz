@@ -396,6 +396,7 @@ class KolkhozBoard extends StatelessWidget {
     this.incomingComradeRequestUserIDs = const {},
     this.outgoingComradeRequestUserIDs = const {},
     this.onComradeRequestToUser,
+    this.suppressPlanningOverlay = false,
     super.key,
   });
 
@@ -446,6 +447,7 @@ class KolkhozBoard extends StatelessWidget {
   final Set<String> incomingComradeRequestUserIDs;
   final Set<String> outgoingComradeRequestUserIDs;
   final Future<void> Function(String userID)? onComradeRequestToUser;
+  final bool suppressPlanningOverlay;
   @override
   Widget build(BuildContext context) {
     final visibleModel = boardVisibleModelDuringTransition(model, transition);
@@ -574,6 +576,8 @@ class KolkhozBoard extends StatelessWidget {
                                     onLanguageToggle: onLanguageToggle,
                                     onAppearanceToggle: onAppearanceToggle,
                                     onCardBackChanged: onCardBackChanged,
+                                    suppressPlanningOverlay:
+                                        suppressPlanningOverlay,
                                   )
                                 else
                                   SizedBox(
@@ -638,6 +642,8 @@ class KolkhozBoard extends StatelessWidget {
                                       onLanguageToggle: onLanguageToggle,
                                       onAppearanceToggle: onAppearanceToggle,
                                       onCardBackChanged: onCardBackChanged,
+                                      suppressPlanningOverlay:
+                                          suppressPlanningOverlay,
                                     ),
                                   ),
                               ],
@@ -766,6 +772,7 @@ class CompactBoardShell extends StatelessWidget {
     this.onLanguageToggle,
     this.onAppearanceToggle,
     this.onCardBackChanged,
+    this.suppressPlanningOverlay = false,
     super.key,
   });
 
@@ -814,6 +821,7 @@ class CompactBoardShell extends StatelessWidget {
   final VoidCallback? onLanguageToggle;
   final VoidCallback? onAppearanceToggle;
   final ValueChanged<KolkhozCardBack>? onCardBackChanged;
+  final bool suppressPlanningOverlay;
 
   @override
   Widget build(BuildContext context) {
@@ -867,6 +875,7 @@ class CompactBoardShell extends StatelessWidget {
             onLanguageToggle: onLanguageToggle,
             onAppearanceToggle: onAppearanceToggle,
             onCardBackChanged: onCardBackChanged,
+            suppressPlanningOverlay: suppressPlanningOverlay,
           ),
         ),
         BoardSeparator(tokens: tokens, thickness: metrics.separatorWidth),
@@ -1119,6 +1128,7 @@ class BoardPlayArea extends StatelessWidget {
     this.incomingComradeRequestUserIDs = const {},
     this.outgoingComradeRequestUserIDs = const {},
     this.onComradeRequestToUser,
+    this.suppressPlanningOverlay = false,
     this.compact = false,
     required this.language,
     required this.appearance,
@@ -1172,6 +1182,7 @@ class BoardPlayArea extends StatelessWidget {
   final Set<String> incomingComradeRequestUserIDs;
   final Set<String> outgoingComradeRequestUserIDs;
   final Future<void> Function(String userID)? onComradeRequestToUser;
+  final bool suppressPlanningOverlay;
   final bool compact;
   final KolkhozLanguage language;
   final KolkhozAppearance appearance;
@@ -1344,7 +1355,8 @@ class BoardPlayArea extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (model.table.phase == phasePlanning)
+                        if (model.table.phase == phasePlanning &&
+                            !suppressPlanningOverlay)
                           Positioned.fill(
                             key: const Key('planning-phase-overlay'),
                             child: Stack(

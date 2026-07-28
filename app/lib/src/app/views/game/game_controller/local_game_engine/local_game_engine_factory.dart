@@ -56,6 +56,7 @@ class RestoredLocalGame {
     required this.seed,
     required this.variants,
     required this.controllers,
+    required this.tutorial,
   });
 
   final LocalGameEngine engine;
@@ -63,12 +64,14 @@ class RestoredLocalGame {
   final int seed;
   final KolkhozGameVariants variants;
   final List<KolkhozPlayerController> controllers;
+  final bool tutorial;
 }
 
 class LocalGameEngineFactory {
   LocalGameEngineFactory({
     KolkhozCEngineBridge? bridge,
     KolkhozAutosaveStore? autosaveStore,
+    KolkhozAutosaveStore? tutorialAutosaveStore,
     KolkhozNativePolicyModel? mediumPolicy,
     Future<KolkhozNativePolicyModel>? mediumPolicyLoader,
     KolkhozNativePolicyModel? neuralPolicy,
@@ -76,6 +79,9 @@ class LocalGameEngineFactory {
     this.autosaveEnabled = true,
   }) : _bridge = bridge ?? KolkhozCEngineBridge(),
        _autosaveStore = autosaveStore ?? KolkhozAutosaveStore.defaultStore(),
+       _tutorialAutosaveStore =
+           tutorialAutosaveStore ??
+           KolkhozAutosaveStore(KolkhozAutosaveStore.defaultTutorialFile()),
        _mediumPolicy = mediumPolicy,
        _mediumPolicyLoader = mediumPolicy == null
            ? mediumPolicyLoader ??
@@ -89,6 +95,7 @@ class LocalGameEngineFactory {
 
   final KolkhozCEngineBridge _bridge;
   final KolkhozAutosaveStore _autosaveStore;
+  final KolkhozAutosaveStore _tutorialAutosaveStore;
   final bool autosaveEnabled;
   KolkhozNativePolicyModel? _mediumPolicy;
   Future<KolkhozNativePolicyModel>? _mediumPolicyLoader;
@@ -130,20 +137,36 @@ class LocalGameEngineFactory {
     required KolkhozGameVariants variants,
     required List<KolkhozPlayerController> controllers,
     required LocalGameEngineBindings bindings,
+    bool tutorial = false,
   }) => _wrap(
     NativeGameEngine(
       bridge: _bridge,
       seed: seed,
       variants: variants,
       controllers: controllers,
+      tutorial: tutorial,
     ),
     bindings,
   );
 
   RestoredLocalGame? restore(LocalGameEngineBindings bindings) {
     if (!autosaveEnabled) return null;
-    final payload = _autosaveStore.load();
+    return _restore(_autosaveStore, bindings);
+  }
+
+  RestoredLocalGame? restoreTutorial(LocalGameEngineBindings bindings) {
+    if (!autosaveEnabled) return null;
+    return _restore(_tutorialAutosaveStore, bindings, tutorialOnly: true);
+  }
+
+  RestoredLocalGame? _restore(
+    KolkhozAutosaveStore store,
+    LocalGameEngineBindings bindings, {
+    bool tutorialOnly = false,
+  }) {
+    final payload = store.load();
     if (payload == null) return null;
+    if (tutorialOnly != payload.tutorial) return null;
     NativeGameEngine? nativeEngine;
     try {
       nativeEngine = NativeGameEngine(
@@ -151,8 +174,10 @@ class LocalGameEngineFactory {
         seed: payload.seed,
         variants: payload.variants,
         controllers: payload.controllers,
+        tutorial: payload.tutorial,
       );
       for (final action in payload.actions) {
+        _replayAutomaticSteps(nativeEngine);
         final nativeAction = cEngineAction(action);
         if (nativeAction == null) {
           throw const FormatException('Saved action cannot be replayed');
@@ -169,6 +194,7 @@ class LocalGameEngineFactory {
           throw FormatException('Saved action rejected ($result)');
         }
       }
+      _replayAutomaticSteps(nativeEngine);
       final engine = _wrap(
         nativeEngine,
         bindings,
@@ -184,12 +210,35 @@ class LocalGameEngineFactory {
         seed: payload.seed,
         variants: payload.variants,
         controllers: payload.controllers,
+        tutorial: payload.tutorial,
       );
     } catch (_) {
       nativeEngine?.dispose();
-      _autosaveStore.clear();
+      store.clear();
       return null;
     }
+  }
+
+  void _replayAutomaticSteps(NativeGameEngine engine) {
+    for (var step = 0; step < 64; step += 1) {
+      final legalActions = engine.legalActions;
+      final needsAutomaticStep =
+          (engine.phase == kcPhaseRequisition && legalActions.isEmpty) ||
+          (engine.phase == kcPhasePlanning &&
+              engine.isFamine &&
+              legalActions.isEmpty);
+      if (!needsAutomaticStep) {
+        return;
+      }
+      final result = engine.stepAutomatic();
+      if (result < 0) {
+        throw FormatException('Saved automatic step rejected ($result)');
+      }
+      if (result == 0) {
+        return;
+      }
+    }
+    throw const FormatException('Saved automatic steps did not settle');
   }
 
   void save({
@@ -197,20 +246,28 @@ class LocalGameEngineFactory {
     required KolkhozGameVariants variants,
     required List<KolkhozPlayerController> controllers,
     required LocalGameEngine engine,
+    required bool tutorial,
   }) {
     if (!autosaveEnabled) return;
-    _autosaveStore.save(
+    final store = tutorial ? _tutorialAutosaveStore : _autosaveStore;
+    store.save(
       KolkhozSavedGamePayload(
         seed: seed,
         variants: variants,
         controllers: controllers,
         actions: engine.actionLog,
+        tutorial: tutorial,
         gameLogActions: engine.gameLog,
       ),
     );
   }
 
-  void clearAutosave() => _autosaveStore.clear();
+  void clearAutosave({bool tutorial = false}) {
+    (tutorial ? _tutorialAutosaveStore : _autosaveStore).clear();
+  }
+
+  bool get hasTutorialAutosave =>
+      autosaveEnabled && _tutorialAutosaveStore.load()?.tutorial == true;
 
   void startPolicyLoading({
     required void Function() onReady,

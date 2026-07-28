@@ -59,6 +59,8 @@ class KolkhozCEngineBridge {
     KCControllersNative,
   )
   _engineInitWithControllersStepwise;
+  late final void Function(Pointer<KCEngine>, int, KCControllersNative)
+  _engineInitTutorialWithControllersStepwise;
   late final void Function(Pointer<KCVariantsNative>) _variantsKolkhoz;
   late final void Function(Pointer<KCControllersNative>)
   _controllersAllExternal;
@@ -73,6 +75,7 @@ class KolkhozCEngineBridge {
   late final int Function(Pointer<KCEngine>) _lastWinner;
   late final int Function(Pointer<KCEngine>) _winnerID;
   late final bool Function(Pointer<KCEngine>) _isFamine;
+  late final bool Function(Pointer<KCEngine>) _isTutorial;
   late final int Function(Pointer<KCEngine>, int) _visibleScore;
   late final int Function(Pointer<KCEngine>, int) _finalScore;
   late final int Function(Pointer<KCEngine>, int) _playerMedals;
@@ -187,6 +190,7 @@ class KolkhozCEngineBridge {
     KolkhozGameVariants variants = KolkhozGameVariants.kolkhoz,
     List<KolkhozPlayerController> controllers =
         KolkhozPlayerController.defaultControllers,
+    bool tutorial = false,
   }) {
     final engine = _engineAlloc();
     final arena = Arena();
@@ -195,12 +199,21 @@ class KolkhozCEngineBridge {
       final nativeControllers = arena<KCControllersNative>();
       _writeVariants(nativeVariants.ref, variants);
       _writeControllers(nativeControllers, controllers);
-      _engineInitWithControllersStepwise(
-        engine,
-        seed ?? DateTime.now().millisecondsSinceEpoch,
-        nativeVariants.ref,
-        nativeControllers.ref,
-      );
+      final resolvedSeed = seed ?? DateTime.now().millisecondsSinceEpoch;
+      if (tutorial) {
+        _engineInitTutorialWithControllersStepwise(
+          engine,
+          resolvedSeed,
+          nativeControllers.ref,
+        );
+      } else {
+        _engineInitWithControllersStepwise(
+          engine,
+          resolvedSeed,
+          nativeVariants.ref,
+          nativeControllers.ref,
+        );
+      }
     } finally {
       arena.releaseAll();
     }
@@ -290,6 +303,8 @@ class KolkhozCEngineBridge {
   int lastWinner(Pointer<KCEngine> engine) => _lastWinner(engine);
   int winnerID(Pointer<KCEngine> engine) => _winnerID(engine);
   bool isFamine(Pointer<KCEngine> engine) => _isFamine(engine);
+
+  bool isTutorial(Pointer<KCEngine> engine) => _isTutorial(engine);
   int visibleScore(Pointer<KCEngine> engine, int playerID) =>
       _visibleScore(engine, playerID);
   int finalScore(Pointer<KCEngine> engine, int playerID) =>
@@ -610,6 +625,11 @@ class KolkhozCEngineBridge {
             KCControllersNative,
           )
         >('kc_engine_init_with_controllers_stepwise');
+    _engineInitTutorialWithControllersStepwise = _lib
+        .lookupFunction<
+          Void Function(Pointer<KCEngine>, Uint64, KCControllersNative),
+          void Function(Pointer<KCEngine>, int, KCControllersNative)
+        >('kc_engine_init_tutorial_with_controllers_stepwise');
     _variantsKolkhoz = _lib
         .lookupFunction<
           Void Function(Pointer<KCVariantsNative>),
@@ -634,6 +654,7 @@ class KolkhozCEngineBridge {
     _lastWinner = _int0('kc_engine_last_winner');
     _winnerID = _int0('kc_engine_winner_id');
     _isFamine = _bool0('kc_engine_is_famine');
+    _isTutorial = _bool0('kc_engine_is_tutorial');
     _visibleScore = _int1('kc_visible_score');
     _finalScore = _int1('kc_final_score');
     _playerMedals = _int1('kc_player_medals');

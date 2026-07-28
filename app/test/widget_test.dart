@@ -35,6 +35,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/game_presentation
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_presentation_queue.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_presentation_transition.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/local_game_engine_factory.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/native_game_engine.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/game_remote_commands.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_lobby.dart';
 import 'package:kolkhoz_app/src/app/settings/game_sound.dart';
@@ -59,7 +60,6 @@ import 'package:kolkhoz_app/src/app/profile/models/player_presence.dart';
 import 'package:kolkhoz_app/src/app/profile/models/player_profile.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/plot_display.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
-import 'package:kolkhoz_app/src/app/views/shared/rule_content.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/saved_game_store.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/static_hero/static_hero_game_panel.dart';
@@ -67,6 +67,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/models/table_proj
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/terminal_game_record.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/terminal_game_replay.dart';
 import 'package:kolkhoz_app/src/app/views/shared/tutorial_display.dart';
+import 'package:kolkhoz_app/src/app/views/shared/tutorial_content.dart';
 
 part 'widget/store_online_tests.dart';
 part 'widget/board_tests.dart';
@@ -333,6 +334,8 @@ TableViewModel runtimeModelWith({
   required SelectionState selection,
   required List<Job> jobs,
   int? year,
+  bool? isFamine,
+  int? maxTricks,
   GameResult? gameResult,
   int? currentPlayerID,
   List<Seat>? seats,
@@ -351,8 +354,8 @@ TableViewModel runtimeModelWith({
       phasePrompt: base.table.phasePrompt,
       currentPlayerID: currentPlayerID ?? base.table.currentPlayerID,
       trump: base.table.trump,
-      isFamine: base.table.isFamine,
-      maxTricks: base.table.maxTricks,
+      isFamine: isFamine ?? base.table.isFamine,
+      maxTricks: maxTricks ?? base.table.maxTricks,
       seats: seats ?? base.table.seats,
       jobs: jobs,
       trick: trick ?? base.table.trick,

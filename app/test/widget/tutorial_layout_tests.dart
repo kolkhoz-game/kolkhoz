@@ -1,6 +1,12 @@
 part of '../widget_test.dart';
 
 void registerTutorialAndLayoutTests() {
+  late TutorialContent tutorialContent;
+
+  setUpAll(() async {
+    tutorialContent = await loadBaseTutorialContent();
+  });
+
   testWidgets('tutorial walkthrough advances, backs up, and closes', (
     tester,
   ) async {
@@ -14,6 +20,7 @@ void registerTutorialAndLayoutTests() {
           child: TutorialWalkthroughOverlay(
             tokens: defaultDesignTokens,
             language: KolkhozLanguage.en,
+            content: tutorialContent,
             onClose: () => closed = true,
           ),
         ),
@@ -25,7 +32,7 @@ void registerTutorialAndLayoutTests() {
 
     await tester.tap(find.byKey(const Key('tutorial-next')));
     await tester.pump();
-    expect(findAppText('READ THE WORK BOARD'), findsOneWidget);
+    expect(findAppText('YOUR HAND'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('tutorial-back')));
     await tester.pump();
@@ -45,6 +52,7 @@ void registerTutorialAndLayoutTests() {
         child: TutorialWalkthroughOverlay(
           tokens: defaultDesignTokens,
           language: KolkhozLanguage.en,
+          content: tutorialContent,
           onClose: () {},
           model: model,
         ),
@@ -54,11 +62,7 @@ void registerTutorialAndLayoutTests() {
     // Base model: trump chosen, trick phase, no cards played yet.
     await tester.pumpWidget(wrap(runtimeModel()));
 
-    // Step through to the "play a card" step, which waits on cardPlayed.
-    for (var taps = 0; taps < 3; taps += 1) {
-      await tester.tap(find.byKey(const Key('tutorial-next')));
-      await tester.pump();
-    }
+    // Resuming in the trick phase opens the relevant live lesson.
     expect(findAppText('PLAY A CARD'), findsOneWidget);
 
     // A card lands on the table: the step should advance on its own.
@@ -67,6 +71,79 @@ void registerTutorialAndLayoutTests() {
     expect(findAppText('TAKING THE TRICK'), findsOneWidget);
 
     // Let the celebration flash timer finish so no timers are pending.
+    await tester.pump(const Duration(milliseconds: 1700));
+  });
+
+  testWidgets('Misha opens the basic assignment lesson on the third trick', (
+    tester,
+  ) async {
+    Widget wrap(TableViewModel model) => MaterialApp(
+      home: SizedBox(
+        width: 844,
+        height: 390,
+        child: TutorialWalkthroughOverlay(
+          tokens: defaultDesignTokens,
+          language: KolkhozLanguage.en,
+          content: tutorialContent,
+          onClose: () {},
+          model: model,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(wrap(runtimeModel()));
+    await tester.pumpWidget(wrap(runtimeModelWithTrickPlay()));
+    await tester.pump();
+    expect(findAppText('TAKING THE TRICK'), findsOneWidget);
+
+    final base = runtimeModel();
+    final firstJob = base.table.jobs.first;
+    final jobs = [
+      Job(
+        suit: firstJob.suit,
+        hours: firstJob.hours,
+        requiredHours: firstJob.requiredHours,
+        claimed: firstJob.claimed,
+        reward: firstJob.reward,
+        assignedCards: [
+          testCard(
+            id: 'wheat-10',
+            suit: 'wheat',
+            value: 10,
+            assignmentRound: 2,
+          ),
+        ],
+        validAssignmentTarget: firstJob.validAssignmentTarget,
+        highlighted: firstJob.highlighted,
+      ),
+      ...base.table.jobs.skip(1),
+    ];
+    final thirdTrickAssignment = runtimeModelWith(
+      year: 1,
+      phase: phaseAssignment,
+      selection: SelectionState.empty,
+      jobs: jobs,
+      lastTrick: Trick(
+        winnerSeatID: base.viewer.seatID,
+        plays: [
+          TrickPlay(
+            seatID: base.viewer.seatID!,
+            card: testCard(id: 'potato-13', suit: 'potato', value: 13),
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(wrap(thirdTrickAssignment));
+    await tester.pump();
+
+    expect(findAppText('YOU ARE THE BRIGADE LEADER'), findsOneWidget);
+    expect(find.textContaining('all four go to the same'), findsOneWidget);
+    expect(find.byKey(const Key('tutorial-expand')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('tutorial-next')));
+    await tester.pump();
+    expect(find.byKey(const Key('tutorial-expand')), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 1700));
   });
 
@@ -80,6 +157,7 @@ void registerTutorialAndLayoutTests() {
         child: TutorialWalkthroughOverlay(
           tokens: defaultDesignTokens,
           language: KolkhozLanguage.en,
+          content: tutorialContent,
           onClose: () {},
           model: model,
         ),
@@ -87,23 +165,23 @@ void registerTutorialAndLayoutTests() {
     );
 
     await tester.pumpWidget(wrap(runtimeModel()));
-    expect(findAppText('WELCOME TO THE COLLECTIVE'), findsOneWidget);
+    expect(findAppText('PLAY A CARD'), findsOneWidget);
 
     // Selecting a trick card folds the panel into the corner badge.
     await tester.pumpWidget(wrap(runtimeModelWithSelectedHandCard()));
     await tester.pump();
-    expect(findAppText('WELCOME TO THE COLLECTIVE'), findsNothing);
+    expect(findAppText('PLAY A CARD'), findsNothing);
     expect(find.byKey(const Key('tutorial-expand')), findsOneWidget);
 
     // The badge can be re-opened manually.
     await tester.tap(find.byKey(const Key('tutorial-expand')));
     await tester.pump();
-    expect(findAppText('WELCOME TO THE COLLECTIVE'), findsOneWidget);
+    expect(findAppText('PLAY A CARD'), findsOneWidget);
 
     // Clearing the pending play keeps the panel open.
     await tester.pumpWidget(wrap(runtimeModel()));
     await tester.pump();
-    expect(findAppText('WELCOME TO THE COLLECTIVE'), findsOneWidget);
+    expect(findAppText('PLAY A CARD'), findsOneWidget);
     expect(find.byKey(const Key('tutorial-expand')), findsNothing);
   });
 
@@ -118,17 +196,15 @@ void registerTutorialAndLayoutTests() {
           child: TutorialWalkthroughOverlay(
             tokens: defaultDesignTokens,
             language: KolkhozLanguage.en,
+            content: TutorialContent(
+              orientationHeader: tutorialContent.orientationHeader,
+              orientationBeginLabel: tutorialContent.orientationBeginLabel,
+              orientationStops: tutorialContent.orientationStops,
+              firstMatchStepId: tutorialContent.steps.last.id,
+              steps: [tutorialContent.steps.last],
+            ),
             onClose: () => closed = true,
-            steps: const [
-              TutorialStepContent(
-                titleKey: KolkhozText.tutorialStep1Title,
-                bodyKey: KolkhozText.tutorialStep1Body,
-                tipKey: KolkhozText.tutorialStep1Tip,
-                calloutKey: KolkhozText.tutorialStep1Callout,
-                iconPath:
-                    'assets/art/field_plan/shared/pictograms/how-to-play.png',
-              ),
-            ],
+            model: runtimeModel(),
           ),
         ),
       ),
@@ -147,6 +223,7 @@ void registerTutorialAndLayoutTests() {
           child: TutorialWalkthroughOverlay(
             tokens: defaultDesignTokens,
             language: KolkhozLanguage.ru,
+            content: tutorialContent,
             onClose: () {},
           ),
         ),
@@ -154,7 +231,7 @@ void registerTutorialAndLayoutTests() {
     );
 
     expect(findAppText('ДОБРО ПОЖАЛОВАТЬ В КОЛХОЗ'), findsOneWidget);
-    expect(find.textContaining('Это настоящая игра, товарищ'), findsOneWidget);
+    expect(find.textContaining('Матч длится пять лет'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (widget) => widget is ChromeScaledLabel && widget.text == 'Далее',
@@ -162,6 +239,432 @@ void registerTutorialAndLayoutTests() {
       findsOneWidget,
     );
   });
+
+  testWidgets('Year 0 tour unlocks the scripted match after its final stop', (
+    tester,
+  ) async {
+    var unlocked = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 844,
+          height: 390,
+          child: TutorialWalkthroughOverlay(
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            content: tutorialContent,
+            onClose: () {},
+            onOrientationComplete: () => unlocked = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(findAppText('YEAR 0 · ORIENTATION'), findsOneWidget);
+    for (
+      var stop = 0;
+      stop < tutorialContent.orientationStops.length;
+      stop += 1
+    ) {
+      await tester.tap(find.byKey(const Key('tutorial-next')));
+      await tester.pump();
+    }
+    expect(unlocked, isTrue);
+    expect(findAppText("THIS YEAR'S REWARDS"), findsOneWidget);
+  });
+
+  testWidgets('reward lesson pauses before the AI trump lesson', (
+    tester,
+  ) async {
+    String? continuedWith;
+    final rewardAction = testLegalAction(
+      kind: actionCompleteTutorialRewardLesson,
+      label: 'Continue to trump',
+    );
+    final model = runtimeModelWith(
+      year: 1,
+      phase: phasePlanning,
+      selection: SelectionState.empty,
+      jobs: runtimeModel().table.jobs,
+      legalActions: [rewardAction],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 844,
+          height: 390,
+          child: TutorialWalkthroughOverlay(
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            content: tutorialContent,
+            model: model,
+            onClose: () {},
+            onContinueAction: (kind) => continuedWith = kind,
+          ),
+        ),
+      ),
+    );
+
+    expect(findAppText("THIS YEAR'S REWARDS"), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1700));
+    expect(findAppText("THIS YEAR'S REWARDS"), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('tutorial-next')));
+    await tester.pump();
+
+    expect(continuedWith, actionCompleteTutorialRewardLesson);
+    expect(findAppText('THE TRUMP CROP'), findsOneWidget);
+  });
+
+  test('tutorial panels move away from the highlighted hand', () {
+    expect(tutorialPanelAlignment(TutorialFocus.hand), Alignment.topRight);
+    expect(tutorialPanelAlignment(TutorialFocus.jobs), Alignment.bottomRight);
+    expect(tutorialPanelAlignment(TutorialFocus.table), Alignment.bottomRight);
+  });
+
+  testWidgets('Year 0 can suppress the planning reward overlay', (
+    tester,
+  ) async {
+    final model = runtimeModelWith(
+      phase: phasePlanning,
+      selection: SelectionState.empty,
+      jobs: runtimeModel().table.jobs,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 900,
+          height: 520,
+          child: BoardPlayArea(
+            model: model,
+            tokens: defaultDesignTokens,
+            metrics: ResponsiveBoardMetrics.fromSize(
+              const Size(900, 520),
+              defaultDesignTokens,
+            ),
+            language: KolkhozLanguage.en,
+            appearance: KolkhozAppearance.dark,
+            suppressPlanningOverlay: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('planning-phase-overlay')), findsNothing);
+  });
+
+  testWidgets('Year 2 hands the swap lesson to requisition at the failure', (
+    tester,
+  ) async {
+    Widget wrap(TableViewModel model) => MaterialApp(
+      home: SizedBox(
+        width: 844,
+        height: 390,
+        child: TutorialWalkthroughOverlay(
+          tokens: defaultDesignTokens,
+          language: KolkhozLanguage.en,
+          content: tutorialContent,
+          onClose: () {},
+          model: model,
+        ),
+      ),
+    );
+
+    final base = runtimeModel();
+    TableViewModel yearTwoModel({
+      required String phase,
+      List<int> completedRounds = const [],
+      bool learnerWon = false,
+    }) {
+      final firstJob = base.table.jobs.first;
+      return runtimeModelWith(
+        year: 2,
+        phase: phase,
+        selection: SelectionState.empty,
+        jobs: [
+          Job(
+            suit: firstJob.suit,
+            hours: firstJob.hours,
+            requiredHours: firstJob.requiredHours,
+            claimed: firstJob.claimed,
+            reward: firstJob.reward,
+            assignedCards: [
+              for (final round in completedRounds)
+                testCard(
+                  id: 'wheat-$round',
+                  suit: 'wheat',
+                  value: 10,
+                  assignmentRound: round,
+                ),
+            ],
+            validAssignmentTarget: firstJob.validAssignmentTarget,
+            highlighted: firstJob.highlighted,
+          ),
+          ...base.table.jobs.skip(1),
+        ],
+        lastTrick: learnerWon
+            ? Trick(
+                winnerSeatID: base.viewer.seatID,
+                plays: [
+                  TrickPlay(
+                    seatID: base.viewer.seatID!,
+                    card: testCard(id: 'wheat-trump', suit: 'wheat', value: 10),
+                  ),
+                ],
+              )
+            : base.table.lastTrick,
+      );
+    }
+
+    await tester.pumpWidget(wrap(yearTwoModel(phase: phaseSwap)));
+    expect(findAppText('THE YEARLY SWAP'), findsOneWidget);
+
+    await tester.pumpWidget(
+      wrap(
+        yearTwoModel(
+          phase: phaseAssignment,
+          completedRounds: const [1],
+          learnerWon: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(findAppText('ONE TRICK, TWO JOBS'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1700));
+
+    await tester.pumpWidget(
+      wrap(
+        yearTwoModel(
+          phase: phaseAssignment,
+          completedRounds: const [1, 2, 3],
+          learnerWon: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(findAppText('CHOOSE THE JOB, NOT THE SUIT'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1700));
+
+    await tester.pumpWidget(
+      wrap(
+        yearTwoModel(
+          phase: phaseRequisition,
+          completedRounds: const [1, 2, 3, 4],
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(findAppText('THIS IS REQUISITION'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1700));
+  });
+
+  testWidgets('Year 3 pauses on the forced Saboteur before the AI overtrumps', (
+    tester,
+  ) async {
+    String? continuedWith;
+    Widget wrap(TableViewModel model) => MaterialApp(
+      home: SizedBox(
+        width: 844,
+        height: 390,
+        child: TutorialWalkthroughOverlay(
+          tokens: defaultDesignTokens,
+          language: KolkhozLanguage.en,
+          content: tutorialContent,
+          onClose: () {},
+          onContinueAction: (kind) => continuedWith = kind,
+          model: model,
+        ),
+      ),
+    );
+
+    final paused = runtimeModelWith(
+      year: 3,
+      phase: phaseTrick,
+      selection: SelectionState.empty,
+      jobs: runtimeModel().table.jobs,
+      legalActions: [
+        testLegalAction(
+          kind: actionCompleteTutorialSaboteurFollowLesson,
+          label: 'Continue the trick',
+        ),
+      ],
+    );
+    await tester.pumpWidget(wrap(paused));
+    expect(findAppText('THE SABOTEUR ALWAYS FOLLOWS'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('tutorial-next')));
+    await tester.pump();
+    expect(continuedWith, actionCompleteTutorialSaboteurFollowLesson);
+    expect(find.byKey(const Key('tutorial-expand')), findsOneWidget);
+
+    final base = runtimeModel();
+    final assignment = runtimeModelWith(
+      year: 3,
+      phase: phaseAssignment,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      legalActions: const [],
+      lastTrick: Trick(
+        winnerSeatID: 1,
+        plays: [
+          TrickPlay(
+            seatID: 0,
+            card: testCard(id: 'wrecker-0', suit: wreckerSuit, value: 0),
+          ),
+          TrickPlay(
+            seatID: 1,
+            card: testCard(id: 'sunflower-11', suit: 'sunflower', value: 11),
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(wrap(assignment));
+    await tester.pump();
+    expect(findAppText('THE SABOTEUR POISONS A JOB'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1700));
+  });
+
+  testWidgets(
+    'tutorial stays hands-off in Year 4 then teaches famine and ends',
+    (tester) async {
+      TableViewModel model({
+        required int year,
+        required String phase,
+        bool isFamine = false,
+        int maxTricks = 4,
+        Trick? lastTrick,
+        List<Seat>? seats,
+        List<RequisitionEvent>? requisitionEvents,
+      }) => runtimeModelWith(
+        year: year,
+        phase: phase,
+        isFamine: isFamine,
+        maxTricks: maxTricks,
+        selection: SelectionState.empty,
+        jobs: runtimeModel().table.jobs,
+        lastTrick: lastTrick,
+        seats: seats,
+        requisitionEvents: requisitionEvents,
+      );
+
+      Widget wrap(TableViewModel value) => MaterialApp(
+        home: SizedBox(
+          width: 844,
+          height: 390,
+          child: TutorialWalkthroughOverlay(
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            content: tutorialContent,
+            onClose: () {},
+            model: value,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        wrap(
+          model(
+            year: 3,
+            phase: phaseAssignment,
+            lastTrick: Trick(
+              winnerSeatID: 1,
+              plays: [
+                TrickPlay(
+                  seatID: 0,
+                  card: testCard(id: 'wrecker-0', suit: wreckerSuit, value: 0),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(findAppText('THE SABOTEUR POISONS A JOB'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('tutorial-next')));
+      await tester.pump();
+      expect(find.byKey(const Key('tutorial-expand')), findsOneWidget);
+
+      await tester.pumpWidget(wrap(model(year: 4, phase: phaseTrick)));
+      await tester.pump();
+      expect(find.byKey(const Key('tutorial-expand')), findsOneWidget);
+      expect(findAppText('YEAR FIVE IS FAMINE'), findsNothing);
+
+      await tester.pumpWidget(
+        wrap(
+          model(year: 5, phase: phasePlanning, isFamine: true, maxTricks: 3),
+        ),
+      );
+      await tester.pump();
+      expect(findAppText('YEAR FIVE IS FAMINE'), findsOneWidget);
+      expect(
+        findAppText('MAKE THE HIGHLIGHTED SWAP, THEN PLAY THREE TRICKS.'),
+        findsOneWidget,
+      );
+      await tester.pump(const Duration(milliseconds: 1700));
+
+      final famineSeats = [
+        for (final seat in runtimeModel().table.seats)
+          seat.id == 0 ? seatWithMedals(seat, 2) : seat,
+      ];
+      await tester.pumpWidget(
+        wrap(
+          model(
+            year: 5,
+            phase: phaseTrick,
+            isFamine: true,
+            maxTricks: 3,
+            seats: famineSeats,
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(findAppText('ONE TRICK FROM HISTORY'), findsOneWidget);
+      expect(findAppText('WIN THE FINAL TRICK.'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 1700));
+
+      await tester.tap(find.byKey(const Key('tutorial-next')));
+      await tester.pump();
+      expect(find.byKey(const Key('tutorial-expand')), findsOneWidget);
+
+      final heroSeats = [
+        for (final seat in runtimeModel().table.seats)
+          seat.id == 0 ? seatWithMedals(seat, 3) : seat,
+      ];
+      await tester.pumpWidget(
+        wrap(
+          model(
+            year: 5,
+            phase: phaseRequisition,
+            isFamine: true,
+            maxTricks: 3,
+            seats: heroSeats,
+            requisitionEvents: const [
+              RequisitionEvent(
+                seatID: 0,
+                suit: 'wheat',
+                card: null,
+                message: 'Protected from requisition.',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(findAppText('HERO OF SOCIALIST LABOR'), findsOneWidget);
+      expect(
+        findAppText('YOUR CELLAR IS SAFE FROM THE FINAL REQUISITION.'),
+        findsOneWidget,
+      );
+      await tester.pump(const Duration(milliseconds: 1700));
+
+      await tester.pumpWidget(wrap(model(year: 5, phase: phaseGameOver)));
+      await tester.pump();
+      expect(findAppText('HIGHEST FINAL CELLAR WINS'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 1700));
+    },
+  );
 
   test('board content width caps extra-wide desktop layouts', () {
     expect(boardPlayableContentWidth(900), 900);

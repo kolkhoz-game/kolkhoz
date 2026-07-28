@@ -1553,6 +1553,44 @@ static void kc_policy_features(const KCEngine *engine, int32_t player_id, int32_
     kc_add_policy_one_hot(candidate, 91, (player_id - engine->trump_selector + KC_PLAYER_COUNT) % KC_PLAYER_COUNT, KC_PLAYER_COUNT);
 }
 
+static bool kc_policy_action_equal(KCAction lhs, KCAction rhs) {
+    return lhs.kind == rhs.kind
+        && lhs.player_id == rhs.player_id
+        && lhs.suit == rhs.suit
+        && kc_card_equal(lhs.card, rhs.card)
+        && kc_card_equal(lhs.hand_card, rhs.hand_card)
+        && kc_card_equal(lhs.plot_card, rhs.plot_card)
+        && lhs.plot_zone == rhs.plot_zone
+        && lhs.target_suit == rhs.target_suit;
+}
+
+static int32_t kc_filter_tutorial_policy_candidates(
+    const KCEngine *engine,
+    KCPolicyActionCandidate *candidates,
+    int32_t count
+) {
+    if (!engine->tutorial_mode || count <= 0) {
+        return count;
+    }
+
+    KCAction legal_actions[256];
+    int32_t legal_count = kc_engine_legal_actions(engine, legal_actions, 256);
+    int32_t kept = 0;
+    for (int32_t candidate_index = 0; candidate_index < count; candidate_index++) {
+        bool legal = false;
+        for (int32_t legal_index = 0; legal_index < legal_count; legal_index++) {
+            if (kc_policy_action_equal(candidates[candidate_index].action, legal_actions[legal_index])) {
+                legal = true;
+                break;
+            }
+        }
+        if (legal) {
+            candidates[kept++] = candidates[candidate_index];
+        }
+    }
+    return kept;
+}
+
 int32_t kc_policy_candidates(const KCEngine *engine, int32_t player_id, KCPolicyModelBuffer model, KCPolicyActionCandidate *candidates, int32_t max_candidates, double *hidden_cache) {
     int32_t count = 0;
     int32_t activation_count = kc_policy_activation_count(model);
@@ -1635,7 +1673,7 @@ int32_t kc_policy_candidates(const KCEngine *engine, int32_t player_id, KCPolicy
             }
         }
     }
-    return count;
+    return kc_filter_tutorial_policy_candidates(engine, candidates, count);
 }
 
 int32_t kc_engine_policy_action_features(const KCEngine *engine, int32_t player_id, int32_t input_size, KCPolicyActionFeatures *features, int32_t max_features) {
@@ -2102,17 +2140,6 @@ bool kc_greedy_policy_action(const KCEngine *engine, int32_t player_id, KCPolicy
     }
     *selected = candidates[best].action;
     return true;
-}
-
-static bool kc_policy_action_equal(KCAction lhs, KCAction rhs) {
-    return lhs.kind == rhs.kind
-        && lhs.player_id == rhs.player_id
-        && lhs.suit == rhs.suit
-        && kc_card_equal(lhs.card, rhs.card)
-        && kc_card_equal(lhs.hand_card, rhs.hand_card)
-        && kc_card_equal(lhs.plot_card, rhs.plot_card)
-        && lhs.plot_zone == rhs.plot_zone
-        && lhs.target_suit == rhs.target_suit;
 }
 
 int32_t kc_policy_candidate_index_for_action(const KCPolicyActionCandidate *candidates, int32_t count, KCAction action) {

@@ -765,7 +765,7 @@ void registerLobbyAndProfileTests() {
         ),
       );
 
-      expect(findAppText('RULES'), findsNothing);
+      expect(findAppText('RULES'), findsOneWidget);
       expect(findAppText('HOW TO PLAY'), findsWidgets);
       await tester.tap(findAppText('TUTORIAL'));
 

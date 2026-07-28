@@ -35,6 +35,7 @@ import 'package:kolkhoz_app/src/app/profile/views/progression_notice.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
 import 'package:kolkhoz_app/src/app/views/shared/tutorial_display.dart';
+import 'package:kolkhoz_app/src/app/views/shared/tutorial_content.dart';
 import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_view.dart';
 
 export 'package:kolkhoz_app/src/app/views/main_menu/main_menu_view.dart';
@@ -272,7 +273,9 @@ String safeAccountErrorMessage(Object exception, KolkhozLanguage language) {
 }
 
 class KolkhozApp extends StatefulWidget {
-  const KolkhozApp({super.key});
+  const KolkhozApp({required this.tutorialContent, super.key});
+
+  final TutorialContent tutorialContent;
 
   @override
   State<KolkhozApp> createState() => _KolkhozAppState();
@@ -801,6 +804,8 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
               onTutorialPressed: () {
                 showTutorial();
               },
+              hasTutorialProgress: store.hasSavedTutorial,
+              onRestartTutorialPressed: () => showTutorial(restart: true),
               onLanguageToggle: toggleLanguage,
               onAppearanceToggle: toggleAppearance,
               onCardBackChanged: setCardBack,
@@ -868,6 +873,12 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
                   },
                   currentProfileUserID: comradesSummary.userID,
                   onComradeRequestToUser: requestComradeByUserID,
+                  suppressPlanningOverlay:
+                      showingTutorial &&
+                      model.legalActions.any(
+                        (action) =>
+                            action.kind == actionCompleteTutorialOrientation,
+                      ),
                 ),
                 if (store.error != null)
                   Positioned(
@@ -921,8 +932,11 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
                   child: TutorialWalkthroughOverlay(
                     tokens: tokens,
                     language: language,
+                    content: widget.tutorialContent,
                     model: showingLobby ? null : store.model,
                     onClose: navigationController.closeTutorial,
+                    onOrientationComplete: completeTutorialOrientation,
+                    onContinueAction: completeTutorialContinueAction,
                   ),
                 ),
             ],
@@ -1202,21 +1216,36 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     navigationController.returnFromGame();
   }
 
-  void showTutorial() {
+  void showTutorial({bool restart = false}) {
     clearForemanHint();
     store.clearActivePanel();
-    if (showingLobby || store.model == null) {
-      store.startGame(
-        variants: activeVariants,
-        controllers: activePlayerControllers,
-      );
-    }
+    store.startTutorial(restart: restart);
     navigationController.showGame(tutorial: true);
   }
 
   void applyBoardAction(LegalAction action) {
     clearForemanHint();
     store.applyLegalAction(action);
+  }
+
+  void completeTutorialOrientation() {
+    final actions = store.model?.legalActions ?? const <LegalAction>[];
+    for (final action in actions) {
+      if (action.kind == actionCompleteTutorialOrientation) {
+        applyBoardAction(action);
+        return;
+      }
+    }
+  }
+
+  void completeTutorialContinueAction(String kind) {
+    final actions = store.model?.legalActions ?? const <LegalAction>[];
+    for (final action in actions) {
+      if (action.kind == kind) {
+        applyBoardAction(action);
+        return;
+      }
+    }
   }
 
   Future<void> copyGameResult() async {

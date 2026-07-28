@@ -1273,13 +1273,27 @@ class _PosterCardFan extends StatelessWidget {
         final strideY = cardSize.height * 0.44;
         final contentHeight = cardSize.height + (rows - 1) * strideY;
         final indexedCards = cards.indexed.toList();
+        final cardOccurrences = <String, int>{};
+        final layerKeys = <int, String>{
+          for (final (index, entry) in indexedCards) index: entry.id,
+        };
+        for (final (index, entry) in indexedCards) {
+          final occurrence = cardOccurrences.update(
+            entry.id,
+            (count) => count + 1,
+            ifAbsent: () => 0,
+          );
+          if (occurrence > 0) {
+            layerKeys[index] = '${entry.id}-$occurrence';
+          }
+        }
         return Stack(
           clipBehavior: Clip.none,
           children: [
             for (final (index, entry)
                 in reversePaintOrder ? indexedCards.reversed : indexedCards)
               Builder(
-                key: ValueKey('poster-fan-layer-${entry.id}'),
+                key: ValueKey('poster-fan-layer-${layerKeys[index]}'),
                 builder: (context) {
                   final row = index ~/ perRow;
                   final column = index % perRow;

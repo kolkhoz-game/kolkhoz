@@ -175,6 +175,8 @@ class StandaloneLobby extends StatelessWidget {
     required this.onOfflinePressed,
     required this.onOnlinePressed,
     required this.onTutorialPressed,
+    this.hasTutorialProgress = false,
+    this.onRestartTutorialPressed,
     required this.onLanguageToggle,
     required this.onAppearanceToggle,
     this.onCardBackChanged,
@@ -315,6 +317,8 @@ class StandaloneLobby extends StatelessWidget {
   final VoidCallback onOfflinePressed;
   final VoidCallback onOnlinePressed;
   final VoidCallback onTutorialPressed;
+  final bool hasTutorialProgress;
+  final VoidCallback? onRestartTutorialPressed;
   final VoidCallback onLanguageToggle;
   final VoidCallback onAppearanceToggle;
   final ValueChanged<KolkhozCardBack>? onCardBackChanged;
@@ -475,6 +479,8 @@ class StandaloneLobby extends StatelessWidget {
                     cloudAuthMessage: cloudAuthMessage,
                     cloudAuthIsError: cloudAuthIsError,
                     onTutorialPressed: onTutorialPressed,
+                    hasTutorialProgress: hasTutorialProgress,
+                    onRestartTutorialPressed: onRestartTutorialPressed,
                     onStart: onStart,
                     onResumeLocalGame: onResumeLocalGame,
                     onHostOnline: onHostOnline,
@@ -1486,6 +1492,8 @@ class _LobbyPanel extends StatelessWidget {
     required this.cloudAuthMessage,
     required this.cloudAuthIsError,
     required this.onTutorialPressed,
+    this.hasTutorialProgress = false,
+    this.onRestartTutorialPressed,
     required this.onStart,
     required this.onResumeLocalGame,
     required this.onHostOnline,
@@ -1563,6 +1571,8 @@ class _LobbyPanel extends StatelessWidget {
   final String? cloudAuthMessage;
   final bool cloudAuthIsError;
   final VoidCallback onTutorialPressed;
+  final bool hasTutorialProgress;
+  final VoidCallback? onRestartTutorialPressed;
   final VoidCallback onStart;
   final VoidCallback? onResumeLocalGame;
   final Future<String> Function(
@@ -1761,6 +1771,8 @@ class _LobbyPanel extends StatelessWidget {
               tokens: tokens,
               language: language,
               onTutorialPressed: onTutorialPressed,
+              hasTutorialProgress: hasTutorialProgress,
+              onRestartTutorialPressed: onRestartTutorialPressed,
             ),
         ],
       ),

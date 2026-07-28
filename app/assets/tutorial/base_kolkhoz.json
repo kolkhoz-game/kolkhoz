@@ -1,0 +1,606 @@
+{
+  "version": 1,
+  "_editingNotes": [
+    "This is the single source of truth for the base Kolkhoz tutorial panels.",
+    "Reorder, add, or remove objects in orientation.stops and steps to change the walkthrough.",
+    "Keep step ids stable once released so saved tutorials resume at the intended lesson.",
+    "focus: none, rail, jobs, table, or hand.",
+    "advance: manual, rewardsRevealed, trumpChosen, cardPlayed, learnerThirdTrickWon, learnerThirdTrickAssigned, learnerYearTwoFirstMultiSuitWon, learnerYearTwoSecondMultiSuitWon, saboteurFollowPaused, saboteurAssignmentOpened, jobCompleted, swapPhase, yearTwoRequisition, yearThree, famineYear, learnerFamineTwoWins, learnerHeroProtected, or gameOver.",
+    "Set autoAdvance to false when the player must press Next after an event. continueAction names the legal engine action that Next should apply. collapseAfterContinue folds the next reminder out of the way.",
+    "Scripted cards, legal actions, and outcomes remain in engine/KolkhozCEngine/KolkhozCEngine.c."
+  ],
+  "orientation": {
+    "header": {
+      "en": "YEAR 0 · ORIENTATION",
+      "ru": "ГОД 0 · ЗНАКОМСТВО"
+    },
+    "beginLabel": {
+      "en": "BEGIN YEAR 1",
+      "ru": "НАЧАТЬ ГОД 1"
+    },
+    "stops": [
+      {
+        "id": "welcome",
+        "title": {
+          "en": "Welcome to the collective",
+          "ru": "Добро пожаловать в колхоз"
+        },
+        "body": {
+          "en": "This match lasts five years. Bank the highest total value in your cellar and plot to win.",
+          "ru": "Матч длится пять лет. Побеждает игрок с наибольшей суммой карт в подвале и на участке."
+        },
+        "focus": "none"
+      },
+      {
+        "id": "hand",
+        "title": {
+          "en": "Your hand",
+          "ru": "Ваша рука"
+        },
+        "body": {
+          "en": "Your workers wait along the bottom edge. Opponents can see how many cards you hold, but never which cards they are.",
+          "ru": "Ваши рабочие находятся внизу. Соперники видят количество карт, но не видят сами карты."
+        },
+        "focus": "hand"
+      },
+      {
+        "id": "jobs",
+        "title": {
+          "en": "Read the work board",
+          "ru": "Осмотрите доску работ"
+        },
+        "body": {
+          "en": "The four jobs run across the top. Each shows its crop, current work hours, quota, and the reward available this year.",
+          "ru": "Наверху находятся четыре работы. Здесь показаны культура, часы, норма и награда текущего года."
+        },
+        "focus": "jobs"
+      },
+      {
+        "id": "trick-table",
+        "title": {
+          "en": "The trick table",
+          "ru": "Стол взятки"
+        },
+        "body": {
+          "en": "Cards played this trick gather in the center. Turn and trump indicators tell you who acts and which crop currently has priority.",
+          "ru": "Карты текущей взятки собираются в центре. Указатели хода и козыря показывают, кто действует и какая культура главная."
+        },
+        "focus": "table"
+      },
+      {
+        "id": "plots-cellars-medals",
+        "title": {
+          "en": "Plots, cellars, and medals",
+          "ru": "Участки, подвалы и медали"
+        },
+        "body": {
+          "en": "Plot cards are public; cellar cards stay hidden. Medals show who has won tricks. Opponents' hidden cards remain secret.",
+          "ru": "Карты участка открыты, карты подвала скрыты. Медали показывают победителей взяток. Скрытые карты соперников остаются тайной."
+        },
+        "focus": "rail"
+      },
+      {
+        "id": "north",
+        "title": {
+          "en": "The North",
+          "ru": "Север"
+        },
+        "body": {
+          "en": "Cards sent North are out of the game. The record remains visible so you can understand what was lost and why.",
+          "ru": "Карты, отправленные на Север, выходят из игры. Запись остаётся видимой, чтобы было понятно, что и почему потеряно."
+        },
+        "focus": "rail"
+      },
+      {
+        "id": "begin-year-one",
+        "title": {
+          "en": "Begin Year 1",
+          "ru": "Начать первый год"
+        },
+        "body": {
+          "en": "Misha will pause before each new mechanic. Afterward, small reminders will point you in the right direction without stopping play.",
+          "ru": "Миша остановит игру перед каждой новой механикой. Затем небольшие подсказки будут помогать, не прерывая ход."
+        },
+        "focus": "none"
+      }
+    ]
+  },
+  "firstMatchStepId": "reward-cards",
+  "steps": [
+    {
+      "id": "welcome",
+      "title": {
+        "en": "Welcome to the collective",
+        "ru": "Добро пожаловать в колхоз"
+      },
+      "body": {
+        "en": "This is a real game, comrade — play while we talk. Your goal: end the Five-Year Plan with the most points hidden in your cellar.",
+        "ru": "Это настоящая игра, товарищ — играйте, пока мы говорим. Цель: закончить пятилетку с самым богатым подвалом."
+      },
+      "tip": {
+        "en": "High hidden cards are your bank. Losing one to the North can swing the final score.",
+        "ru": "Старшие скрытые карты — ваш запас. Потеря одной на Севере может решить итоговый счёт."
+      },
+      "callout": {
+        "en": "The buttons below turn my lessons. The board stays yours.",
+        "ru": "Кнопки листают уроки. Стол остаётся вашим."
+      },
+      "icon": "assets/art/field_plan/game/ui/icons/plot.png",
+      "focus": "none",
+      "advance": "manual"
+    },
+    {
+      "id": "work-board",
+      "title": {
+        "en": "Read the work board",
+        "ru": "Осмотрите доску работ"
+      },
+      "body": {
+        "en": "Four jobs each year, one per crop. Each reward pile has ranks 1–4 plus one hidden lotto rank from 5–K; the counter is work hours — 40 completes the job.",
+        "ru": "Каждый год четыре работы, по одной на культуру. В наградах всегда 1–4 и один тайный случайный ранг от 5 до К; счётчик — часы: 40 закрывают работу."
+      },
+      "tip": {
+        "en": "Failed jobs summon requisition at year's end. Remember which crops look doomed.",
+        "ru": "Проваленные работы зовут реквизицию в конце года. Запоминайте обречённые культуры."
+      },
+      "callout": {
+        "en": "Find the four job counters along the top of the table.",
+        "ru": "Найдите четыре счётчика работ наверху стола."
+      },
+      "icon": "assets/art/field_plan/game/ui/navigation/jobs.png",
+      "focus": "jobs",
+      "advance": "manual"
+    },
+    {
+      "id": "reward-cards",
+      "title": {
+        "en": "This year's rewards",
+        "ru": "Награды этого года"
+      },
+      "body": {
+        "en": "Each crop offers one face-up reward. Complete that job's 40-hour quota and the brigade leader who closes it adds the reward to their public plot.",
+        "ru": "Каждая культура предлагает одну открытую награду. Выполните норму работы в 40 часов, и бригадир, закрывший работу, добавит награду на свой открытый участок."
+      },
+      "tip": {
+        "en": "Rewards score their printed rank, so some jobs are worth more than others.",
+        "ru": "Награды приносят очки по своему достоинству, поэтому одни работы ценнее других."
+      },
+      "callout": {
+        "en": "Look over all four rewards, then continue.",
+        "ru": "Осмотрите все четыре награды, затем продолжайте."
+      },
+      "icon": "assets/art/field_plan/game/ui/navigation/jobs.png",
+      "focus": "jobs",
+      "advance": "rewardsRevealed",
+      "autoAdvance": false,
+      "continueAction": "completeTutorialRewardLesson",
+      "resumeAt": [
+        "year1.rewards"
+      ]
+    },
+    {
+      "id": "trump-crop",
+      "title": {
+        "en": "The trump crop",
+        "ru": "Козырная культура"
+      },
+      "body": {
+        "en": "In planning, one crop is declared the State's main task — trump. In year five, the leftover deal card is revealed to set trump; Saboteur means no trump.",
+        "ru": "В планировании одну культуру объявляют главной задачей — козырем. В пятом году лишнюю карту сдачи открывают для выбора козыря; Вредитель означает игру без козыря."
+      },
+      "tip": {
+        "en": "When you are central planner, pick trump for the hand you expect to play — not only for the biggest card you see.",
+        "ru": "Став центральным плановиком, выбирайте козырь под всю руку, а не только под самую крупную карту."
+      },
+      "callout": {
+        "en": "Watch the central planner declare trump.",
+        "ru": "Смотрите, как центральный плановик объявляет козырь."
+      },
+      "icon": "assets/ui/Icons/icon-crop-seal.png",
+      "focus": "table",
+      "advance": "trumpChosen",
+      "resumeAt": [
+        "year1.planning"
+      ]
+    },
+    {
+      "id": "play-card",
+      "title": {
+        "en": "Play a card",
+        "ru": "Сыграйте карту"
+      },
+      "body": {
+        "en": "Follow the led crop if you can — legal cards glow. Out of that crop? Play anything, even trump.",
+        "ru": "Ходите в масть, если можете — разрешённые карты подсвечены. Нет масти? Кладите что угодно, хоть козырь."
+      },
+      "tip": {
+        "en": "Ducking a trick is allowed — and often wise. Winners attract attention.",
+        "ru": "Уступить взятку можно — и часто мудро. Победители привлекают внимание."
+      },
+      "callout": {
+        "en": "Play a card from your hand when your turn comes.",
+        "ru": "Сыграйте карту с руки, когда придёт ваш ход."
+      },
+      "icon": "assets/ui/Icons/icon-hand.png",
+      "focus": "hand",
+      "advance": "cardPlayed",
+      "resumeAt": [
+        "year1.trick"
+      ]
+    },
+    {
+      "id": "take-trick",
+      "title": {
+        "en": "Taking the trick",
+        "ru": "Взятие взятки"
+      },
+      "body": {
+        "en": "Highest card of the led crop wins — unless trump lands; then the highest trump. The winner takes a medal and becomes brigade leader.",
+        "ru": "Взятку берёт старшая карта ведущей масти — если не лёг козырь: тогда старший козырь. Победитель берёт медаль и становится бригадиром."
+      },
+      "tip": {
+        "en": "Medals break ties at the end — but every win paints a target on your cellar.",
+        "ru": "Медали решают ничьи в конце — но каждая победа рисует мишень на подвале."
+      },
+      "callout": {
+        "en": "Watch who takes this trick.",
+        "ru": "Смотрите, кто возьмёт эту взятку."
+      },
+      "icon": "assets/art/field_plan/game/ui/icons/medal.png",
+      "focus": "table",
+      "advance": "learnerThirdTrickWon"
+    },
+    {
+      "id": "assign-labor",
+      "title": {
+        "en": "You are the brigade leader",
+        "ru": "Вы стали бригадиром"
+      },
+      "body": {
+        "en": "You won the third trick, so you assign its four worker cards. For this first lesson, all four go to the same highlighted job.",
+        "ru": "Вы выиграли третью взятку, поэтому распределяете её четыре карты рабочих. В этом первом уроке все четыре отправляются на одну подсвеченную работу."
+      },
+      "tip": {
+        "en": "Each card adds its printed rank as work hours. A job is complete at 40.",
+        "ru": "Каждая карта добавляет столько часов, каков её ранг. Работа завершена при 40 часах."
+      },
+      "callout": {
+        "en": "Tap the highlighted job for each card, then confirm the assignment.",
+        "ru": "Для каждой карты нажмите подсвеченную работу, затем подтвердите назначение."
+      },
+      "icon": "assets/art/field_plan/game/ui/navigation/jobs.png",
+      "focus": "jobs",
+      "advance": "learnerThirdTrickAssigned",
+      "resumeAt": [
+        "year1.assignment"
+      ]
+    },
+    {
+      "id": "meet-quota",
+      "title": {
+        "en": "Meet the quota",
+        "ru": "Выполните норму"
+      },
+      "body": {
+        "en": "A job that reaches 40 hours is complete: its reward goes face-up into the closer's plot, and that crop is safe from requisition this year.",
+        "ru": "Работа с 40 часами закрыта: награда открыто попадает на участок закрывшего, и эта культура в этом году не вызовет реквизицию."
+      },
+      "tip": {
+        "en": "A finished job pays you and protects you. Two birds, one quota.",
+        "ru": "Закрытая работа и платит, и защищает. Две птицы — одна норма."
+      },
+      "callout": {
+        "en": "Push a job to 40 hours to claim its reward.",
+        "ru": "Доведите работу до 40 часов и заберите награду."
+      },
+      "icon": "assets/ui/Icons/icon-status-reward-claimed.png",
+      "focus": "jobs",
+      "advance": "jobCompleted"
+    },
+    {
+      "id": "leftover-card",
+      "title": {
+        "en": "The leftover card",
+        "ru": "Последняя карта"
+      },
+      "body": {
+        "en": "Only four tricks are played. Your fifth card slips face-down into your cellar at year's end — its rank becomes points.",
+        "ru": "Взяток только четыре. Пятая карта в конце года уходит в подвал рубашкой вверх — её ранг станет очками."
+      },
+      "tip": {
+        "en": "Steer the year so your best card is the one that survives.",
+        "ru": "Ведите год так, чтобы уцелела лучшая карта."
+      },
+      "callout": {
+        "en": "Your unplayed card banks itself when the year ends.",
+        "ru": "Несыгранная карта спрячется сама в конце года."
+      },
+      "icon": "assets/art/field_plan/game/ui/icons/cellar.png",
+      "focus": "hand",
+      "advance": "swapPhase",
+      "resumeAt": [
+        "year1.requisition"
+      ]
+    },
+    {
+      "id": "yearly-swap",
+      "title": {
+        "en": "The yearly swap",
+        "ru": "Ежегодный обмен"
+      },
+      "body": {
+        "en": "Before the tricks begin, trade one hand card with one cellar card. Bring your hidden Wheat 10 into your hand and put the Beet King in its place.",
+        "ru": "Перед началом взяток обменяйте одну карту руки на карту подвала. Возьмите скрытую десятку пшеницы в руку, а на её место положите короля свёклы."
+      },
+      "tip": {
+        "en": "Wheat is trump, so this gives you two trumps while the valuable Beet King waits safely in your cellar.",
+        "ru": "Пшеница — козырь, поэтому у вас будет два козыря, а ценный король свёклы безопасно подождёт в подвале."
+      },
+      "callout": {
+        "en": "Swap the Beet King for the hidden Wheat 10, then confirm.",
+        "ru": "Обменяйте короля свёклы на скрытую десятку пшеницы, затем подтвердите."
+      },
+      "icon": "assets/art/field_plan/game/ui/icons/cellar.png",
+      "focus": "hand",
+      "advance": "learnerYearTwoFirstMultiSuitWon",
+      "resumeAt": [
+        "year2.default"
+      ]
+    },
+    {
+      "id": "split-assignment",
+      "title": {
+        "en": "One trick, two jobs",
+        "ru": "Одна взятка, две работы"
+      },
+      "body": {
+        "en": "Your trump won a Beet-led trick containing Wheat and Beet cards. Both crops are legal jobs, and you assign the four cards one at a time.",
+        "ru": "Ваш козырь выиграл свекольную взятку с картами пшеницы и свёклы. Обе культуры доступны как работы, а четыре карты назначаются по одной."
+      },
+      "tip": {
+        "en": "A worker does not have to go to the job printed on their card. The trick only determines which jobs are available.",
+        "ru": "Рабочего не обязательно отправлять на культуру его карты. Взятка лишь определяет, какие работы доступны."
+      },
+      "callout": {
+        "en": "Follow the highlights: send the Wheat card to Wheat and the Beet cards to Beets, then confirm.",
+        "ru": "Следуйте подсветке: отправьте карту пшеницы на пшеницу, карты свёклы — на свёклу, затем подтвердите."
+      },
+      "icon": "assets/art/field_plan/game/ui/navigation/jobs.png",
+      "focus": "jobs",
+      "advance": "learnerYearTwoSecondMultiSuitWon",
+      "resumeAt": [
+        "year2.firstAssignment"
+      ]
+    },
+    {
+      "id": "flexible-assignment",
+      "title": {
+        "en": "Choose the job, not the suit",
+        "ru": "Выбирайте работу, а не масть"
+      },
+      "body": {
+        "en": "Your second trump won another mixed Wheat-and-Beet trick. Because Wheat appeared, every card in the trick may be sent to the Wheat job.",
+        "ru": "Ваш второй козырь выиграл ещё одну смешанную взятку из пшеницы и свёклы. Поскольку в ней была пшеница, все карты можно отправить на работу с пшеницей."
+      },
+      "tip": {
+        "en": "Assignment is strategic: any card may go to any legal job represented in the trick.",
+        "ru": "Назначение — стратегический выбор: любую карту можно отправить на любую доступную работу из взятки."
+      },
+      "callout": {
+        "en": "Send all four cards to Wheat, then confirm.",
+        "ru": "Отправьте все четыре карты на пшеницу, затем подтвердите."
+      },
+      "icon": "assets/art/field_plan/game/ui/navigation/jobs.png",
+      "focus": "jobs",
+      "advance": "yearTwoRequisition",
+      "resumeAt": [
+        "year2.secondAssignment"
+      ]
+    },
+    {
+      "id": "requisition",
+      "title": {
+        "en": "This is requisition",
+        "ru": "Это реквизиция"
+      },
+      "body": {
+        "en": "Beets failed. Because you won tricks this year, requisition takes your highest plot or cellar card matching a failed crop: the Beet King you hid during the swap.",
+        "ru": "Работа со свёклой провалена. Поскольку вы брали взятки в этом году, реквизиция забирает вашу старшую карту проваленной культуры с участка или из подвала — короля свёклы, спрятанного при обмене."
+      },
+      "tip": {
+        "en": "If N jobs fail, each player who won a trick loses their N highest cards matching any failed crop. Winning rewards can also expose your best cards.",
+        "ru": "Если провалено N работ, каждый бравший взятки игрок теряет N старших карт любой проваленной культуры. Победы дают награды, но подвергают лучшие карты риску."
+      },
+      "callout": {
+        "en": "Watch the Beet King leave your cellar for the North.",
+        "ru": "Смотрите, как король свёклы отправляется из подвала на Север."
+      },
+      "icon": "assets/art/field_plan/game/ui/navigation/north.png",
+      "focus": "table",
+      "advance": "saboteurFollowPaused",
+      "resumeAt": [
+        "year2.requisition"
+      ]
+    },
+    {
+      "id": "saboteur-follow",
+      "title": {
+        "en": "The Saboteur always follows",
+        "ru": "Вредитель всегда ходит в масть"
+      },
+      "body": {
+        "en": "Wheat was led. The Saboteur counts as Wheat—and every other crop—so he was your only legal card and you had to follow with him.",
+        "ru": "Была сыграна пшеница. Вредитель считается пшеницей — и любой другой культурой, — поэтому он был вашей единственной законной картой."
+      },
+      "tip": {
+        "en": "You can never use the Saboteur to claim that you are void in the led crop.",
+        "ru": "Нельзя объявить, что нужной масти нет, пока у вас есть Вредитель."
+      },
+      "callout": {
+        "en": "Continue and watch the next player answer with a higher Sunflower trump.",
+        "ru": "Продолжайте и смотрите, как следующий игрок отвечает старшим козырем-подсолнухом."
+      },
+      "icon": "assets/ui/Icons/icon-warning.png",
+      "focus": "table",
+      "advance": "saboteurFollowPaused",
+      "autoAdvance": false,
+      "continueAction": "completeTutorialSaboteurFollowLesson",
+      "collapseAfterContinue": true,
+      "resumeAt": [
+        "year3.follow"
+      ]
+    },
+    {
+      "id": "saboteur-watch",
+      "title": {
+        "en": "Watch where he goes",
+        "ru": "Следите, куда он попадёт"
+      },
+      "body": {
+        "en": "The trick is still in play. Watch who wins it and which job becomes available.",
+        "ru": "Взятка ещё разыгрывается. Следите, кто её выиграет и какая работа станет доступной."
+      },
+      "tip": {
+        "en": "The Saboteur's second rule matters during assignment.",
+        "ru": "Второе правило Вредителя проявится при назначении."
+      },
+      "callout": {
+        "en": "Let the AI finish the trick.",
+        "ru": "Позвольте ИИ закончить взятку."
+      },
+      "icon": "assets/ui/Icons/icon-warning.png",
+      "focus": "table",
+      "advance": "saboteurAssignmentOpened",
+      "resumeAt": [
+        "year3.default"
+      ]
+    },
+    {
+      "id": "saboteur-assignment",
+      "title": {
+        "en": "The Saboteur poisons a job",
+        "ru": "Вредитель губит работу"
+      },
+      "body": {
+        "en": "The next player won with a higher Sunflower trump. Although no Beet was played, the Saboteur makes Beets a legal target, so the AI sends the entire trick there.",
+        "ru": "Следующий игрок выиграл старшим козырем-подсолнухом. Хотя свёкла не игралась, Вредитель делает её законной целью, и ИИ отправляет туда всю взятку."
+      },
+      "tip": {
+        "en": "Beets is unfinished now. It can still reach 40 and pay its reward later, but a job containing the Saboteur is guaranteed to fail at requisition.",
+        "ru": "Свёкла пока не завершена. Позже она может достичь 40 часов и выдать награду, но работа с Вредителем гарантированно провалится при реквизиции."
+      },
+      "callout": {
+        "en": "Watch Beets complete later—and still appear among the failed jobs.",
+        "ru": "Смотрите, как свёкла позже завершится — и всё равно окажется среди проваленных работ."
+      },
+      "icon": "assets/ui/Icons/icon-warning.png",
+      "focus": "jobs",
+      "advance": "famineYear",
+      "resumeAt": [
+        "year3.assignment",
+        "year4.default"
+      ]
+    },
+    {
+      "id": "famine",
+      "title": {
+        "en": "Year five is famine",
+        "ru": "Пятый год — голод"
+      },
+      "body": {
+        "en": "The last year is lean: four cards and three tricks. One leftover worker card is revealed to set trump; if it is the Saboteur, there is no trump.",
+        "ru": "Последний год скуден: четыре карты и три взятки. Оставшаяся карта рабочего задаёт козырь; если это Вредитель, козыря нет."
+      },
+      "tip": {
+        "en": "Swap the highlighted low off-suit for the matching high card in your cellar. Your hand will then contain only trump and one off-suit.",
+        "ru": "Обменяйте подсвеченную младшую некозырную карту на совпадающую старшую карту из подвала. После этого в руке останутся только козыри и одна некозырная масть."
+      },
+      "callout": {
+        "en": "Make the highlighted swap, then play three tricks.",
+        "ru": "Сделайте подсвеченный обмен, затем сыграйте три взятки."
+      },
+      "icon": "assets/ui/Icons/icon-famine.png",
+      "focus": "table",
+      "advance": "learnerFamineTwoWins",
+      "resumeAt": [
+        "year5.default"
+      ]
+    },
+    {
+      "id": "hero-within-reach",
+      "title": {
+        "en": "One trick from history",
+        "ru": "Одна взятка до славы"
+      },
+      "body": {
+        "en": "Your low trump won after the AI led the suit you swapped away. Then your high trump drew every remaining trump—including the Saboteur. Win the last trick to sweep the year.",
+        "ru": "Младший козырь победил после того, как ИИ зашёл с масти, которую вы обменяли. Затем старший козырь собрал все оставшиеся козыри, включая Вредителя. Выиграйте последнюю взятку, чтобы забрать весь год."
+      },
+      "tip": {
+        "en": "A player who wins every trick becomes Hero of Socialist Labor.",
+        "ru": "Игрок, выигравший все взятки года, становится Героем Социалистического Труда."
+      },
+      "callout": {
+        "en": "Win the final trick.",
+        "ru": "Выиграйте последнюю взятку."
+      },
+      "icon": "assets/art/field_plan/game/ui/icons/medal.png",
+      "focus": "rail",
+      "advance": "learnerHeroProtected",
+      "collapseAfterContinue": true,
+      "resumeAt": [
+        "year5.finalTrick"
+      ]
+    },
+    {
+      "id": "hero-of-socialist-labor",
+      "title": {
+        "en": "Hero of Socialist Labor",
+        "ru": "Герой Социалистического Труда"
+      },
+      "body": {
+        "en": "You won every trick this year. A Hero is protected from requisition; instead, every other player is vulnerable, even those who never led a brigade.",
+        "ru": "Вы выиграли все взятки этого года. Герой защищён от реквизиции; вместо него уязвимы все остальные игроки, даже не руководившие бригадой."
+      },
+      "tip": {
+        "en": "The title is earned anew each year by winning every available trick.",
+        "ru": "Звание присуждается заново каждый год за победу во всех доступных взятках."
+      },
+      "callout": {
+        "en": "Your cellar is safe from the final requisition.",
+        "ru": "Ваш подвал защищён от последней реквизиции."
+      },
+      "icon": "assets/art/field_plan/game/ui/icons/medal.png",
+      "focus": "rail",
+      "advance": "gameOver",
+      "resumeAt": [
+        "year5.requisition"
+      ]
+    },
+    {
+      "id": "final-score",
+      "title": {
+        "en": "Highest final cellar wins",
+        "ru": "Побеждает лучший подвал"
+      },
+      "body": {
+        "en": "After year five, every cellar card counts its rank. Highest total wins the Plan; medals break ties. Make me proud, comrade.",
+        "ru": "После пятого года каждая карта подвала приносит свой ранг. Наибольшая сумма выигрывает пятилетку; медали решают ничьи. Не подведите, товарищ."
+      },
+      "tip": {
+        "en": "One protected King is worth a year of caution.",
+        "ru": "Один сбережённый король стоит года осторожности."
+      },
+      "callout": {
+        "en": "Finish the Plan — Misha is watching.",
+        "ru": "Закончите пятилетку — Миша следит."
+      },
+      "icon": "assets/art/field_plan/game/ui/icons/medal.png",
+      "focus": "none",
+      "advance": "manual",
+      "resumeAt": [
+        "gameOver"
+      ]
+    }
+  ]
+}
