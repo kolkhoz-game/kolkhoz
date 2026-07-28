@@ -50,7 +50,7 @@ const defaultDesignTokens = DesignTokens(
   ),
   stroke: TokenStroke(hairline: 0.8, standard: 1, emphasis: 1.5, active: 3),
   typography: TokenTypography(
-    family: 'Handjet',
+    family: 'PTSans',
     scale: {
       'largeTitle': 34,
       'title': 28,

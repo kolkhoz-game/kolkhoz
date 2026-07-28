@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-enum AppDestination { offline, rules, online, profile, game }
+enum AppDestination { home, offline, rules, online, profile, game }
 
 enum KolkhozGameLaunchOrigin {
   created,
@@ -21,7 +21,7 @@ enum AppSettingsSection {
 }
 
 class AppNavigationController extends ChangeNotifier {
-  AppDestination _destination = AppDestination.offline;
+  AppDestination _destination = AppDestination.home;
   KolkhozGameLaunchOrigin _gameLaunchOrigin = KolkhozGameLaunchOrigin.created;
   AppSettingsSection _settingsSection = AppSettingsSection.profile;
   bool _showingTutorial = false;

@@ -3,7 +3,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 
 void main() {
   testWidgets('chrome buttons expose one labeled button action', (
@@ -19,7 +19,7 @@ void main() {
             tokens: defaultDesignTokens,
             backgroundColor: Colors.red,
             textColor: Colors.white,
-            textSize: PixelTextSize.caption,
+            textSize: DisplayTextSize.caption,
             uppercase: false,
             onPressed: () {},
           ),
@@ -48,7 +48,7 @@ void main() {
             tokens: defaultDesignTokens,
             backgroundColor: Colors.grey,
             textColor: Colors.black,
-            textSize: PixelTextSize.caption,
+            textSize: DisplayTextSize.caption,
             uppercase: false,
             enabled: false,
           ),

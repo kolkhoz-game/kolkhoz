@@ -411,8 +411,8 @@ enum KolkhozLanguage {
 
   String get toggleIconAsset {
     return next == KolkhozLanguage.en
-        ? 'icon-language-en.png'
-        : 'icon-language-ru.png';
+        ? 'assets/art/field_plan/shared/pictograms/language-en.png'
+        : 'assets/art/field_plan/shared/pictograms/language-ru.png';
   }
 
   String get footerLabel {
@@ -457,8 +457,8 @@ enum KolkhozAppearance {
 
   String get toggleIconAsset {
     return next == KolkhozAppearance.light
-        ? 'icon-appearance-light.png'
-        : 'icon-appearance-dark.png';
+        ? 'assets/art/field_plan/shared/pictograms/appearance-light.png'
+        : 'assets/art/field_plan/shared/pictograms/appearance-dark.png';
   }
 }
 

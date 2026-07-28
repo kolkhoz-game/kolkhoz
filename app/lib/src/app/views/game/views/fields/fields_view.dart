@@ -7,7 +7,7 @@ import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/assignment_projection.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.dart';
 
@@ -475,15 +475,15 @@ class _JobTileState extends State<JobTile> {
                             Flexible(
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
-                                child: PixelText(
+                                child: DisplayText(
                                   job.claimed
                                       ? widget
                                             .language
                                             .strings
                                             .boardJobspanelDone
                                       : '$displayHours/${job.requiredHours}',
-                                  size: PixelTextSize.headline,
-                                  variant: PixelTextVariant.heavy,
+                                  size: DisplayTextSize.headline,
+                                  variant: DisplayTextWeight.bold,
                                   color: job.claimed
                                       ? tokens.colors.green
                                       : tokens.colors.gold,
@@ -507,7 +507,7 @@ class _JobTileState extends State<JobTile> {
                                     width: double.infinity,
                                     height: jobsTileEmptyPromptMinHeight,
                                     child: Center(
-                                      child: PixelText(
+                                      child: DisplayText(
                                         showAssignPrompt
                                             ? widget
                                                   .language
@@ -515,8 +515,8 @@ class _JobTileState extends State<JobTile> {
                                                   .boardJobspanelTapToAssign
                                             : '',
                                         textAlign: TextAlign.center,
-                                        size: PixelTextSize.caption2,
-                                        variant: PixelTextVariant.heavy,
+                                        size: DisplayTextSize.caption2,
+                                        variant: DisplayTextWeight.bold,
                                         color: showAssignPrompt
                                             ? tokens.colors.gold
                                             : Colors.transparent,

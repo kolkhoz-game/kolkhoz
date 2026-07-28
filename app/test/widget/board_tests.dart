@@ -1745,7 +1745,7 @@ void registerBoardTests() {
   });
 
   test('chrome text style avoids collapsed variable font axes', () {
-    expect(kolkhozFontStyle.fontFamily, 'Handjet');
+    expect(kolkhozFontStyle.fontFamily, 'PTSans');
     expect(kolkhozFontStyle.fontVariations, isNull);
   });
 
@@ -1757,10 +1757,11 @@ void registerBoardTests() {
   test('chrome rail underlays expose tiled nine-slice configs', () {
     final plain = chromeButtonNineSliceConfig(chromeButtonSecondaryAsset);
     expect(plain, isNotNull);
-    expect(plain!.left, 96);
-    expect(plain.top, 96);
-    expect(plain.right, 96);
-    expect(plain.bottom, 96);
+    expect(plain!.left, 32);
+    expect(plain.top, 32);
+    expect(plain.right, 32);
+    expect(plain.bottom, 32);
+    expect(plain.tileSampleSize, 64);
 
     expect(
       chromeButtonNineSliceConfig(chromeButtonPrimaryCurrentAsset),
@@ -1772,7 +1773,9 @@ void registerBoardTests() {
     );
   });
 
-  testWidgets('chrome command labels use bitmap pixel text', (tester) async {
+  testWidgets('chrome command labels use condensed display text', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: SizedBox(
@@ -1783,7 +1786,7 @@ void registerBoardTests() {
             backgroundAsset: chromeButtonPrimaryAsset,
             tokens: defaultDesignTokens,
             textColor: defaultDesignTokens.colors.onAccent,
-            textSize: PixelTextSize.headline,
+            textSize: DisplayTextSize.headline,
           ),
         ),
       ),
@@ -1794,7 +1797,7 @@ void registerBoardTests() {
         (widget) =>
             widget is ChromeScaledLabel &&
             widget.text == 'NEW GAME' &&
-            widget.size == PixelTextSize.headline,
+            widget.size == DisplayTextSize.headline,
       ),
       findsOneWidget,
     );

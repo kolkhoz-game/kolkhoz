@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 
 List<Offset> pipPositions(int value) {
@@ -206,45 +206,45 @@ double facePortraitArtWidth(TableCard card, TokenCardSize size) {
   return width * 2;
 }
 
-PixelTextSize pixelTextSizeForCardRank(TokenCardSize size) {
-  return pixelTextBitmapSizeForCardRank(size.cornerRankFontSize);
+DisplayTextSize displayTextSizeForCardRank(TokenCardSize size) {
+  return displayTextSizeForFontSize(size.cornerRankFontSize);
 }
 
-PixelTextSize pixelTextBitmapSizeForCardRank(double fontSize) {
+DisplayTextSize displayTextSizeForFontSize(double fontSize) {
   if (fontSize <= 9) {
-    return PixelTextSize.xSmall;
+    return DisplayTextSize.xSmall;
   }
   if (fontSize <= 10.5) {
-    return PixelTextSize.small;
+    return DisplayTextSize.small;
   }
   if (fontSize <= 12) {
-    return PixelTextSize.caption2;
+    return DisplayTextSize.caption2;
   }
   if (fontSize <= 15) {
-    return PixelTextSize.caption;
+    return DisplayTextSize.caption;
   }
   if (fontSize <= 18.5) {
-    return PixelTextSize.headline;
+    return DisplayTextSize.headline;
   }
   if (fontSize <= 22) {
-    return PixelTextSize.title;
+    return DisplayTextSize.title;
   }
-  return PixelTextSize.cardRank;
+  return DisplayTextSize.cardRank;
 }
 
-PixelTextSize pixelTextSizeForCardFaceValue(TokenCardSize size) {
+DisplayTextSize displayTextSizeForCardFaceValue(TokenCardSize size) {
   if (size.cornerRankFontSize <= 10.5) {
-    return PixelTextSize.xSmall;
+    return DisplayTextSize.xSmall;
   }
   if (size.cornerRankFontSize <= 15) {
-    return PixelTextSize.small;
+    return DisplayTextSize.small;
   }
-  return PixelTextSize.caption2;
+  return DisplayTextSize.caption2;
 }
 
-double pixelTextScaleForCardRank(TokenCardSize size) {
-  final bitmapSize = pixelTextSizeForCardRank(size);
-  return (size.cornerRankFontSize / bitmapSize.value).clamp(
+double displayTextScaleForCardRank(TokenCardSize size) {
+  final displaySize = displayTextSizeForCardRank(size);
+  return (size.cornerRankFontSize / displaySize.value).clamp(
     1,
     cardRankTextMaxScale,
   );

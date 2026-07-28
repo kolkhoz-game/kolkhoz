@@ -65,6 +65,7 @@ class RemoteConnection extends ChangeNotifier {
     Map<String, String> query = const {},
     Map<String, String> headers = const {},
     Object? body,
+    bool includeAuthorization = true,
   }) async {
     final handler = requestHandler;
     if (handler != null) {
@@ -76,7 +77,9 @@ class RemoteConnection extends ChangeNotifier {
     if (deviceID.isNotEmpty) {
       request.headers.set('X-Kolkhoz-Device-ID', deviceID);
     }
-    final accessToken = await accessTokenProvider();
+    final accessToken = includeAuthorization
+        ? await accessTokenProvider()
+        : null;
     if (accessToken != null && accessToken.isNotEmpty) {
       request.headers.set(
         HttpHeaders.authorizationHeader,
@@ -111,6 +114,7 @@ class RemoteConnection extends ChangeNotifier {
     Map<String, String> query = const {},
     Map<String, String> headers = const {},
     Object? body,
+    bool includeAuthorization = true,
   }) async {
     final value = await request(
       method: method,
@@ -118,6 +122,7 @@ class RemoteConnection extends ChangeNotifier {
       query: query,
       headers: headers,
       body: body,
+      includeAuthorization: includeAuthorization,
     );
     if (value is! Map) {
       throw const FormatException('Remote response must be a JSON object');

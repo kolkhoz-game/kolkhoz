@@ -63,6 +63,24 @@ abstract class OnlineSessionUpdate with _$OnlineSessionUpdate {
     final remaining = deadline - DateTime.now().millisecondsSinceEpoch / 1000;
     return remaining.ceil().clamp(0, 30).toInt();
   }
+
+  OnlineSessionUpdate retainingPlayerProfilesFrom(
+    OnlineSessionUpdate previous,
+  ) {
+    if (!started || previous.sessionID != sessionID) {
+      return this;
+    }
+    final profilesByPlayer = {
+      for (final profile in previous.playerProfiles) profile.playerID: profile,
+      for (final profile in playerProfiles) profile.playerID: profile,
+    };
+    if (profilesByPlayer.length == playerProfiles.length) {
+      return this;
+    }
+    final profiles = profilesByPlayer.values.toList()
+      ..sort((left, right) => left.playerID.compareTo(right.playerID));
+    return copyWith(playerProfiles: profiles);
+  }
 }
 
 @Freezed(toJson: false)

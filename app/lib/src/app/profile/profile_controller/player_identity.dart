@@ -36,6 +36,12 @@ bool shouldRetryPlatformAuthenticationError(
     errorCode != 'game_center_timeout' &&
     shouldRetryPlatformAuthentication(completedAttempts);
 
+@visibleForTesting
+bool shouldSignIntoExistingPlatformIdentity(RemoteRequestException error) =>
+    error.statusCode == HttpStatus.conflict &&
+    error.message ==
+        'this platform identity is already linked to another player';
+
 @immutable
 class KolkhozPlayerIdentity {
   const KolkhozPlayerIdentity({
@@ -151,10 +157,10 @@ class KolkhozIdentityRuntime extends ChangeNotifier {
                 'displayName': displayName,
               },
             )
-          : await _remoteConnection!.requestJson(
-              method: 'POST',
-              path: 'identity/platform/$provider',
-              body: {'credential': credential, 'displayName': displayName},
+          : await _authenticatePlatform(
+              provider: provider,
+              credential: credential,
+              displayName: displayName,
             );
       await _acceptSession(response);
       message = player!.guest
@@ -336,6 +342,30 @@ class KolkhozIdentityRuntime extends ChangeNotifier {
     await _storage.write(key: _tokenKey, value: token);
   }
 
+  Future<Map<String, Object?>> _authenticatePlatform({
+    required String provider,
+    required Map<String, Object?> credential,
+    required String displayName,
+  }) async {
+    final path = 'identity/platform/$provider';
+    final body = {'credential': credential, 'displayName': displayName};
+    try {
+      return await _remoteConnection!.requestJson(
+        method: 'POST',
+        path: path,
+        body: body,
+      );
+    } on RemoteRequestException catch (error) {
+      if (!shouldSignIntoExistingPlatformIdentity(error)) rethrow;
+      return _remoteConnection!.requestJson(
+        method: 'POST',
+        path: path,
+        body: body,
+        includeAuthorization: false,
+      );
+    }
+  }
+
   bool _schedulePlatformRetry(String displayName) {
     if (_platformRetryScheduled ||
         !shouldRetryPlatformAuthentication(_platformAuthenticationAttempts)) {
@@ -434,7 +464,7 @@ class PlayerIdentityPanel extends StatelessWidget {
                     key: Key(provider ?? 'guest-identity-state'),
                     style: kolkhozFontStyle.copyWith(
                       color: provider == null
-                          ? Colors.orange.shade200
+                          ? tokens.colors.goldBright
                           : tokens.colors.gold,
                       fontWeight: FontWeight.w800,
                     ),
@@ -492,7 +522,7 @@ class PlayerIdentityPanel extends StatelessWidget {
                       ? null
                       : () => _confirmDelete(context),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.red.shade300,
+                    foregroundColor: tokens.colors.redBright,
                   ),
                   child: const Text('DELETE ACCOUNT'),
                 ),
@@ -521,7 +551,9 @@ class PlayerIdentityPanel extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red.shade300),
+            style: TextButton.styleFrom(
+              foregroundColor: tokens.colors.redBright,
+            ),
             child: const Text('DELETE ACCOUNT'),
           ),
         ],

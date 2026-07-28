@@ -2,15 +2,10 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import 'package:kolkhoz_app/src/app/views/shared/art_direction.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
+import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 
-const ledgerNeutralUnderlay = ArtAssetRef(
-  fieldPlanPath: 'assets/art/field_plan/ledger/underlays/ledger-neutral.png',
-);
-const ledgerPrimaryUnderlay = ArtAssetRef(
-  fieldPlanPath: 'assets/art/field_plan/ledger/underlays/ledger-primary.png',
-);
 const fieldPlanLightPaperTexture =
     'assets/art/field_plan/shared/textures/paper-light.png';
 const _fieldPlanNineSlice = ChromeNineSliceConfig(
@@ -29,6 +24,7 @@ class PrintedUnderlay extends StatelessWidget {
     this.tone = PrintedUnderlayTone.neutral,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
     this.focused = false,
+    this.tokens,
     super.key,
   });
 
@@ -36,13 +32,19 @@ class PrintedUnderlay extends StatelessWidget {
   final PrintedUnderlayTone tone;
   final EdgeInsetsGeometry padding;
   final bool focused;
+  final DesignTokens? tokens;
 
   @override
   Widget build(BuildContext context) {
     final primary = tone == PrintedUnderlayTone.primary;
-    Widget underlay = _PrintedUnderlayBackground(
-      asset: primary ? ledgerPrimaryUnderlay : ledgerNeutralUnderlay,
-    );
+    final dark = tokens != null && !tokens!.usesLightAppearance;
+    Widget underlay = dark && !primary
+        ? _DarkPrintedUnderlayBackground(tokens: tokens!)
+        : _PrintedUnderlayBackground(
+            asset: primary
+                ? fieldPlanNavigationActiveFramePath
+                : fieldPlanNavigationInactiveFramePath,
+          );
     if (tone == PrintedUnderlayTone.disabled) {
       underlay = Opacity(opacity: 0.46, child: underlay);
     }
@@ -51,11 +53,14 @@ class PrintedUnderlay extends StatelessWidget {
       children: [
         underlay,
         if (focused)
-          const IgnorePointer(
+          IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 border: Border.fromBorderSide(
-                  BorderSide(color: Color(0xffa33a28), width: 3),
+                  BorderSide(
+                    color: tokens?.colors.red ?? const Color(0xffa33a28),
+                    width: 3,
+                  ),
                 ),
               ),
             ),
@@ -66,15 +71,49 @@ class PrintedUnderlay extends StatelessWidget {
   }
 }
 
+class _DarkPrintedUnderlayBackground extends StatelessWidget {
+  const _DarkPrintedUnderlayBackground({required this.tokens});
+
+  final DesignTokens tokens;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: tokens.colors.iron),
+        Opacity(
+          opacity: 0.08,
+          child: Image.asset(
+            fieldPlanLightPaperTexture,
+            alignment: Alignment.topLeft,
+            fit: BoxFit.none,
+            repeat: ImageRepeat.repeat,
+            filterQuality: FilterQuality.low,
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: tokens.colors.gold.withValues(alpha: 0.72),
+              width: 1.5,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PrintedUnderlayBackground extends StatelessWidget {
   const _PrintedUnderlayBackground({required this.asset});
 
-  final ArtAssetRef asset;
+  final String asset;
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<ui.Image>(
-      future: ChromeImageCache.load(context, asset.fieldPlanPath),
+      future: ChromeImageCache.load(context, asset),
       builder: (context, snapshot) {
         final image = snapshot.data;
         if (image == null) {
@@ -95,24 +134,30 @@ class _PrintedUnderlayBackground extends StatelessWidget {
 class PrintedPaperSurface extends StatelessWidget {
   const PrintedPaperSurface({
     required this.child,
-    this.color = const Color(0xffe7d4a5),
-    this.textureOpacity = 0.32,
+    this.tokens,
+    this.color,
+    this.textureOpacity,
     super.key,
   });
 
   final Widget child;
-  final Color color;
-  final double textureOpacity;
+  final DesignTokens? tokens;
+  final Color? color;
+  final double? textureOpacity;
 
   @override
   Widget build(BuildContext context) {
+    final dark = tokens != null && !tokens!.usesLightAppearance;
+    final resolvedColor =
+        color ?? tokens?.colors.panel ?? const Color(0xffe7d4a5);
+    final resolvedTextureOpacity = textureOpacity ?? (dark ? 0.1 : 0.32);
     return Stack(
       fit: StackFit.expand,
       children: [
-        ColoredBox(color: color),
+        ColoredBox(color: resolvedColor),
         IgnorePointer(
           child: Opacity(
-            opacity: textureOpacity,
+            opacity: resolvedTextureOpacity,
             child: Image.asset(
               fieldPlanLightPaperTexture,
               alignment: Alignment.topLeft,

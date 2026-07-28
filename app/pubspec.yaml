@@ -79,7 +79,6 @@ flutter:
     - assets/art/field_plan/shared/textures/
     - assets/art/field_plan/shared/pictograms/
     - assets/art/field_plan/shared/signs/
-    - assets/art/field_plan/ledger/underlays/
     - assets/art/field_plan/ledger/presets/
     - assets/art/field_plan/ledger/variants/
     - assets/art/field_plan/ledger/actions/
@@ -103,9 +102,6 @@ flutter:
     - assets/policies/hard_policy.json
 
   fonts:
-    - family: Handjet
-      fonts:
-        - asset: assets/ui/Fonts/Handjet.ttf
     - family: PTSansNarrow
       fonts:
         - asset: assets/art/field_plan/shared/fonts/PTSansNarrow-Regular.ttf

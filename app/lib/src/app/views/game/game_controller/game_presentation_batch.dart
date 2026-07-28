@@ -27,6 +27,13 @@ int assignmentTargetRunEnd(List<EngineTransitionEvent> events, int startIndex) {
       : startIndex;
 }
 
+bool needsFinalPresentationBoundary(
+  TableViewModel presented,
+  TableViewModel authoritative,
+) =>
+    presented.table.phase != authoritative.table.phase ||
+    presented.table.year != authoritative.table.year;
+
 /// Builds the visible state at each semantic boundary in one engine dispatch.
 ///
 /// The engine remains authoritative for the final model. Intermediate models

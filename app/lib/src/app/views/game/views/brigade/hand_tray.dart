@@ -12,7 +12,7 @@ import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.dart';
@@ -1058,12 +1058,12 @@ class HandConsole extends StatelessWidget {
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: PixelText(
+                  child: DisplayText(
                     status,
                     size: compact
-                        ? PixelTextSize.caption2
-                        : PixelTextSize.caption,
-                    variant: PixelTextVariant.heavy,
+                        ? DisplayTextSize.caption2
+                        : DisplayTextSize.caption,
+                    variant: DisplayTextWeight.bold,
                     color: tokens.colors.cream,
                   ),
                 ),

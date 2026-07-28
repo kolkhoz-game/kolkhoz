@@ -1,9 +1,44 @@
 import 'package:kolkhoz_app/src/app/views/shared/art_direction.dart';
 
+const fieldPlanMenuBackgroundPath =
+    'assets/art/field_plan/menu-village-day-underlay-v3.png';
+const fieldPlanMenuDarkBackgroundPath =
+    'assets/art/field_plan/menu-village-night-underlay-v1.png';
+
+String fieldPlanMenuBackgroundPathFor({required bool dark}) =>
+    dark ? fieldPlanMenuDarkBackgroundPath : fieldPlanMenuBackgroundPath;
+
 const fieldPlanBrigadePlotBackgroundPath =
     'assets/art/field_plan/game/backgrounds/brigade-plot-light.png';
 const fieldPlanStaticHeroBrigadeBackgroundPath =
     'assets/art/field_plan/game/backgrounds/static-hero-brigade-underlay-v1.png';
+const fieldPlanStaticHeroBrigadeDarkBackgroundPath =
+    'assets/art/field_plan/game/backgrounds/'
+    'static-hero-brigade-underlay-night-v1.png';
+const fieldPlanStaticHeroFieldsBackgroundPath =
+    'assets/art/field_plan/game/backgrounds/static-hero-fields-underlay-v1.png';
+const fieldPlanStaticHeroFieldsDarkBackgroundPath =
+    'assets/art/field_plan/game/backgrounds/'
+    'static-hero-fields-underlay-night-v1.png';
+const fieldPlanStaticHeroNorthBackgroundPath =
+    'assets/art/field_plan/game/backgrounds/static-hero-north-underlay-v1.png';
+const fieldPlanStaticHeroNorthDarkBackgroundPath =
+    'assets/art/field_plan/game/backgrounds/'
+    'static-hero-north-underlay-night-v1.png';
+
+String fieldPlanStaticHeroBackgroundPathFor({
+  required String region,
+  required bool dark,
+}) => switch ((region, dark)) {
+  ('brigade', false) => fieldPlanStaticHeroBrigadeBackgroundPath,
+  ('brigade', true) => fieldPlanStaticHeroBrigadeDarkBackgroundPath,
+  ('fields', false) => fieldPlanStaticHeroFieldsBackgroundPath,
+  ('fields', true) => fieldPlanStaticHeroFieldsDarkBackgroundPath,
+  ('north', false) => fieldPlanStaticHeroNorthBackgroundPath,
+  ('north', true) => fieldPlanStaticHeroNorthDarkBackgroundPath,
+  _ => throw ArgumentError.value(region, 'region'),
+};
+
 const fieldPlanFieldsBackgroundPath =
     'assets/art/field_plan/game/backgrounds/fields-light.png';
 const fieldPlanNorthBackgroundPath =
@@ -218,8 +253,35 @@ const fieldPlanPresetCustom = ArtAssetRef(
   fieldPlanPath: 'assets/art/field_plan/ledger/presets/preset_custom.png',
 );
 
-const fieldPlanVariantDeck = ArtAssetRef(
-  fieldPlanPath: 'assets/art/field_plan/ledger/variants/variant_deck.png',
+const fieldPlanVariantDeck52 = ArtAssetRef(
+  fieldPlanPath: 'assets/art/field_plan/ledger/variants/variant_deck_52.png',
+);
+const fieldPlanVariantDeck36 = ArtAssetRef(
+  fieldPlanPath: 'assets/art/field_plan/ledger/variants/variant_deck_36.png',
+);
+
+ArtAssetRef fieldPlanVariantDeckFor(int deckType) =>
+    deckType == 36 ? fieldPlanVariantDeck36 : fieldPlanVariantDeck52;
+const fieldPlanVariantNomenklatura = ArtAssetRef(
+  fieldPlanPath:
+      'assets/art/field_plan/ledger/variants/variant_nomenclature.png',
+);
+const fieldPlanVariantNorthernStyle = ArtAssetRef(
+  fieldPlanPath:
+      'assets/art/field_plan/ledger/variants/variant_northern_style.png',
+);
+const fieldPlanVariantMice = ArtAssetRef(
+  fieldPlanPath: 'assets/art/field_plan/ledger/variants/variant_mice.png',
+);
+const fieldPlanVariantOrderToBoss = ArtAssetRef(
+  fieldPlanPath:
+      'assets/art/field_plan/ledger/variants/variant_order_to_boss.png',
+);
+const fieldPlanVariantMedals = ArtAssetRef(
+  fieldPlanPath: 'assets/art/field_plan/ledger/variants/variant_medals.png',
+);
+const fieldPlanVariantHero = ArtAssetRef(
+  fieldPlanPath: 'assets/art/field_plan/ledger/variants/variant_hero.png',
 );
 const fieldPlanVariantFiveYearPlan = ArtAssetRef(
   fieldPlanPath:
@@ -256,7 +318,14 @@ const fieldPlanLedgerIllustrations = <ArtAssetRef>[
   fieldPlanPresetLittleKolkhoz,
   fieldPlanPresetCampStyle,
   fieldPlanPresetCustom,
-  fieldPlanVariantDeck,
+  fieldPlanVariantDeck52,
+  fieldPlanVariantDeck36,
+  fieldPlanVariantNomenklatura,
+  fieldPlanVariantNorthernStyle,
+  fieldPlanVariantMice,
+  fieldPlanVariantOrderToBoss,
+  fieldPlanVariantMedals,
+  fieldPlanVariantHero,
   fieldPlanVariantFiveYearPlan,
   fieldPlanVariantSwapCards,
   fieldPlanVariantPassCards,

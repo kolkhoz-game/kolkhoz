@@ -41,8 +41,8 @@ to primary so buttons do not jump when selection changes.
 
 The repo already contains stretchable Field Plan assets:
 
-- `app/assets/art/field_plan/ledger/underlays/ledger-neutral.png`;
-- `app/assets/art/field_plan/ledger/underlays/ledger-primary.png`;
+- `app/assets/art/field_plan/game/ui/navigation/nav-frame-inactive.png`;
+- `app/assets/art/field_plan/game/ui/navigation/nav-frame-active.png`;
 - `PrintedUnderlay` and `ChromeNineSlicePainter`.
 
 Those are good implementation references and can temporarily cover rectangular
@@ -82,11 +82,11 @@ place before creating replacements:
 | Create/local-game icon | `app/assets/art/field_plan/shared/pictograms/create-game.png` |
 | Join/online-game icon | `app/assets/art/field_plan/shared/pictograms/join-game.png` |
 | How-to-play icon/character | `app/assets/art/field_plan/shared/pictograms/how-to-play.png` |
-| Profile utility icon | `app/assets/ui/Icons/icon-profile.png` |
+| Profile utility icon | `app/assets/art/field_plan/shared/pictograms/profile.png` |
 | Settings utility icon | `app/assets/art/field_plan/shared/pictograms/settings.png` |
 | Star ornament | `app/assets/art/field_plan/game/ui/icons/medal.png` |
-| Language controls | `app/assets/ui/Icons/icon-language-en.png`, `icon-language-ru.png` |
-| Appearance controls | `app/assets/ui/Icons/icon-appearance-light.png`, `icon-appearance-dark.png` |
+| Language controls | `app/assets/art/field_plan/shared/pictograms/language-en.png`, `language-ru.png` |
+| Appearance controls | `app/assets/art/field_plan/shared/pictograms/appearance-light.png`, `appearance-dark.png` |
 | Profile portraits | `app/assets/art/field_plan/game/players/*.png` |
 | Paper grain | `app/assets/art/field_plan/shared/textures/paper-light.png` |
 | Display type | `PTSansNarrow` fonts already declared in `app/pubspec.yaml` |

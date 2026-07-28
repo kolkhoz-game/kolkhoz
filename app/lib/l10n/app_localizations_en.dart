@@ -12,6 +12,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lobbyCreateGame => 'Create Game';
 
   @override
+  String get lobbyResumeGame => 'Resume Match';
+
+  @override
   String get lobbyPlayDemo => 'Play Demo';
 
   @override

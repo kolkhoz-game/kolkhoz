@@ -10,11 +10,12 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engin
 import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
 import 'package:kolkhoz_app/src/app/views/shared/art_direction.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
+import 'package:kolkhoz_app/src/app/views/shared/deadline_countdown.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/profile/views/player_profile_panel.dart';
 import 'package:kolkhoz_app/src/app/views/shared/printed_underlay.dart';
 import '../main_menu_view.dart';
@@ -40,6 +41,7 @@ class CreateGameView extends StatefulWidget {
     required this.comradesSummary,
     required this.compactRail,
     required this.onStart,
+    this.onResumeLocalGame,
     required this.onHostOnline,
     this.onHostOnlineSeries,
     required this.onInviteOnlineComrades,
@@ -74,6 +76,7 @@ class CreateGameView extends StatefulWidget {
   final OnlineComradesResponse comradesSummary;
   final bool compactRail;
   final VoidCallback onStart;
+  final VoidCallback? onResumeLocalGame;
   final Future<String> Function(
     Uri baseURL,
     List<KolkhozPlayerController> controllers,
@@ -375,13 +378,21 @@ class _VariantPanelState extends State<CreateGameView> {
     final custom =
         widget.selectedPreset == KolkhozGamePreset.custom && !widget.demoMode;
     return PrintedPaperSurface(
+      tokens: widget.tokens,
       child: Padding(
         padding: EdgeInsets.all(widget.compactRail ? 8 : 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: widget.compactRail ? 7 : 10,
           children: [
+            if (widget.onResumeLocalGame != null)
+              _primaryCommandButton(
+                label: widget.language.strings.lobbyResumeGame,
+                iconAsset: fieldPlanToolbarConfirmIconPath,
+                onPressed: widget.onResumeLocalGame,
+              ),
             _FieldPlanPresetSelector(
+              tokens: widget.tokens,
               language: widget.language,
               selectedPreset: widget.selectedPreset,
               compact: widget.compactRail,
@@ -403,6 +414,7 @@ class _VariantPanelState extends State<CreateGameView> {
                               onChanged: widget.onCustomVariantsChanged,
                             )
                           : _FieldPlanVariantLedger(
+                              tokens: widget.tokens,
                               language: widget.language,
                               variants: widget.variants,
                               demoMode: widget.demoMode,
@@ -436,6 +448,12 @@ class _VariantPanelState extends State<CreateGameView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 10,
       children: [
+        if (widget.onResumeLocalGame != null)
+          _primaryCommandButton(
+            label: widget.language.strings.lobbyResumeGame,
+            iconAsset: fieldPlanToolbarConfirmIconPath,
+            onPressed: widget.onResumeLocalGame,
+          ),
         _PresetSummaryStrip(
           tokens: widget.tokens,
           language: widget.language,
@@ -511,7 +529,7 @@ class _VariantPanelState extends State<CreateGameView> {
           selected: browserJoinable,
           enabled: hasOnlineSeats,
           iconAsset: browserJoinable
-              ? 'assets/ui/Icons/icon-online.png'
+              ? 'assets/art/field_plan/shared/pictograms/online.png'
               : 'assets/ui/Icons/icon-lock.png',
           onTap: () => setState(() => browserJoinable = !browserJoinable),
         ),
@@ -551,8 +569,8 @@ class _VariantPanelState extends State<CreateGameView> {
         iconAsset: fieldPlanToolbarUndoIconPath,
         iconSize: widget.compactRail ? 18 : 22,
         textSize: widget.compactRail
-            ? PixelTextSize.caption
-            : PixelTextSize.headline,
+            ? DisplayTextSize.caption
+            : DisplayTextSize.headline,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         expandLabel: false,
         onPressed: onPressed ?? () => showLobbyStep(false),
@@ -623,12 +641,6 @@ class _VariantPanelState extends State<CreateGameView> {
 
   Widget _hostedLobbyCommandRow(OnlineSessionUpdate update) {
     final height = widget.compactRail ? 50.0 : 56.0;
-    final countdownSeconds = update.lobbyCountdownSeconds;
-    final waitingLabel = countdownSeconds == null
-        ? widget.language.strings.kolkhozappWaitingForPlayers
-        : widget.language.strings.kolkhozappGameStartsInValue1s(
-            value1: countdownSeconds,
-          );
     return Row(
       spacing: 8,
       children: [
@@ -671,7 +683,7 @@ class _VariantPanelState extends State<CreateGameView> {
                               spacing: 7,
                               children: [
                                 const MainMenuAssetIcon(
-                                  'assets/ui/Icons/icon-add-friend.png',
+                                  'assets/art/field_plan/shared/pictograms/add-friend.png',
                                   size: 22,
                                 ),
                                 Expanded(
@@ -687,13 +699,13 @@ class _VariantPanelState extends State<CreateGameView> {
                                             .strings
                                             .kolkhozappInviteCode,
                                         color: widget.tokens.colors.cardInk,
-                                        size: PixelTextSize.xSmall,
+                                        size: DisplayTextSize.xSmall,
                                         textAlign: TextAlign.start,
                                       ),
                                       ChromeScaledLabel(
                                         widget.hostedInviteCode!,
                                         color: widget.tokens.colors.cardInk,
-                                        size: PixelTextSize.caption,
+                                        size: DisplayTextSize.caption,
                                         textAlign: TextAlign.start,
                                       ),
                                     ],
@@ -715,13 +727,26 @@ class _VariantPanelState extends State<CreateGameView> {
             ),
           ),
         Expanded(
-          child: WaitingRoomEnterButton(
-            tokens: widget.tokens,
-            language: widget.language,
-            tableReady: update.started,
-            waitingLabel: waitingLabel,
-            height: height,
-            onPressed: widget.onEnterOnlineGame,
+          child: DeadlineCountdownBuilder(
+            deadlineEpochSeconds: update.started
+                ? null
+                : update.lobbyCountdownEndsAt,
+            maxSeconds: 30,
+            builder: (context, countdownSeconds) {
+              final waitingLabel = countdownSeconds == null
+                  ? widget.language.strings.kolkhozappWaitingForPlayers
+                  : widget.language.strings.kolkhozappGameStartsInValue1s(
+                      value1: countdownSeconds,
+                    );
+              return WaitingRoomEnterButton(
+                tokens: widget.tokens,
+                language: widget.language,
+                tableReady: update.started,
+                waitingLabel: waitingLabel,
+                height: height,
+                onPressed: widget.onEnterOnlineGame,
+              );
+            },
           ),
         ),
       ],
@@ -750,8 +775,8 @@ class _VariantPanelState extends State<CreateGameView> {
         iconAsset: iconAsset,
         iconSize: widget.compactRail ? 22 : 28,
         textSize: widget.compactRail
-            ? PixelTextSize.headline
-            : PixelTextSize.title,
+            ? DisplayTextSize.headline
+            : DisplayTextSize.title,
         expandLabel: false,
       ),
     );
@@ -760,8 +785,8 @@ class _VariantPanelState extends State<CreateGameView> {
   Widget _setupCommandRow() {
     final height = widget.compactRail ? 50.0 : 56.0;
     final secondaryTextSize = widget.compactRail
-        ? PixelTextSize.caption
-        : PixelTextSize.headline;
+        ? DisplayTextSize.caption
+        : DisplayTextSize.headline;
     return Row(
       spacing: 8,
       children: [
@@ -806,11 +831,12 @@ class _VariantPanelState extends State<CreateGameView> {
               prominent: true,
               tokens: widget.tokens,
               onPressed: () => showLobbyStep(true),
-              iconAsset: 'assets/ui/Icons/icon-add-friend.png',
+              iconAsset:
+                  'assets/art/field_plan/shared/pictograms/add-friend.png',
               iconSize: widget.compactRail ? 22 : 28,
               textSize: widget.compactRail
-                  ? PixelTextSize.headline
-                  : PixelTextSize.title,
+                  ? DisplayTextSize.headline
+                  : DisplayTextSize.title,
               padding: widget.compactRail
                   ? const EdgeInsets.symmetric(horizontal: 8)
                   : null,
@@ -1091,8 +1117,8 @@ class _VariantHeaderIconChip extends StatelessWidget {
                             label,
                             color: tokens.colors.onAccent,
                             size: compact
-                                ? PixelTextSize.caption2
-                                : PixelTextSize.caption,
+                                ? DisplayTextSize.caption2
+                                : DisplayTextSize.caption,
                             uppercase: false,
                           ),
                         ),
@@ -1112,12 +1138,14 @@ class _VariantHeaderIconChip extends StatelessWidget {
 
 class _FieldPlanPresetSelector extends StatelessWidget {
   const _FieldPlanPresetSelector({
+    required this.tokens,
     required this.language,
     required this.selectedPreset,
     required this.compact,
     required this.onPresetChanged,
   });
 
+  final DesignTokens tokens;
   final KolkhozLanguage language;
   final KolkhozGamePreset selectedPreset;
   final bool compact;
@@ -1158,6 +1186,7 @@ class _FieldPlanPresetSelector extends StatelessWidget {
                         ? null
                         : () => onPresetChanged!(preset),
                     child: PrintedUnderlay(
+                      tokens: tokens,
                       tone: selectedPreset == preset
                           ? PrintedUnderlayTone.primary
                           : PrintedUnderlayTone.neutral,
@@ -1180,8 +1209,8 @@ class _FieldPlanPresetSelector extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: fieldPlanDisplayTextStyle.copyWith(
                                 color: selectedPreset == preset
-                                    ? const Color(0xfff4dfad)
-                                    : const Color(0xff20251d),
+                                    ? tokens.colors.onAccent
+                                    : tokens.colors.cream,
                                 fontSize: compact ? 14 : 18,
                               ),
                             ),
@@ -1201,19 +1230,23 @@ class _FieldPlanPresetSelector extends StatelessWidget {
 
 class _FieldPlanVariantLedger extends StatelessWidget {
   const _FieldPlanVariantLedger({
+    required this.tokens,
     required this.language,
     required this.variants,
     required this.demoMode,
     required this.compact,
   });
 
+  final DesignTokens tokens;
   final KolkhozLanguage language;
   final KolkhozGameVariants variants;
   final bool demoMode;
   final bool compact;
 
   ArtAssetRef? _newAssetFor(VariantRowData row) {
-    if (identical(row, VariantRowData.deckType)) return fieldPlanVariantDeck;
+    if (identical(row, VariantRowData.deckType)) {
+      return fieldPlanVariantDeckFor(variants.deckType);
+    }
     if (identical(row, VariantRowData.maxYears)) {
       return fieldPlanVariantFiveYearPlan;
     }
@@ -1259,6 +1292,7 @@ class _FieldPlanVariantLedger extends StatelessWidget {
           SizedBox(
             height: compact ? 68 : 84,
             child: PrintedUnderlay(
+              tokens: tokens,
               padding: EdgeInsets.symmetric(
                 horizontal: compact ? 10 : 14,
                 vertical: 6,
@@ -1270,7 +1304,7 @@ class _FieldPlanVariantLedger extends StatelessWidget {
                     child: Text(
                       '${index + 1}'.padLeft(2, '0'),
                       style: fieldPlanDisplayTextStyle.copyWith(
-                        color: const Color(0xffa33a28),
+                        color: tokens.colors.red,
                         fontSize: compact ? 22 : 28,
                       ),
                     ),
@@ -1292,7 +1326,7 @@ class _FieldPlanVariantLedger extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: fieldPlanDisplayTextStyle.copyWith(
-                            color: const Color(0xff20251d),
+                            color: tokens.colors.cream,
                             fontSize: compact ? 17 : 23,
                           ),
                         ),
@@ -1308,14 +1342,14 @@ class _FieldPlanVariantLedger extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: fieldPlanBodyTextStyle.copyWith(
-                              color: const Color(0xff3d4437),
+                              color: tokens.colors.creamDim,
                               fontSize: 13,
                             ),
                           ),
                       ],
                     ),
                   ),
-                  const PrintedSelectionStamp(size: 30),
+                  PrintedSelectionStamp(size: 30, color: tokens.colors.red),
                 ],
               ),
             ),
@@ -1670,7 +1704,7 @@ class _SeatComradePicker extends StatelessWidget {
                 spacing: 8,
                 children: [
                   MainMenuAssetIcon(
-                    'assets/ui/Icons/icon-comrade.png',
+                    'assets/art/field_plan/shared/pictograms/comrade.png',
                     size: compact ? 20 : 24,
                     opacity: selected != null ? 1 : 0.7,
                   ),
@@ -1681,8 +1715,8 @@ class _SeatComradePicker extends StatelessWidget {
                           ? tokens.colors.activeSurfaceText
                           : tokens.colors.cardInk.withValues(alpha: 0.72),
                       size: compact
-                          ? PixelTextSize.caption2
-                          : PixelTextSize.caption,
+                          ? DisplayTextSize.caption2
+                          : DisplayTextSize.caption,
                     ),
                   ),
                 ],
@@ -1764,8 +1798,8 @@ class _SeatChoiceOptionButton extends StatelessWidget {
                               ? tokens.colors.activeSurfaceText
                               : tokens.colors.cardInk,
                           size: compact
-                              ? PixelTextSize.caption2
-                              : PixelTextSize.caption,
+                              ? DisplayTextSize.caption2
+                              : DisplayTextSize.caption,
                         ),
                       ),
                     ],
@@ -1851,7 +1885,7 @@ class _OnlineGameOptionToggle extends StatelessWidget {
                                   child: ChromeScaledLabel(
                                     title,
                                     color: foreground.withValues(alpha: 0.68),
-                                    size: PixelTextSize.caption2,
+                                    size: DisplayTextSize.caption2,
                                   ),
                                 ),
                                 SizedBox(
@@ -1860,7 +1894,7 @@ class _OnlineGameOptionToggle extends StatelessWidget {
                                   child: ChromeScaledLabel(
                                     label,
                                     color: foreground,
-                                    size: PixelTextSize.caption,
+                                    size: DisplayTextSize.caption,
                                   ),
                                 ),
                               ],
@@ -2086,16 +2120,20 @@ enum _LobbySeatChoice {
 
   String get iconAsset {
     return switch (this) {
-      _LobbySeatChoice.empty => 'assets/ui/Icons/icon-human-seat.png',
+      _LobbySeatChoice.empty =>
+        'assets/art/field_plan/shared/pictograms/human-seat.png',
       _LobbySeatChoice.local =>
-        'assets/ui/Icons/icon-controller-hotseat-player.png',
+        'assets/art/field_plan/shared/pictograms/controller-hotseat-player.png',
       _LobbySeatChoice.online =>
-        'assets/ui/Icons/icon-controller-online-player.png',
-      _LobbySeatChoice.comrade => 'assets/ui/Icons/icon-comrade.png',
-      _LobbySeatChoice.easyAI => 'assets/ui/Icons/icon-controller-easy-ai.png',
+        'assets/art/field_plan/shared/pictograms/controller-online-player.png',
+      _LobbySeatChoice.comrade =>
+        'assets/art/field_plan/shared/pictograms/comrade.png',
+      _LobbySeatChoice.easyAI =>
+        'assets/art/field_plan/shared/pictograms/controller-easy-ai.png',
       _LobbySeatChoice.mediumAI =>
-        'assets/ui/Icons/icon-controller-medium-ai.png',
-      _LobbySeatChoice.hardAI => 'assets/ui/Icons/icon-controller-hard-ai.png',
+        'assets/art/field_plan/shared/pictograms/controller-medium-ai.png',
+      _LobbySeatChoice.hardAI =>
+        'assets/art/field_plan/shared/pictograms/controller-hard-ai.png',
     };
   }
 }
@@ -2110,7 +2148,7 @@ class ImageTabButton extends StatelessWidget {
     this.iconAsset,
     this.iconSize = 18,
     this.height = 48,
-    this.textSize = PixelTextSize.caption,
+    this.textSize = DisplayTextSize.caption,
     this.horizontalPadding,
     this.contentSpacing = 8,
   });
@@ -2122,7 +2160,7 @@ class ImageTabButton extends StatelessWidget {
   final String? iconAsset;
   final double iconSize;
   final double height;
-  final PixelTextSize textSize;
+  final DisplayTextSize textSize;
   final double? horizontalPadding;
   final double contentSpacing;
 

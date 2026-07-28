@@ -20,6 +20,8 @@ void main() {
     final navigation = AppNavigationController();
     addTearDown(navigation.dispose);
 
+    expect(navigation.destination, AppDestination.home);
+
     navigation.showProfile(section: AppSettingsSection.display);
     expect(navigation.destination, AppDestination.profile);
     expect(navigation.settingsSection, AppSettingsSection.display);

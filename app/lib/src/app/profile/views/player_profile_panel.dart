@@ -4,7 +4,7 @@ import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 
 class PlayerProfileStat {
   const PlayerProfileStat({
@@ -40,7 +40,7 @@ class PlayerProfileAction {
     this.prominent = false,
     this.height = 28,
     this.iconSize = 16,
-    this.textSize = PixelTextSize.xSmall,
+    this.textSize = DisplayTextSize.xSmall,
   });
 
   final String label;
@@ -49,7 +49,7 @@ class PlayerProfileAction {
   final bool prominent;
   final double height;
   final double iconSize;
-  final PixelTextSize textSize;
+  final DisplayTextSize textSize;
 }
 
 class PlayerProfileBadge extends StatelessWidget {
@@ -507,10 +507,10 @@ class PlayerProfileChipView extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-        child: PixelText(
+        child: DisplayText(
           chip.label,
-          size: PixelTextSize.xSmall,
-          variant: PixelTextVariant.heavy,
+          size: DisplayTextSize.xSmall,
+          variant: DisplayTextWeight.bold,
           color: chip.active ? tokens.colors.onAccent : tokens.colors.gold,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

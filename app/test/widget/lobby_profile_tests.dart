@@ -12,6 +12,47 @@ void registerLobbyAndProfileTests() {
     );
   });
 
+  testWidgets('active local match can be resumed from setup', (tester) async {
+    var resumed = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 1200,
+          height: 800,
+          child: StandaloneLobby(
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            appearance: KolkhozAppearance.dark,
+            onStart: () {},
+            onResumeLocalGame: () => resumed = true,
+            selectedPreset: KolkhozGamePreset.kolkhoz,
+            customVariants: KolkhozGameVariants.kolkhoz,
+            playerControllers: KolkhozPlayerController.defaultControllers,
+            showingRules: false,
+            showingOnline: false,
+            onHostOnline: (_, _, _, _, _) async => 'session',
+            onJoinOnline: (_, _, _) async {},
+            onEnterOnlineGame: () {},
+            onPresetChanged: (_) {},
+            onCustomVariantsChanged: (_) {},
+            onPlayerControllersChanged: (_) {},
+            onRulesPressed: () {},
+            onOfflinePressed: () {},
+            onOnlinePressed: () {},
+            onTutorialPressed: () {},
+            onLanguageToggle: () {},
+            onAppearanceToggle: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(findAppText('RESUME MATCH'), findsOneWidget);
+    await tester.tap(findAppText('RESUME MATCH'));
+    expect(resumed, isTrue);
+  });
+
   testWidgets('narrow preset tabs reserve space between icons and labels', (
     tester,
   ) async {
@@ -103,6 +144,29 @@ void registerLobbyAndProfileTests() {
         ),
       ),
     );
+
+    final languageIcon = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const Key('field-plan-menu-language')),
+        matching: find.byType(Image),
+      ),
+    );
+    final themeIcon = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const Key('field-plan-menu-theme')),
+        matching: find.byType(Image),
+      ),
+    );
+    expect(
+      (languageIcon.image as AssetImage).assetName,
+      KolkhozLanguage.en.toggleIconAsset,
+    );
+    expect(languageIcon.color, isNull);
+    expect(
+      (themeIcon.image as AssetImage).assetName,
+      KolkhozAppearance.light.toggleIconAsset,
+    );
+    expect(themeIcon.color, isNull);
 
     await tester.tap(find.byKey(const Key('field-plan-menu-language')));
     await tester.tap(find.byKey(const Key('field-plan-menu-theme')));
@@ -333,6 +397,17 @@ void registerLobbyAndProfileTests() {
   testWidgets('lobby leaderboard renders players from the online client', (
     tester,
   ) async {
+    KolkhozIdentityRuntime.instance.setTestState(
+      identity: const KolkhozPlayerIdentity(
+        id: 'current-user',
+        displayName: 'You',
+        guest: false,
+        portable: true,
+      ),
+    );
+    addTearDown(
+      () => KolkhozIdentityRuntime.instance.setTestState(identity: null),
+    );
     await tester.pumpWidget(
       MaterialApp(
         home: SizedBox(
@@ -355,7 +430,47 @@ void registerLobbyAndProfileTests() {
             menuRemoteConnection: testMenuRemoteConnection(
               FakeOnlineHttpClient(),
             ),
-            profileController: testProfileController(FakeOnlineHttpClient()),
+            profileController: testProfileController(
+              FakeOnlineHttpClient(
+                leaderboardPlayers: const [
+                  {
+                    'userID': 'leader-user',
+                    'displayName': 'Leader',
+                    'rank': 1,
+                    'inGame': true,
+                    'isComrade': true,
+                    'stats': {
+                      'online_games': 8,
+                      'online_wins': 6,
+                      'rating': 1200,
+                      'casual_rating': 1200,
+                    },
+                  },
+                  {
+                    'userID': 'stranger-user',
+                    'displayName': 'Stranger',
+                    'isComrade': false,
+                    'stats': {
+                      'online_games': 5,
+                      'online_wins': 3,
+                      'rating': 1100,
+                      'casual_rating': 1100,
+                    },
+                  },
+                  {
+                    'userID': 'current-user',
+                    'displayName': 'You',
+                    'isComrade': false,
+                    'stats': {
+                      'online_games': 4,
+                      'online_wins': 2,
+                      'rating': 1050,
+                      'casual_rating': 1050,
+                    },
+                  },
+                ],
+              ),
+            ),
             onHostOnline: (_, _, _, _, _) async => 'session',
             onJoinOnline: (_, _, _) async {},
             onEnterOnlineGame: () {},
@@ -376,10 +491,10 @@ void registerLobbyAndProfileTests() {
     await tester.pumpAndSettle();
 
     expect(findAppText('Leader'), findsOneWidget);
-    expect(findAppText('1000'), findsOneWidget);
+    expect(findAppText('1200'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is PixelText && widget.text == '1',
+        (widget) => widget is DisplayText && widget.text == '1',
       ),
       findsOneWidget,
     );
@@ -388,6 +503,34 @@ void registerLobbyAndProfileTests() {
     expect(findAppText('COMRADES'), findsWidgets);
     expect(find.byTooltip('IN GAME'), findsOneWidget);
     expect(find.byTooltip('COMRADE'), findsOneWidget);
+    expect(
+      find.byKey(const Key('leaderboard-current-user-row')),
+      findsOneWidget,
+    );
+
+    await tester.tap(findAppText('CASUAL').last);
+    await tester.pump();
+    expect(
+      find.byKey(const Key('leaderboard-current-user-row')),
+      findsOneWidget,
+    );
+
+    await tester.tap(findAppText('COMRADES').last);
+    await tester.pump();
+    expect(findAppText('You'), findsOneWidget);
+    expect(findAppText('Leader'), findsOneWidget);
+    expect(findAppText('Stranger'), findsNothing);
+    expect(
+      tester.getTopLeft(findAppText('Leader')).dy,
+      lessThan(tester.getTopLeft(findAppText('You')).dy),
+    );
+    final currentUserRow = tester.widget<Material>(
+      find.byKey(const Key('leaderboard-current-user-row')),
+    );
+    expect(
+      currentUserRow.color,
+      defaultDesignTokens.colors.redDark.withValues(alpha: 0.88),
+    );
   });
 
   testWidgets('light active variant rows use high contrast text', (
@@ -431,7 +574,7 @@ void registerLobbyAndProfileTests() {
     );
     final swapBodyFinder = find.byWidgetPredicate(
       (widget) =>
-          widget is PixelText &&
+          widget is DisplayText &&
           widget.text == swapDescription &&
           widget.color == lightDesignTokens.colors.activeSurfaceText,
     );

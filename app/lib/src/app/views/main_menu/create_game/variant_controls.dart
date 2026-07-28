@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
@@ -8,7 +7,7 @@ import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import '../main_menu_view.dart';
 
 class VariantIcon extends StatelessWidget {
@@ -24,78 +23,8 @@ class VariantIcon extends StatelessWidget {
   final double opacity;
 
   @override
-  Widget build(BuildContext context) {
-    final source = _variantIconSourceRect(asset);
-    if (source == null) {
-      return MainMenuAssetIcon(asset, size: size, opacity: opacity);
-    }
-    return Opacity(
-      opacity: opacity,
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: FutureBuilder<ui.Image>(
-          future: ChromeImageCache.load(context, asset),
-          builder: (context, snapshot) {
-            final image = snapshot.data;
-            if (image == null) {
-              return MainMenuAssetIcon(asset, size: size);
-            }
-            return CustomPaint(
-              painter: _CroppedAssetIconPainter(image: image, source: source),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _CroppedAssetIconPainter extends CustomPainter {
-  const _CroppedAssetIconPainter({required this.image, required this.source});
-
-  final ui.Image image;
-  final Rect source;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty || source.isEmpty) {
-      return;
-    }
-    final scale = math.min(
-      size.width / source.width,
-      size.height / source.height,
-    );
-    final width = source.width * scale;
-    final height = source.height * scale;
-    final destination = Rect.fromLTWH(
-      (size.width - width) / 2,
-      (size.height - height) / 2,
-      width,
-      height,
-    );
-    final paint = Paint()
-      ..filterQuality = FilterQuality.none
-      ..isAntiAlias = false;
-    canvas.drawImageRect(image, source, destination, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _CroppedAssetIconPainter oldDelegate) {
-    return image != oldDelegate.image || source != oldDelegate.source;
-  }
-}
-
-Rect? _variantIconSourceRect(String asset) {
-  return switch (asset) {
-    'assets/ui/Icons/icon-variant-nomenclature.png' => const Rect.fromLTRB(
-      124,
-      131,
-      352,
-      377,
-    ),
-    _ => null,
-  };
+  Widget build(BuildContext context) =>
+      MainMenuAssetIcon(asset, size: size, opacity: opacity);
 }
 
 class VariantRowData {
@@ -128,7 +57,8 @@ class VariantRowData {
     titleFor: (variants, language) =>
         language.strings.variantValue1CardDeck(value1: variants.deckType),
     descriptionFor: (variants, language) => '',
-    iconAssetForVariants: (variants) => fieldPlanVariantDeck.fieldPlanPath,
+    iconAssetForVariants: (variants) =>
+        fieldPlanVariantDeckFor(variants.deckType).fieldPlanPath,
     valueOf: (variants) => true,
     withValue: (variants, value) => variants,
   );
@@ -136,17 +66,15 @@ class VariantRowData {
     titleFor: (variants, language) =>
         language.strings.variantValue1YearPlan(value1: variants.maxYears),
     descriptionFor: (variants, language) => '',
-    iconAssetForVariants: (variants) {
-      final yearIcon = variants.maxYears.clamp(1, 5).toInt();
-      return fieldPlanYearIconPath(yearIcon);
-    },
+    iconAssetForVariants: (variants) =>
+        fieldPlanVariantFiveYearPlan.fieldPlanPath,
     valueOf: (variants) => true,
     withValue: (variants, value) => variants,
   );
   static final nomenclature = VariantRowData(
     titleKey: KolkhozText.variantNomenklaturaTitle,
     descriptionKey: KolkhozText.variantNomenklaturaDescription,
-    iconAsset: 'assets/ui/Icons/icon-variant-nomenclature.png',
+    iconAsset: fieldPlanVariantNomenklatura.fieldPlanPath,
     valueOf: (variants) => variants.nomenclature,
     withValue: (variants, value) => variants.copyWith(nomenclature: value),
   );
@@ -160,21 +88,21 @@ class VariantRowData {
   static final northernStyle = VariantRowData(
     titleKey: KolkhozText.variantNorthernStyleTitle,
     descriptionKey: KolkhozText.variantNorthernStyleDescription,
-    iconAsset: 'assets/ui/Icons/icon-variant-northern-style.png',
+    iconAsset: fieldPlanVariantNorthernStyle.fieldPlanPath,
     valueOf: (variants) => variants.northernStyle,
     withValue: (variants, value) => variants.copyWith(northernStyle: value),
   );
   static final miceVariant = VariantRowData(
     titleKey: KolkhozText.variantMiceTitle,
     descriptionKey: KolkhozText.variantMiceDescription,
-    iconAsset: 'assets/ui/Icons/icon-variant-mice.png',
+    iconAsset: fieldPlanVariantMice.fieldPlanPath,
     valueOf: (variants) => variants.miceVariant,
     withValue: (variants, value) => variants.copyWith(miceVariant: value),
   );
   static final ordenNachalniku = VariantRowData(
     titleKey: KolkhozText.variantOrdenNachalnikuTitle,
     descriptionKey: KolkhozText.variantOrdenNachalnikuDescription,
-    iconAsset: 'assets/ui/Icons/icon-variant-order-to-boss.png',
+    iconAsset: fieldPlanVariantOrderToBoss.fieldPlanPath,
     valueOf: (variants) => variants.ordenNachalniku,
     withValue: (variants, value) => variants.copyWith(ordenNachalniku: value),
     visibleInCustom: (variants) => variants.deckType == 36,
@@ -182,14 +110,14 @@ class VariantRowData {
   static final medalsCount = VariantRowData(
     titleKey: KolkhozText.variantMedalsTitle,
     descriptionKey: KolkhozText.variantMedalsDescription,
-    iconAsset: 'assets/ui/Icons/icon-variant-medals.png',
+    iconAsset: fieldPlanVariantMedals.fieldPlanPath,
     valueOf: (variants) => variants.medalsCount,
     withValue: (variants, value) => variants.copyWith(medalsCount: value),
   );
   static final heroOfSovietUnion = VariantRowData(
     titleKey: KolkhozText.variantHeroTitle,
     descriptionKey: KolkhozText.variantHeroDescription,
-    iconAsset: 'assets/ui/Icons/icon-variant-hero.png',
+    iconAsset: fieldPlanVariantHero.fieldPlanPath,
     valueOf: (variants) => variants.heroOfSovietUnion,
     withValue: (variants, value) => variants.copyWith(heroOfSovietUnion: value),
   );
@@ -551,8 +479,8 @@ class _DeckVariantToggleRow extends StatelessWidget {
     final deckTextSize = compact
         ? buttonContentTextSize(deckButtonHeight)
         : scale > 0.38
-        ? PixelTextSize.cardRank
-        : PixelTextSize.title;
+        ? DisplayTextSize.cardRank
+        : DisplayTextSize.title;
     final deckPadding = compact ? 7.0 : 14 + 8 * scale;
     final deckSpacing = compact ? 6.0 : 8.0;
     return Row(
@@ -562,7 +490,7 @@ class _DeckVariantToggleRow extends StatelessWidget {
           child: ImageTabButton(
             tokens: tokens,
             label: language.strings.variantDeck52Cards,
-            iconAsset: fieldPlanVariantDeck.fieldPlanPath,
+            iconAsset: fieldPlanVariantDeck52.fieldPlanPath,
             iconSize: deckIconSize,
             selected: variants.deckType == 52,
             height: deckButtonHeight,
@@ -578,7 +506,7 @@ class _DeckVariantToggleRow extends StatelessWidget {
           child: ImageTabButton(
             tokens: tokens,
             label: language.strings.variantDeck36Cards,
-            iconAsset: fieldPlanVariantDeck.fieldPlanPath,
+            iconAsset: fieldPlanVariantDeck36.fieldPlanPath,
             iconSize: deckIconSize,
             selected: variants.deckType == 36,
             height: deckButtonHeight,
@@ -941,10 +869,10 @@ class _VariantText extends StatelessWidget {
         ? tokens.colors.activeSurfaceText
         : tokens.colors.cardInk.withValues(alpha: 0.74);
     final titleSize = compact
-        ? PixelTextSize.headline
+        ? DisplayTextSize.headline
         : _variantTitleTextSize(scale);
     final bodySize = compact
-        ? PixelTextSize.caption
+        ? DisplayTextSize.caption
         : _variantBodyTextSize(scale);
     final description = row.localizedDescription(language, variants);
     return Column(
@@ -957,24 +885,24 @@ class _VariantText extends StatelessWidget {
           : 7 + 3 * scale,
       children: [
         VariantPixelLine(
-          height: pixelTextSlotHeight(titleSize),
-          child: PixelText(
+          height: displayTextSlotHeight(titleSize),
+          child: DisplayText(
             row.localizedTitle(language, variants).toUpperCase(),
             color: titleColor,
             size: titleSize,
-            variant: PixelTextVariant.heavy,
+            variant: DisplayTextWeight.bold,
             maxLines: 1,
             overflow: TextOverflow.clip,
           ),
         ),
         if (description.isNotEmpty)
           VariantPixelLine(
-            height: pixelTextSlotHeight(bodySize),
-            child: PixelText(
+            height: displayTextSlotHeight(bodySize),
+            child: DisplayText(
               description,
               color: bodyColor,
               size: bodySize,
-              variant: PixelTextVariant.regular,
+              variant: DisplayTextWeight.regular,
               maxLines: 1,
               overflow: TextOverflow.clip,
             ),
@@ -1011,23 +939,23 @@ class VariantPixelLine extends StatelessWidget {
   }
 }
 
-PixelTextSize _variantTitleTextSize(double scale) {
-  return scale > 0.44 ? PixelTextSize.cardRank : PixelTextSize.title;
+DisplayTextSize _variantTitleTextSize(double scale) {
+  return scale > 0.44 ? DisplayTextSize.cardRank : DisplayTextSize.title;
 }
 
-PixelTextSize _variantBodyTextSize(double scale) {
-  return scale > 0.44 ? PixelTextSize.title : PixelTextSize.headline;
+DisplayTextSize _variantBodyTextSize(double scale) {
+  return scale > 0.44 ? DisplayTextSize.title : DisplayTextSize.headline;
 }
 
-double pixelTextSlotHeight(PixelTextSize size) {
+double displayTextSlotHeight(DisplayTextSize size) {
   return switch (size) {
-    PixelTextSize.cardRank => 34,
-    PixelTextSize.title => 29,
-    PixelTextSize.headline => 25,
-    PixelTextSize.caption => 20,
-    PixelTextSize.caption2 => 18,
-    PixelTextSize.small => 16,
-    PixelTextSize.xSmall => 14,
+    DisplayTextSize.cardRank => 34,
+    DisplayTextSize.title => 29,
+    DisplayTextSize.headline => 25,
+    DisplayTextSize.caption => 20,
+    DisplayTextSize.caption2 => 18,
+    DisplayTextSize.small => 16,
+    DisplayTextSize.xSmall => 14,
   };
 }
 

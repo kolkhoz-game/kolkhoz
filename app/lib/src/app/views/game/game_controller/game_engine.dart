@@ -12,10 +12,12 @@ class GameEngineUpdate {
 
 abstract interface class GameEngine {
   GameEngineMode get mode;
+  bool get humanActionInFlight;
 
   TableViewModel project();
 
   void sendHumanAction(LegalAction action);
+  void sendHumanActions(List<EngineAction> actions);
 
   void dispose();
 }

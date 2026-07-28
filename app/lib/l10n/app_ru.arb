@@ -1,6 +1,7 @@
 {
   "@@locale": "ru",
   "lobbyCreateGame": "Создать игру",
+  "lobbyResumeGame": "Продолжить матч",
   "lobbyPlayDemo": "Играть демо",
   "lobbyJoinGame": "Войти в игру",
   "lobbyHowToPlay": "Как играть",

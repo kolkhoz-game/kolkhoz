@@ -13,10 +13,31 @@ replacement pass.
 - `language.png`
 - `appearance.png`
 - `settings.png`
+- `profile.png`
+- `friends-list.png`
+- `add-friend.png`
+- `comrade.png`
+- `online.png`
+- `status-connecting.png`
+- `status-connected.png`
+- `human-seat.png`
+- `controller-hotseat-player.png`
+- `controller-online-player.png`
+- `controller-easy-ai.png`
+- `controller-medium-ai.png`
+- `controller-hard-ai.png`
+- `status-current-turn.png`
+- `status-ai-thinking.png`
+- `status-brigade-leader.png`
+- `status-protected.png`
+- `status-vulnerable.png`
+- `turn-timer-clock.png`
 
 Shared prompt direction: early-1930s Soviet agricultural-manual or color-lithograph spot
 illustration; utilitarian rather than heroic; coal contour; cream, brick red, ochre, and
 optional dusty cobalt spot colors; one compact isolated silhouette; no containing button,
 slogan, political symbol, gradient, glow, or pixel art.
 
-Fallback mappings live in `lib/src/field_plan_assets.dart`.
+The social and online group is extracted reproducibly from
+`design/field-plan-world/ui-icon-sheets/social-online-v1-source.png` by
+`app/tool/extract_field_plan_icon_sheets.py`.

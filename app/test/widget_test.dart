@@ -26,6 +26,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/c_engine_bridge.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/controller_projection.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/deadline_countdown.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/engine_action_projection.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
@@ -45,7 +46,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engin
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/remote_game_engine_factory.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/remote_lobby_projection.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/remote_game_projection.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/players/player_ai_heuristic.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/players/player_ai_neural.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/players/player_human.dart';
@@ -114,7 +115,7 @@ Finder findAppText(String text, {bool skipOffstage = true}) {
   return find.byWidgetPredicate(
     (widget) =>
         (widget is Text && widget.data == text) ||
-        (widget is PixelText && widget.text == text) ||
+        (widget is DisplayText && widget.text == text) ||
         (widget is EditableText && widget.controller.text == text),
     skipOffstage: skipOffstage,
   );
@@ -826,6 +827,9 @@ class FakeOnlineRequestRecord {
 }
 
 class FakeOnlineHttpClient implements HttpClient {
+  FakeOnlineHttpClient({this.leaderboardPlayers});
+
+  final List<Map<String, Object?>>? leaderboardPlayers;
   final requests = <FakeOnlineRequestRecord>[];
 
   @override
@@ -936,16 +940,18 @@ class FakeOnlineHttpClient implements HttpClient {
     }
     if (method == 'GET' && uri.path == '/leaderboard') {
       return FakeOnlineHttpClientResponse.json({
-        'players': [
-          {
-            'userID': 'leader-user',
-            'displayName': 'Leader',
-            'rank': 1,
-            'inGame': true,
-            'isComrade': true,
-            'stats': {'online_games': 8, 'online_wins': 6},
-          },
-        ],
+        'players':
+            leaderboardPlayers ??
+            [
+              {
+                'userID': 'leader-user',
+                'displayName': 'Leader',
+                'rank': 1,
+                'inGame': true,
+                'isComrade': true,
+                'stats': {'online_games': 8, 'online_wins': 6},
+              },
+            ],
       });
     }
     if (method == 'GET' && uri.path == '/results/recent') {

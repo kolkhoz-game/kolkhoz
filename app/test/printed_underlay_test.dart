@@ -40,11 +40,11 @@ void main() {
       await Future.wait([
         ChromeImageCache.load(
           context,
-          'assets/art/field_plan/ledger/underlays/ledger-neutral.png',
+          'assets/art/field_plan/game/ui/navigation/nav-frame-inactive.png',
         ),
         ChromeImageCache.load(
           context,
-          'assets/art/field_plan/ledger/underlays/ledger-primary.png',
+          'assets/art/field_plan/game/ui/navigation/nav-frame-active.png',
         ),
       ]);
     });

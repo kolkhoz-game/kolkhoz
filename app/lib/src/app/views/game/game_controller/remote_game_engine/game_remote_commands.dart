@@ -81,6 +81,7 @@ class GameRemoteCommands extends GameCommandStream {
     }
     return switch (command) {
       SubmitGameAction() => _submitAction(command),
+      SubmitGameActions() => _submitActions(command),
       RefreshGame() => _refresh(command),
       SendGameReaction() => _sendReaction(command),
       KickGamePlayer() => _kickPlayer(command),
@@ -106,52 +107,28 @@ class GameRemoteCommands extends GameCommandStream {
     }
     _commandInFlight = true;
     try {
-      final beforeRevision = command.expectedRevision ?? _latestRevision;
-      final OnlineSessionUpdate update;
-      try {
-        update = await client.submitAction(
-          sessionID: sessionID,
-          playerID: playerID,
-          seatToken: seatToken,
-          actionLogCount: beforeRevision,
-          action: command.action,
-        );
-      } catch (error) {
-        if (!isStaleOnlineActionError(error)) {
-          rethrow;
+      await _submitOneAction(
+        command.action,
+        expectedRevision: command.expectedRevision,
+      );
+      publish(GameCommandCompleted(command));
+    } catch (error) {
+      publish(GameCommandFailed(command: command, error: error));
+    } finally {
+      _commandInFlight = false;
+    }
+  }
+
+  Future<void> _submitActions(SubmitGameActions command) async {
+    if (_commandInFlight || spectator || command.actions.isEmpty) {
+      return;
+    }
+    _commandInFlight = true;
+    try {
+      for (final action in command.actions) {
+        if (!await _submitOneAction(action)) {
+          throw StateError('The assignment changed before it was confirmed.');
         }
-        final refreshed = await client.fetchUpdate(
-          sessionID: sessionID,
-          playerID: playerID,
-          seatToken: seatToken,
-        );
-        _publishState(refreshed);
-        publish(GameCommandCompleted(command));
-        return;
-      }
-      if (onlineActionResultIsSingleRevision(
-        beforeRevision,
-        update.actionLogCount,
-      )) {
-        _publishActions(
-          OnlineActionUpdatesResponse(
-            sessionID: sessionID,
-            actionLogCount: update.actionLogCount,
-            updates: [
-              OnlineActionUpdate(
-                revision: update.actionLogCount,
-                action: OnlineEngineAction.fromEngineAction(command.action),
-                update: update,
-              ),
-            ],
-          ),
-        );
-        publish(GameCommandCompleted(command));
-        return;
-      }
-      final response = await _fetchUpdates(afterRevision: beforeRevision);
-      if (response == null || !_publishActions(response)) {
-        _publishState(update);
       }
       publish(GameCommandCompleted(command));
     } catch (error) {
@@ -159,6 +136,58 @@ class GameRemoteCommands extends GameCommandStream {
     } finally {
       _commandInFlight = false;
     }
+  }
+
+  Future<bool> _submitOneAction(
+    EngineAction action, {
+    int? expectedRevision,
+  }) async {
+    final beforeRevision = expectedRevision ?? _latestRevision;
+    final OnlineSessionUpdate update;
+    try {
+      update = await client.submitAction(
+        sessionID: sessionID,
+        playerID: playerID,
+        seatToken: seatToken,
+        actionLogCount: beforeRevision,
+        action: action,
+      );
+    } catch (error) {
+      if (!isStaleOnlineActionError(error)) {
+        rethrow;
+      }
+      final refreshed = await client.fetchUpdate(
+        sessionID: sessionID,
+        playerID: playerID,
+        seatToken: seatToken,
+      );
+      _publishState(refreshed);
+      return false;
+    }
+    if (onlineActionResultIsSingleRevision(
+      beforeRevision,
+      update.actionLogCount,
+    )) {
+      _publishActions(
+        OnlineActionUpdatesResponse(
+          sessionID: sessionID,
+          actionLogCount: update.actionLogCount,
+          updates: [
+            OnlineActionUpdate(
+              revision: update.actionLogCount,
+              action: OnlineEngineAction.fromEngineAction(action),
+              update: update,
+            ),
+          ],
+        ),
+      );
+      return true;
+    }
+    final response = await _fetchUpdates(afterRevision: beforeRevision);
+    if (response == null || !_publishActions(response)) {
+      _publishState(update);
+    }
+    return true;
   }
 
   Future<void> _refresh(RefreshGame command) async {

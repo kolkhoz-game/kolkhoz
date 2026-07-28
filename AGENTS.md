@@ -74,10 +74,19 @@ verification suite for final handoff or changes to native C/FFI, plugins, signin
 other build inputs that cannot hot reload.
 
 This checkout may live inside Dropbox. Generated Flutter/Xcode output in `app/build/`
-can acquire conflicted framework copies and stale symlinks there. Prefer placing build
-output on a local unsynced volume via a project-specific setup or symlink; do not change
-the user's global Flutter build directory. Treat `app/build/` as disposable and move a
-corrupted build directory aside before rebuilding rather than repeatedly retrying it.
+can acquire conflicted framework copies, stale symlinks, and extended attributes that
+invalidate macOS code signatures and break Game Center. Before every macOS Flutter
+build or `flutter run -d macos`, run:
+
+```bash
+./app/tool/use_local_flutter_build.sh
+```
+
+This is required, not optional. Do not run a macOS Flutter build when `app/build/` is a
+real directory or resolves inside Dropbox. The setup script moves an existing Dropbox
+build into a recoverable stale directory and links `app/build/` to an unsynced local
+cache. The script rejects overrides that point back into Dropbox. Do not change the
+user's global Flutter build directory.
 
 ## iPhone Deployment
 

@@ -149,9 +149,16 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.runAsync(() async {
-      final handjet = FontLoader('Handjet')
-        ..addFont(rootBundle.load('assets/ui/Fonts/Handjet.ttf'));
-      await handjet.load();
+      final ptSans = FontLoader('PTSans')
+        ..addFont(
+          rootBundle.load(
+            'assets/art/field_plan/shared/fonts/PTSans-Regular.ttf',
+          ),
+        )
+        ..addFont(
+          rootBundle.load('assets/art/field_plan/shared/fonts/PTSans-Bold.ttf'),
+        );
+      await ptSans.load();
     });
 
     for (final scenario in _scenarios) {
@@ -167,10 +174,8 @@ void main() {
             key: UniqueKey(),
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
-              fontFamily: 'Handjet',
-              textTheme: ThemeData.dark().textTheme.apply(
-                fontFamily: 'Handjet',
-              ),
+              fontFamily: 'PTSans',
+              textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'PTSans'),
             ),
             home: RepaintBoundary(
               key: const Key('lobby-layout-screenshot'),

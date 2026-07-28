@@ -27,9 +27,6 @@ import 'local_game_engine/local_game_engine_factory.dart';
 import 'remote_game_engine/remote_game_engine.dart';
 import 'remote_game_engine/remote_game_engine_factory.dart';
 
-bool actionCapturesUndoSnapshot(String actionKind) =>
-    actionKind == actionAssign;
-
 TableViewModel withoutLegalActions(TableViewModel model) => TableViewModel(
   viewer: model.viewer,
   table: model.table,
@@ -140,6 +137,8 @@ class GameController extends ChangeNotifier {
   TableViewModel? _model;
   TableViewModel? _authoritativeModel;
   final GamePresentationQueue _presentationQueue = GamePresentationQueue();
+  final Map<String, EngineAction> _assignmentDraft = {};
+  final List<String> _assignmentDraftHistory = [];
   Timer? _onlinePresentationPaceTimer;
   TableViewModel? get model => finishedGameLobby?.model ?? _model;
   FinishedGameLobby? finishedGameLobby;
@@ -253,6 +252,31 @@ class GameController extends ChangeNotifier {
     if (_presentationQueue.isBusy) {
       return;
     }
+    if (action.kind == actionAssign) {
+      final card = action.engineAction.card;
+      if (card == null || action.engineAction.targetSuit == null) {
+        return;
+      }
+      _assignmentDraft[card.id] = action.engineAction;
+      _assignmentDraftHistory
+        ..remove(card.id)
+        ..add(card.id);
+      uiState = uiState.clearSelectionAfterAction(action.kind);
+      _sync();
+      return;
+    }
+    if (action.kind == actionSubmitAssignments && _assignmentDraft.isNotEmpty) {
+      final playerID = model?.viewer.seatID;
+      if (playerID == null) {
+        return;
+      }
+      _engine?.sendHumanActions([
+        ..._assignmentDraft.values,
+        EngineAction(kind: actionSubmitAssignments, playerID: playerID),
+      ]);
+      _sync();
+      return;
+    }
     _engine?.sendHumanAction(action);
   }
 
@@ -280,6 +304,9 @@ class GameController extends ChangeNotifier {
   }
 
   bool get isOnlineGame => _engine?.mode == GameEngineMode.remote;
+  bool get hasActiveLocalGame =>
+      _engine?.mode == GameEngineMode.local &&
+      lifecycle == GameControllerLifecycle.playing;
   bool get isSpectating => _remoteEngine?.spectator ?? false;
   String? get onlineSessionID => _remoteEngine?.sessionID;
   String? get onlineInviteCode => _remoteEngine?.inviteCode;
@@ -344,13 +371,17 @@ class GameController extends ChangeNotifier {
   }
 
   bool get canUndo =>
-      _remoteEngine == null &&
-      (_localEngine?.canUndo(model?.table.phase) ?? false);
+      _assignmentDraftHistory.isNotEmpty &&
+      !(_engine?.humanActionInFlight ?? false);
 
   void undoLastAction() {
-    if (_remoteEngine == null) {
-      _localEngine?.undoLastAction();
+    if (!canUndo) {
+      return;
     }
+    final cardID = _assignmentDraftHistory.removeLast();
+    _assignmentDraft.remove(cardID);
+    uiState = uiState.selectAssignmentCard(cardID);
+    _sync();
   }
 
   Future<String> startOnlineGame({
@@ -643,6 +674,12 @@ class GameController extends ChangeNotifier {
         visibleBefore = visibleStates[lastIndex];
         index = lastIndex + 1;
       }
+      if (needsFinalPresentationBoundary(visibleBefore, presentedAfter)) {
+        _presentationQueue.enqueue(
+          before: visibleBefore,
+          after: presentedAfter,
+        );
+      }
     }
     if (wasIdle) {
       _presentCurrentTransition();
@@ -655,6 +692,10 @@ class GameController extends ChangeNotifier {
     if (nextModel == null) {
       return null;
     }
+    if (nextModel.table.phase != phaseAssignment) {
+      _clearAssignmentDraft();
+    }
+    nextModel = _withAssignmentDraft(nextModel, engine!);
     final phase = nextModel.table.phase;
     final nextUiState = autoSelectCards(
       uiState.clearActivePanelAfterPhaseChange(
@@ -665,10 +706,28 @@ class GameController extends ChangeNotifier {
     );
     if (!identical(nextUiState, uiState)) {
       uiState = nextUiState;
-      nextModel = engine!.project();
+      nextModel = _withAssignmentDraft(engine.project(), engine);
     }
     _lastSyncedPhase = phase;
     return nextModel;
+  }
+
+  TableViewModel _withAssignmentDraft(TableViewModel model, GameEngine engine) {
+    final playerID = model.viewer.seatID;
+    if (playerID == null) {
+      return model;
+    }
+    return withAssignmentDraft(
+      model,
+      _assignmentDraft.values,
+      playerID: playerID,
+      canSubmit: !engine.humanActionInFlight,
+    );
+  }
+
+  void _clearAssignmentDraft() {
+    _assignmentDraft.clear();
+    _assignmentDraftHistory.clear();
   }
 
   void _presentCurrentTransition() {
@@ -984,6 +1043,7 @@ class GameController extends ChangeNotifier {
     engine?.dispose();
     _authoritativeModel = null;
     _presentationQueue.clear();
+    _clearAssignmentDraft();
   }
 
   int _newSeed() => DateTime.now().microsecondsSinceEpoch;

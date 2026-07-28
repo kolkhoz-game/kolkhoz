@@ -12,7 +12,7 @@ import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 
 class GameOverPlotPanel extends StatelessWidget {
   const GameOverPlotPanel({
@@ -734,7 +734,9 @@ class GameOverPosterActions extends StatelessWidget {
           width: double.infinity,
           height: height,
           padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 12),
-          textSize: compact ? PixelTextSize.caption2 : PixelTextSize.caption,
+          textSize: compact
+              ? DisplayTextSize.caption2
+              : DisplayTextSize.caption,
           spacing: compact ? 4 : 7,
           surfaceKey: key,
         ),

@@ -17,7 +17,7 @@ import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/profile/views/progression_overview.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
@@ -138,6 +138,7 @@ class StandaloneLobby extends StatelessWidget {
     required this.appearance,
     this.cardBack = KolkhozCardBack.classic,
     required this.onStart,
+    this.onResumeLocalGame,
     required this.selectedPreset,
     required this.customVariants,
     required this.playerControllers,
@@ -148,6 +149,7 @@ class StandaloneLobby extends StatelessWidget {
     this.confirmMainMenu = true,
     this.showInvalidTapHints = true,
     this.soundEnabled = true,
+    this.showingHome = false,
     required this.showingRules,
     required this.showingOnline,
     required this.onHostOnline,
@@ -225,6 +227,7 @@ class StandaloneLobby extends StatelessWidget {
   final KolkhozAppearance appearance;
   final KolkhozCardBack cardBack;
   final VoidCallback onStart;
+  final VoidCallback? onResumeLocalGame;
   final KolkhozGamePreset selectedPreset;
   final KolkhozGameVariants customVariants;
   final List<KolkhozPlayerController> playerControllers;
@@ -235,6 +238,7 @@ class StandaloneLobby extends StatelessWidget {
   final bool confirmMainMenu;
   final bool showInvalidTapHints;
   final bool soundEnabled;
+  final bool showingHome;
   final bool showingRules;
   final bool showingOnline;
   final bool showingProfile;
@@ -333,17 +337,23 @@ class StandaloneLobby extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final backgroundPath = fieldPlanMenuBackgroundPathFor(
+      dark: appearance == KolkhozAppearance.dark,
+    );
     return Scaffold(
       backgroundColor: const Color(0xff171712),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/art/field_plan/menu-village-day-underlay-v3.png',
-            key: const Key('field-plan-menu-background'),
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            filterQuality: FilterQuality.high,
+          KeyedSubtree(
+            key: ValueKey(backgroundPath),
+            child: Image.asset(
+              backgroundPath,
+              key: const Key('field-plan-menu-background'),
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              filterQuality: FilterQuality.high,
+            ),
           ),
           const _FieldPlanMenuSceneTreatment(),
           SafeArea(
@@ -398,6 +408,7 @@ class StandaloneLobby extends StatelessWidget {
                     language: language,
                     appearance: appearance,
                     compact: shortLandscape,
+                    showingHome: showingHome,
                     showingRules: showingRules,
                     showingOnline: showingOnline,
                     showingProfile: showingProfile,
@@ -465,6 +476,7 @@ class StandaloneLobby extends StatelessWidget {
                     cloudAuthIsError: cloudAuthIsError,
                     onTutorialPressed: onTutorialPressed,
                     onStart: onStart,
+                    onResumeLocalGame: onResumeLocalGame,
                     onHostOnline: onHostOnline,
                     onHostOnlineSeries: onHostOnlineSeries,
                     onInviteOnlineComrades: onInviteOnlineComrades,
@@ -507,47 +519,54 @@ class StandaloneLobby extends StatelessWidget {
                   padding: EdgeInsets.all(outerPadding),
                   child: Align(
                     alignment: Alignment.topCenter,
-                    child: Stack(
-                      children: [
-                        if (wide)
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              menuRail,
-                              SizedBox(width: spacing),
-                              Padding(
-                                padding: EdgeInsets.only(top: panelTop),
-                                child: panel,
-                              ),
-                            ],
-                          )
-                        else
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              menuRail,
-                              SizedBox(height: spacing),
-                              panel,
-                            ],
-                          ),
-                        if (showCornerProfile)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: _FieldPlanProfilePlaque(
-                              displayName: displayName,
-                              portraitAsset: portraitAsset,
-                              cloudSignedIn: cloudSignedIn,
-                              badgeCount:
-                                  comradesSummary.incomingRequests.length,
-                              selected:
-                                  showingProfile &&
-                                  initialSettingsTab ==
-                                      KolkhozSettingsTab.profile,
-                              onPressed: onProfilePressed,
+                    child: SizedBox(
+                      width: contentWidth,
+                      child: Stack(
+                        children: [
+                          if (wide)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                menuRail,
+                                if (!showingHome) ...[
+                                  SizedBox(width: spacing),
+                                  Padding(
+                                    padding: EdgeInsets.only(top: panelTop),
+                                    child: panel,
+                                  ),
+                                ],
+                              ],
+                            )
+                          else
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                menuRail,
+                                if (!showingHome) ...[
+                                  SizedBox(height: spacing),
+                                  panel,
+                                ],
+                              ],
                             ),
-                          ),
-                      ],
+                          if (showCornerProfile)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: _FieldPlanProfilePlaque(
+                                displayName: displayName,
+                                portraitAsset: portraitAsset,
+                                cloudSignedIn: cloudSignedIn,
+                                badgeCount:
+                                    comradesSummary.incomingRequests.length,
+                                selected:
+                                    showingProfile &&
+                                    initialSettingsTab ==
+                                        KolkhozSettingsTab.profile,
+                                onPressed: onProfilePressed,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -616,6 +635,7 @@ class _FieldPlanMenuRail extends StatelessWidget {
     required this.language,
     required this.appearance,
     required this.compact,
+    required this.showingHome,
     required this.showingRules,
     required this.showingOnline,
     required this.showingProfile,
@@ -640,6 +660,7 @@ class _FieldPlanMenuRail extends StatelessWidget {
   final KolkhozLanguage language;
   final KolkhozAppearance appearance;
   final bool compact;
+  final bool showingHome;
   final bool showingRules;
   final bool showingOnline;
   final bool showingProfile;
@@ -662,7 +683,8 @@ class _FieldPlanMenuRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localSelected = !showingRules && !showingOnline && !showingProfile;
+    final localSelected =
+        !showingHome && !showingRules && !showingOnline && !showingProfile;
     final mainButtonHeight = compact ? 48.0 : 68.0;
     final gap = compact ? 6.0 : 10.0;
     return LayoutBuilder(
@@ -919,13 +941,13 @@ class _FieldPlanUtilityStrip extends StatelessWidget {
             _FieldPlanCompactUtilityButton(
               key: const Key('field-plan-menu-language'),
               label: language.strings.lobbyLanguage,
-              asset: fieldPlanLanguagePictogram.fieldPlanPath,
+              asset: language.toggleIconAsset,
               onPressed: onLanguageToggle,
             ),
             _FieldPlanCompactUtilityButton(
               key: const Key('field-plan-menu-theme'),
               label: language.strings.lobbyTheme,
-              asset: fieldPlanAppearancePictogram.fieldPlanPath,
+              asset: appearance.toggleIconAsset,
               onPressed: onAppearanceToggle,
             ),
             _FieldPlanCompactUtilityButton(
@@ -964,14 +986,14 @@ class _FieldPlanUtilityStrip extends StatelessWidget {
             key: const Key('field-plan-menu-language'),
             label: language.strings.lobbyLanguage,
             tooltip: language.toggleTitle,
-            asset: fieldPlanLanguagePictogram.fieldPlanPath,
+            asset: language.toggleIconAsset,
             onPressed: onLanguageToggle,
           ),
           _FieldPlanUtilityIconButton(
             key: const Key('field-plan-menu-theme'),
             label: language.strings.lobbyTheme,
             tooltip: appearance.toggleTitle(language),
-            asset: fieldPlanAppearancePictogram.fieldPlanPath,
+            asset: appearance.toggleIconAsset,
             onPressed: onAppearanceToggle,
           ),
           Expanded(
@@ -1022,8 +1044,8 @@ class _FieldPlanCompactUtilityButton extends StatelessWidget {
             asset!,
             width: 22,
             height: 22,
-            color: color,
-            colorBlendMode: BlendMode.srcIn,
+            filterQuality: FilterQuality.high,
+            isAntiAlias: true,
           );
     return Tooltip(
       message: label,
@@ -1153,8 +1175,8 @@ class _FieldPlanUtilityIconButton extends StatelessWidget {
               asset,
               width: 23,
               height: 23,
-              color: const Color(0xffd2bb83),
-              colorBlendMode: BlendMode.srcIn,
+              filterQuality: FilterQuality.high,
+              isAntiAlias: true,
             ),
           ),
         ),
@@ -1401,27 +1423,27 @@ class _FieldPlanButtonBorderPainter extends CustomPainter {
       pointed != oldDelegate.pointed || shadow != oldDelegate.shadow;
 }
 
-PixelTextSize buttonContentTextSize(double buttonHeight) {
+DisplayTextSize buttonContentTextSize(double buttonHeight) {
   final targetFontSize = buttonHeight * 0.40;
   if (targetFontSize <= 9) {
-    return PixelTextSize.xSmall;
+    return DisplayTextSize.xSmall;
   }
   if (targetFontSize <= 10.5) {
-    return PixelTextSize.small;
+    return DisplayTextSize.small;
   }
   if (targetFontSize <= 12) {
-    return PixelTextSize.caption2;
+    return DisplayTextSize.caption2;
   }
   if (targetFontSize <= 15) {
-    return PixelTextSize.caption;
+    return DisplayTextSize.caption;
   }
   if (targetFontSize <= 18.5) {
-    return PixelTextSize.headline;
+    return DisplayTextSize.headline;
   }
   if (targetFontSize <= 22) {
-    return PixelTextSize.title;
+    return DisplayTextSize.title;
   }
-  return PixelTextSize.cardRank;
+  return DisplayTextSize.cardRank;
 }
 
 class _LobbyPanel extends StatelessWidget {
@@ -1465,6 +1487,7 @@ class _LobbyPanel extends StatelessWidget {
     required this.cloudAuthIsError,
     required this.onTutorialPressed,
     required this.onStart,
+    required this.onResumeLocalGame,
     required this.onHostOnline,
     required this.onHostOnlineSeries,
     required this.onInviteOnlineComrades,
@@ -1541,6 +1564,7 @@ class _LobbyPanel extends StatelessWidget {
   final bool cloudAuthIsError;
   final VoidCallback onTutorialPressed;
   final VoidCallback onStart;
+  final VoidCallback? onResumeLocalGame;
   final Future<String> Function(
     Uri baseURL,
     List<KolkhozPlayerController> controllers,
@@ -1631,6 +1655,7 @@ class _LobbyPanel extends StatelessWidget {
       comradesSummary: comradesSummary,
       compactRail: compactRail,
       onStart: onStart,
+      onResumeLocalGame: onResumeLocalGame,
       onHostOnline: onHostOnline,
       onHostOnlineSeries: onHostOnlineSeries,
       onInviteOnlineComrades: onInviteOnlineComrades,
@@ -1768,10 +1793,12 @@ enum KolkhozSettingsTab {
 
   String get iconAsset {
     return switch (this) {
-      KolkhozSettingsTab.profile => 'assets/ui/Icons/icon-profile.png',
+      KolkhozSettingsTab.profile =>
+        'assets/art/field_plan/shared/pictograms/profile.png',
       KolkhozSettingsTab.leaderboard => fieldPlanMedalIconPath,
       KolkhozSettingsTab.progress => fieldPlanMedalIconPath,
-      KolkhozSettingsTab.comrades => 'assets/ui/Icons/icon-friends-list.png',
+      KolkhozSettingsTab.comrades =>
+        'assets/art/field_plan/shared/pictograms/friends-list.png',
       KolkhozSettingsTab.admin => 'assets/ui/Icons/icon-settings-session.png',
       KolkhozSettingsTab.assist => OptionsMenuTab.assist.iconAsset,
       KolkhozSettingsTab.display => OptionsMenuTab.display.iconAsset,
@@ -2084,19 +2111,19 @@ class _SettingsTabButton extends StatelessWidget {
   }
 }
 
-PixelTextSize _settingsTabTextSize(double height) {
+DisplayTextSize _settingsTabTextSize(double height) {
   final targetFontSize = height * 0.58;
   if (targetFontSize <= 10.5) {
-    return PixelTextSize.small;
+    return DisplayTextSize.small;
   }
   if (targetFontSize <= 12) {
-    return PixelTextSize.caption2;
+    return DisplayTextSize.caption2;
   }
   if (targetFontSize <= 15) {
-    return PixelTextSize.caption;
+    return DisplayTextSize.caption;
   }
   if (targetFontSize <= 18.5) {
-    return PixelTextSize.headline;
+    return DisplayTextSize.headline;
   }
-  return PixelTextSize.title;
+  return DisplayTextSize.title;
 }

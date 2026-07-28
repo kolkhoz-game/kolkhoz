@@ -7,7 +7,7 @@ import 'package:kolkhoz_app/src/app/profile/models/profile_remote_models.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/profile/views/player_profile_panel.dart';
 import '../main_menu_view.dart';
 
@@ -38,11 +38,17 @@ class _LeaderboardPanelState extends State<LeaderboardView> {
   _LeaderboardView view = _LeaderboardView.ranked;
 
   bool get usesRankedRating => view != _LeaderboardView.casual;
+  String? get currentUserID =>
+      widget.profileController?.userID ??
+      widget.profileController?.comrades.userID;
 
   List<OnlineComradeProfile> get sortedPlayers {
     final values = [
       for (final player in players)
-        if (view != _LeaderboardView.comrades || player.isComrade) player,
+        if (view != _LeaderboardView.comrades ||
+            player.isComrade ||
+            player.userID == currentUserID)
+          player,
     ];
     values.sort((left, right) {
       final ratingComparison = right.stats
@@ -192,6 +198,7 @@ class _LeaderboardPanelState extends State<LeaderboardView> {
                         separatorBuilder: (_, _) => const SizedBox(height: 4),
                         itemBuilder: (context, index) {
                           final player = visiblePlayers[index];
+                          final isCurrentUser = player.userID == currentUserID;
                           return _LeaderboardRow(
                             tokens: widget.tokens,
                             player: player,
@@ -199,6 +206,7 @@ class _LeaderboardPanelState extends State<LeaderboardView> {
                               ranked: usesRankedRating,
                             ),
                             rank: index + 1,
+                            isCurrentUser: isCurrentUser,
                             onTap: () => showProfile(player),
                           );
                         },
@@ -240,7 +248,8 @@ class _LeaderboardPanelState extends State<LeaderboardView> {
                   label: 'COMRADES',
                   prominent: view == _LeaderboardView.comrades,
                   tokens: widget.tokens,
-                  iconAsset: 'assets/ui/Icons/icon-comrade.png',
+                  iconAsset:
+                      'assets/art/field_plan/shared/pictograms/comrade.png',
                   expandLabel: false,
                   onPressed: () =>
                       setState(() => view = _LeaderboardView.comrades),
@@ -260,6 +269,7 @@ class _LeaderboardRow extends StatelessWidget {
     required this.player,
     required this.rating,
     required this.rank,
+    required this.isCurrentUser,
     required this.onTap,
   });
 
@@ -267,15 +277,20 @@ class _LeaderboardRow extends StatelessWidget {
   final OnlineComradeProfile player;
   final int rating;
   final int rank;
+  final bool isCurrentUser;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '${player.displayLabel}, rank $rank',
+      label:
+          '${player.displayLabel}, rank $rank${isCurrentUser ? ', you' : ''}',
       child: Material(
-        color: tokens.colors.black.withValues(alpha: 0.16),
+        key: isCurrentUser ? const Key('leaderboard-current-user-row') : null,
+        color: isCurrentUser
+            ? tokens.colors.redDark.withValues(alpha: 0.88)
+            : tokens.colors.black.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(tokens.radius.sm),
         child: InkWell(
           onTap: onTap,
@@ -286,7 +301,10 @@ class _LeaderboardRow extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(tokens.radius.sm),
               border: Border.all(
-                color: tokens.colors.gold.withValues(alpha: 0.32),
+                color: isCurrentUser
+                    ? tokens.colors.redBright
+                    : tokens.colors.gold.withValues(alpha: 0.32),
+                width: isCurrentUser ? 1.5 : 1,
               ),
             ),
             child: Row(
@@ -312,14 +330,15 @@ class _LeaderboardRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 _LeaderboardStatusIcon(
-                  asset: 'assets/ui/Icons/icon-controller-online-player.png',
+                  asset:
+                      'assets/art/field_plan/shared/pictograms/controller-online-player.png',
                   active: player.inGame,
                   activeLabel: 'IN GAME',
                   inactiveLabel: player.isOnline ? 'ONLINE' : 'NOT IN GAME',
                 ),
                 const SizedBox(width: 5),
                 _LeaderboardStatusIcon(
-                  asset: 'assets/ui/Icons/icon-comrade.png',
+                  asset: 'assets/art/field_plan/shared/pictograms/comrade.png',
                   active: player.isComrade,
                   activeLabel: 'COMRADE',
                   inactiveLabel: 'NOT A COMRADE',
@@ -351,11 +370,11 @@ class _LeaderboardRow extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      PixelText(
+                      DisplayText(
                         '$rank',
                         color: tokens.colors.gold,
-                        size: PixelTextSize.caption,
-                        variant: PixelTextVariant.heavy,
+                        size: DisplayTextSize.caption,
+                        variant: DisplayTextWeight.bold,
                         maxLines: 1,
                       ),
                     ],

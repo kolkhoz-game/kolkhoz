@@ -21,6 +21,12 @@ class SubmitGameAction extends GameCommand {
   final int? expectedRevision;
 }
 
+class SubmitGameActions extends GameCommand {
+  const SubmitGameActions(this.actions);
+
+  final List<EngineAction> actions;
+}
+
 class AdvanceAutomaticGame extends GameCommand {
   const AdvanceAutomaticGame();
 }

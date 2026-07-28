@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_view.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 
 void main() {
@@ -32,7 +32,7 @@ void main() {
     );
 
     final cell = tester.getRect(find.byKey(cellKey));
-    final score = tester.getRect(find.byType(PixelText));
+    final score = tester.getRect(find.byType(DisplayText));
 
     expect(score.left, greaterThanOrEqualTo(cell.left));
     expect(score.right, lessThanOrEqualTo(cell.right));

@@ -100,9 +100,8 @@ class StaticHeroJobMotionTargets extends StatelessWidget {
 }
 
 extension on StaticHeroGamePanelKind {
-  String get asset =>
-      'assets/art/field_plan/game/backgrounds/'
-      'static-hero-$name-underlay-v1.png';
+  String asset({required bool dark}) =>
+      fieldPlanStaticHeroBackgroundPathFor(region: name, dark: dark);
 }
 
 class StaticHeroGamePanel extends StatelessWidget {
@@ -141,20 +140,29 @@ class StaticHeroGamePanel extends StatelessWidget {
             compact ||
             constraints.maxWidth < 820 ||
             constraints.maxHeight < 440;
+        final backgroundPath = kind.asset(dark: !tokens.usesLightAppearance);
         return ClipRect(
           child: Stack(
             key: Key('production-static-hero-${kind.name}'),
             fit: StackFit.expand,
             children: [
-              Image.asset(
-                kind.asset,
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-                filterQuality: FilterQuality.high,
+              KeyedSubtree(
+                key: ValueKey(backgroundPath),
+                child: Image.asset(
+                  backgroundPath,
+                  key: Key('static-hero-${kind.name}-background'),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  filterQuality: FilterQuality.high,
+                ),
               ),
               Positioned.fill(
                 child: IgnorePointer(
-                  child: ColoredBox(color: const Color(0x0d6f5a37)),
+                  child: ColoredBox(
+                    color: tokens.usesLightAppearance
+                        ? const Color(0x0d6f5a37)
+                        : const Color(0x0c07121f),
+                  ),
                 ),
               ),
               const Positioned(

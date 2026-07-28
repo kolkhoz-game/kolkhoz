@@ -7,7 +7,7 @@ import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/plot_display.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
@@ -372,10 +372,10 @@ class GameOverPlotHiddenStackBack extends StatelessWidget {
             color: tokens.colors.black.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(tokens.radius.xs),
           ),
-          child: PixelText(
+          child: DisplayText(
             '$hiddenCount',
-            size: PixelTextSize.title,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.title,
+            variant: DisplayTextWeight.bold,
             color: tokens.colors.gold,
           ),
         ),
@@ -681,22 +681,24 @@ class OpponentPlotPanel extends StatelessWidget {
                             top: -3,
                             right: -4,
                             child: Image.asset(
-                              'assets/ui/Icons/icon-status-vulnerable.png',
+                              'assets/art/field_plan/shared/pictograms/'
+                              'status-vulnerable.png',
                               width: 14,
                               height: 14,
-                              filterQuality: FilterQuality.none,
+                              filterQuality: FilterQuality.high,
+                              isAntiAlias: true,
                             ),
                           ),
                       ],
                     ),
                   ),
-                  PixelText(
+                  DisplayText(
                     seat.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    size: PixelTextSize.caption2,
-                    variant: PixelTextVariant.heavy,
+                    size: DisplayTextSize.caption2,
+                    variant: DisplayTextWeight.bold,
                     color: tokens.colors.cream,
                   ),
                 ],
@@ -826,10 +828,10 @@ class OpponentPlotMiniSection extends StatelessWidget {
           width: metrics.opponentCardFrameWidth,
           height: metrics.opponentCardFrameHeight,
           child: Center(
-            child: PixelText(
+            child: DisplayText(
               '-',
-              size: PixelTextSize.caption,
-              variant: PixelTextVariant.heavy,
+              size: DisplayTextSize.caption,
+              variant: DisplayTextWeight.bold,
               color: tokens.colors.smoke.withValues(alpha: 0.72),
             ),
           ),
@@ -858,10 +860,10 @@ class OpponentPlotMiniSection extends StatelessWidget {
                   filterQuality: FilterQuality.high,
                   isAntiAlias: true,
                 ),
-                PixelText(
+                DisplayText(
                   value,
-                  size: PixelTextSize.caption2,
-                  variant: PixelTextVariant.heavy,
+                  size: DisplayTextSize.caption2,
+                  variant: DisplayTextWeight.bold,
                   color: tokens.colors.gold,
                 ),
               ],
@@ -945,16 +947,16 @@ class LocalPlotColumn extends StatelessWidget {
                 filterQuality: FilterQuality.high,
                 isAntiAlias: true,
               ),
-              PixelText(
+              DisplayText(
                 title.toUpperCase(),
-                size: PixelTextSize.caption,
-                variant: PixelTextVariant.heavy,
+                size: DisplayTextSize.caption,
+                variant: DisplayTextWeight.bold,
                 color: tokens.colors.gold,
               ),
               const Spacer(),
-              PixelText(
+              DisplayText(
                 '$value',
-                size: PixelTextSize.caption2,
+                size: DisplayTextSize.caption2,
                 color: tokens.colors.smoke,
               ),
             ],
@@ -987,10 +989,10 @@ class LocalPlotColumn extends StatelessWidget {
                           width: cardSize.width,
                           height: cardSize.height,
                           child: Center(
-                            child: PixelText(
+                            child: DisplayText(
                               '-',
-                              size: PixelTextSize.title,
-                              variant: PixelTextVariant.heavy,
+                              size: DisplayTextSize.title,
+                              variant: DisplayTextWeight.bold,
                               color: tokens.colors.smoke.withValues(
                                 alpha: 0.72,
                               ),
@@ -1083,10 +1085,10 @@ class PlotStackMini extends StatelessWidget {
                     color: tokens.colors.black.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(tokens.radius.xs),
                   ),
-                  child: PixelText(
+                  child: DisplayText(
                     '${hidden.length}',
-                    size: PixelTextSize.caption2,
-                    variant: PixelTextVariant.heavy,
+                    size: DisplayTextSize.caption2,
+                    variant: DisplayTextWeight.bold,
                     color: tokens.colors.gold,
                   ),
                 ),

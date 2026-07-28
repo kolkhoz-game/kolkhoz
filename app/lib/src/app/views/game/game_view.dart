@@ -8,6 +8,7 @@ import 'package:kolkhoz_app/src/app/settings/animation_speed.dart';
 import 'package:kolkhoz_app/src/app/settings/game_motion.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
+import 'package:kolkhoz_app/src/app/views/shared/deadline_countdown.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_presentation_transition.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
@@ -17,7 +18,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_const
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/engine_values.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_world_scene.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/game_session_models.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/table_projection_helpers.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_chrome.dart';
@@ -377,6 +378,7 @@ class KolkhozBoard extends StatelessWidget {
     this.canSendReaction = false,
     this.onReaction,
     this.activeReaction,
+    this.turnDeadlineAt,
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
@@ -426,6 +428,7 @@ class KolkhozBoard extends StatelessWidget {
   final bool canSendReaction;
   final ValueChanged<String>? onReaction;
   final OnlineReaction? activeReaction;
+  final double? turnDeadlineAt;
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
@@ -544,6 +547,7 @@ class KolkhozBoard extends StatelessWidget {
                                     canSendReaction: canSendReaction,
                                     onReaction: onReaction,
                                     activeReaction: activeReaction,
+                                    turnDeadlineAt: turnDeadlineAt,
                                     gameOverReturnsToLobby:
                                         gameOverReturnsToLobby,
                                     onTutorial: onTutorial,
@@ -603,6 +607,7 @@ class KolkhozBoard extends StatelessWidget {
                                       canSendReaction: canSendReaction,
                                       onReaction: onReaction,
                                       activeReaction: activeReaction,
+                                      turnDeadlineAt: turnDeadlineAt,
                                       gameOverReturnsToLobby:
                                           gameOverReturnsToLobby,
                                       onTutorial: onTutorial,
@@ -742,6 +747,7 @@ class CompactBoardShell extends StatelessWidget {
     this.canSendReaction = false,
     this.onReaction,
     this.activeReaction,
+    this.turnDeadlineAt,
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
@@ -789,6 +795,7 @@ class CompactBoardShell extends StatelessWidget {
   final bool canSendReaction;
   final ValueChanged<String>? onReaction;
   final OnlineReaction? activeReaction;
+  final double? turnDeadlineAt;
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
@@ -838,6 +845,7 @@ class CompactBoardShell extends StatelessWidget {
             canSendReaction: canSendReaction,
             onReaction: onReaction,
             activeReaction: activeReaction,
+            turnDeadlineAt: turnDeadlineAt,
             gameOverReturnsToLobby: gameOverReturnsToLobby,
             onTutorial: onTutorial,
             animationSpeed: animationSpeed,
@@ -974,12 +982,12 @@ class HotSeatPrivacyOverlay extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       spacing: hotSeatLabelSpacing,
                       children: [
-                        PixelText(
+                        DisplayText(
                           player.name.toUpperCase(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          size: PixelTextSize.title,
-                          variant: PixelTextVariant.heavy,
+                          size: DisplayTextSize.title,
+                          variant: DisplayTextWeight.bold,
                           color: tokens.colors.gold,
                         ),
                         Text(
@@ -1095,6 +1103,7 @@ class BoardPlayArea extends StatelessWidget {
     this.canSendReaction = false,
     this.onReaction,
     this.activeReaction,
+    this.turnDeadlineAt,
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
@@ -1147,6 +1156,7 @@ class BoardPlayArea extends StatelessWidget {
   final bool canSendReaction;
   final ValueChanged<String>? onReaction;
   final OnlineReaction? activeReaction;
+  final double? turnDeadlineAt;
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
@@ -1545,6 +1555,7 @@ class BoardPlayArea extends StatelessWidget {
                                       metrics: metrics,
                                       language: language,
                                       animationSpeed: animationSpeed,
+                                      turnDeadlineAt: turnDeadlineAt,
                                     ),
                                   ),
                                 )
@@ -1554,6 +1565,7 @@ class BoardPlayArea extends StatelessWidget {
                                   metrics: metrics,
                                   language: language,
                                   animationSpeed: animationSpeed,
+                                  turnDeadlineAt: turnDeadlineAt,
                                   floating: true,
                                   includeYear: true,
                                 ),
@@ -1697,6 +1709,7 @@ class TopInfoStrip extends StatefulWidget {
     required this.metrics,
     required this.language,
     required this.animationSpeed,
+    this.turnDeadlineAt,
     this.floating = false,
     this.includeYear = false,
     super.key,
@@ -1707,6 +1720,7 @@ class TopInfoStrip extends StatefulWidget {
   final ResponsiveBoardMetrics metrics;
   final KolkhozLanguage language;
   final GameAnimationSpeed animationSpeed;
+  final double? turnDeadlineAt;
   final bool floating;
   final bool includeYear;
 
@@ -1825,13 +1839,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
       0,
       (score, card) => score + card.value,
     );
-    String? turnClock;
-    for (final seat in model.table.seats) {
-      if (RegExp(r'^\d+s$').hasMatch(seat.statusText)) {
-        turnClock = seat.statusText;
-        break;
-      }
-    }
+    final showTurnClock = widget.turnDeadlineAt != null;
     final topInfo = tokens.layout.topInfo;
     return SizedBox(
       height: metrics.topInfoHeight,
@@ -1877,7 +1885,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                     gaugesWidth +
                     scoreGroupWidth +
                     rowSpacing +
-                    (turnClock == null ? 0 : scoreWidth + rowSpacing)
+                    (showTurnClock ? scoreWidth + rowSpacing : 0)
               : math.max(0, constraints.maxWidth - horizontalPadding * 2);
 
           return ClipRect(
@@ -1991,20 +1999,25 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                         ],
                       ),
                     ),
-                    if (turnClock != null) ...[
+                    if (showTurnClock) ...[
                       if (showJobGauges) const Spacer(),
                       SizedBox(
                         key: const Key('online-turn-clock'),
                         width: scoreWidth,
-                        child: _TopInfoUnderlay(
-                          tokens: tokens,
-                          child: TopInfoCell(
-                            icon: 'icon-turn-timer-clock.png',
-                            value: turnClock,
-                            iconSize: gaugeHeight * 0.68,
-                            contentSpacing: rowSpacing,
-                            height: gaugeHeight,
+                        child: DeadlineCountdownBuilder(
+                          deadlineEpochSeconds: widget.turnDeadlineAt,
+                          builder: (context, seconds) => _TopInfoUnderlay(
                             tokens: tokens,
+                            child: TopInfoCell(
+                              icon:
+                                  'assets/art/field_plan/shared/pictograms/'
+                                  'turn-timer-clock.png',
+                              value: '${seconds ?? 0}s',
+                              iconSize: gaugeHeight * 0.68,
+                              contentSpacing: rowSpacing,
+                              height: gaugeHeight,
+                              tokens: tokens,
+                            ),
                           ),
                         ),
                       ),
@@ -2082,10 +2095,10 @@ class TopInfoCell extends StatelessWidget {
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: PixelText(
+                  child: DisplayText(
                     value,
-                    size: PixelTextSize.cardRank,
-                    variant: PixelTextVariant.heavy,
+                    size: DisplayTextSize.cardRank,
+                    variant: DisplayTextWeight.bold,
                     color: tokens.colors.gold,
                   ),
                 ),
@@ -2482,10 +2495,13 @@ class JobGaugeDeltaBadge extends StatelessWidget {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xffe2d1a8),
-          border: Border.all(color: const Color(0xff55713f), width: 1.4),
-          boxShadow: const [
-            BoxShadow(color: Color(0x6613120f), offset: Offset(2, 2)),
+          color: tokens.colors.panel,
+          border: Border.all(color: tokens.colors.green, width: 1.4),
+          boxShadow: [
+            BoxShadow(
+              color: tokens.colors.black.withValues(alpha: 0.4),
+              offset: const Offset(2, 2),
+            ),
           ],
         ),
         child: Padding(
@@ -2493,7 +2509,7 @@ class JobGaugeDeltaBadge extends StatelessWidget {
           child: Text(
             '+$delta',
             style: fieldPlanDisplayTextStyle.copyWith(
-              color: const Color(0xff55713f),
+              color: tokens.colors.green,
               fontSize: 13,
               height: 0.9,
             ),

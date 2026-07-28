@@ -9,7 +9,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_view.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/shared/rule_content.dart';
 
@@ -296,10 +296,10 @@ class TutorialCollapsedBadge extends StatelessWidget {
               fit: BoxFit.contain,
               filterQuality: FilterQuality.none,
             ),
-            PixelText(
+            DisplayText(
               '?',
-              size: PixelTextSize.caption,
-              variant: PixelTextVariant.heavy,
+              size: DisplayTextSize.caption,
+              variant: DisplayTextWeight.bold,
               color: tokens.colors.gold,
             ),
           ],
@@ -464,7 +464,7 @@ class TutorialDialoguePanel extends StatelessWidget {
                         enabled: index > 0,
                         backgroundAsset: chromeButtonSecondaryAsset,
                         textColor: tokens.colors.cardInk,
-                        textSize: PixelTextSize.caption,
+                        textSize: DisplayTextSize.caption,
                         width: 110,
                         height: 34,
                         onPressed: onBack,
@@ -477,7 +477,7 @@ class TutorialDialoguePanel extends StatelessWidget {
                         tokens: tokens,
                         backgroundAsset: chromeButtonPrimaryAsset,
                         textColor: tokens.colors.onAccent,
-                        textSize: PixelTextSize.caption,
+                        textSize: DisplayTextSize.caption,
                         width: 110,
                         height: 34,
                         onPressed: onNext,
@@ -574,10 +574,10 @@ class TutorialHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 1,
             children: [
-              PixelText(
+              DisplayText(
                 language.strings.tutorialdisplayForemanMisha,
-                size: PixelTextSize.caption,
-                variant: PixelTextVariant.heavy,
+                size: DisplayTextSize.caption,
+                variant: DisplayTextWeight.bold,
                 color: tokens.colors.gold,
               ),
               Text(
@@ -609,10 +609,10 @@ class TutorialHeader extends StatelessWidget {
                   color: tokens.colors.steel.withValues(alpha: 0.56),
                 ),
               ),
-              child: PixelText(
+              child: DisplayText(
                 'V',
-                size: PixelTextSize.caption,
-                variant: PixelTextVariant.heavy,
+                size: DisplayTextSize.caption,
+                variant: DisplayTextWeight.bold,
                 color: tokens.colors.creamDim,
               ),
             ),
@@ -632,10 +632,10 @@ class TutorialHeader extends StatelessWidget {
                 color: tokens.colors.steel.withValues(alpha: 0.56),
               ),
             ),
-            child: PixelText(
+            child: DisplayText(
               'X',
-              size: PixelTextSize.caption,
-              variant: PixelTextVariant.heavy,
+              size: DisplayTextSize.caption,
+              variant: DisplayTextWeight.bold,
               color: tokens.colors.creamDim,
             ),
           ),
@@ -681,10 +681,10 @@ class TutorialTip extends StatelessWidget {
                 color: tokens.colors.redBright.withValues(alpha: 0.58),
               ),
             ),
-            child: PixelText(
+            child: DisplayText(
               language.strings.tutorialdisplayTip,
-              size: PixelTextSize.caption,
-              variant: PixelTextVariant.heavy,
+              size: DisplayTextSize.caption,
+              variant: DisplayTextWeight.bold,
               color: tokens.colors.redBright,
             ),
           ),

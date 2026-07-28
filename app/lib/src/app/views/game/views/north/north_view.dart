@@ -7,7 +7,7 @@ import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.dart';
 
@@ -200,10 +200,10 @@ class FieldPlanNorthYearRow extends StatelessWidget {
             child: cards.isEmpty
                 ? Align(
                     alignment: Alignment.centerLeft,
-                    child: PixelText(
+                    child: DisplayText(
                       '-',
-                      size: PixelTextSize.title,
-                      variant: PixelTextVariant.heavy,
+                      size: DisplayTextSize.title,
+                      variant: DisplayTextWeight.bold,
                       color: tokens.colors.creamDim.withValues(alpha: 0.72),
                     ),
                   )
@@ -247,10 +247,10 @@ class FieldPlanNorthYearRow extends StatelessWidget {
                   ),
           ),
           const SizedBox(width: 7),
-          PixelText(
+          DisplayText(
             '${cards.length}',
-            size: PixelTextSize.caption,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.caption,
+            variant: DisplayTextWeight.bold,
             color: tokens.colors.cream,
           ),
         ],
@@ -312,10 +312,10 @@ class NorthYearColumn extends StatelessWidget {
                   filterQuality: FilterQuality.none,
                 ),
                 const Spacer(),
-                PixelText(
+                DisplayText(
                   '${cards.length}',
-                  size: PixelTextSize.cardRank,
-                  variant: PixelTextVariant.heavy,
+                  size: DisplayTextSize.cardRank,
+                  variant: DisplayTextWeight.bold,
                   color: tokens.colors.creamDim,
                 ),
               ],
@@ -479,10 +479,10 @@ class NorthEmptyYear extends StatelessWidget {
                 filterQuality: FilterQuality.none,
               ),
             ),
-            PixelText(
+            DisplayText(
               '-',
-              size: PixelTextSize.cardRank,
-              variant: PixelTextVariant.heavy,
+              size: DisplayTextSize.cardRank,
+              variant: DisplayTextWeight.bold,
               color: tokens.colors.smoke.withValues(alpha: 0.72),
             ),
           ],

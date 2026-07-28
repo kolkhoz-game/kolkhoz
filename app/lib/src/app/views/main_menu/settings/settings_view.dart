@@ -15,6 +15,8 @@ import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
+import 'package:kolkhoz_app/src/app/views/shared/printed_underlay.dart';
 import 'package:kolkhoz_app/src/app/remote_connection/json_shape.dart';
 import 'package:kolkhoz_app/src/app/profile/views/player_profile_panel.dart';
 import 'package:kolkhoz_app/src/app/views/shared/rule_content.dart';
@@ -139,54 +141,6 @@ class _ProfilePortraitChoice extends StatelessWidget {
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _RuleBlock extends StatelessWidget {
-  const _RuleBlock({
-    required this.tokens,
-    required this.title,
-    required this.body,
-  });
-
-  final DesignTokens tokens;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 98),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: tokens.colors.black.withValues(alpha: 0.20),
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: tokens.colors.steel.withValues(alpha: 0.45)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 6,
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: kolkhozFontStyle.copyWith(
-              color: tokens.colors.gold,
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          Text(
-            body,
-            style: kolkhozFontStyle.copyWith(
-              color: tokens.colors.creamDim,
-              fontSize: 15,
-              height: 1.12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -11,7 +11,6 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/game_ui_state.dar
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/players/player.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import '../game_commands.dart';
-import 'game_undo_snapshot.dart';
 import 'local_game_projection.dart';
 import 'native_game_engine.dart';
 
@@ -51,8 +50,6 @@ class LocalGameEngine implements GameEngine {
   final void Function() onPersist;
 
   NativeGameEngine engine;
-  final List<GameUndoSnapshot> _undoStack = [];
-  GameUndoSnapshot? _pendingUndoSnapshot;
   Timer? _automaticStepTimer;
   int? _automaticPhaseBefore;
   int _automaticRequisitionCountBefore = 0;
@@ -63,10 +60,10 @@ class LocalGameEngine implements GameEngine {
 
   @override
   GameEngineMode get mode => GameEngineMode.local;
+  @override
+  bool get humanActionInFlight => false;
 
   bool get hasScheduledAutomaticStep => _automaticStepTimer != null;
-  bool canUndo(String? phase) =>
-      phase == phaseAssignment && _undoStack.isNotEmpty;
 
   @override
   TableViewModel project() => projectLocalGame(
@@ -79,9 +76,6 @@ class LocalGameEngine implements GameEngine {
   @override
   void sendHumanAction(LegalAction action) {
     clearAutomaticStepTimer();
-    _pendingUndoSnapshot = action.kind == actionAssign
-        ? _snapshotForUndo()
-        : null;
     _send(
       SubmitGameAction(
         action: action.engineAction,
@@ -90,20 +84,33 @@ class LocalGameEngine implements GameEngine {
     );
   }
 
-  void undoLastAction() {
-    if (_undoStack.isEmpty) {
+  @override
+  void sendHumanActions(List<EngineAction> actions) {
+    if (actions.isEmpty) {
       return;
     }
     clearAutomaticStepTimer();
-    final snapshot = _undoStack.removeLast();
-    _replaceEngine(snapshot.engine);
-    actionLog = snapshot.actionLog;
-    gameLog = snapshot.localGameLog;
-    setUiState(snapshot.uiState);
-    setRevealedPlayerID(snapshot.revealedPlayerID);
-    setLastSyncedPhase(snapshot.lastSyncedPhase);
+    final rollback = engine.clone();
+    final transitions = <EngineTransitionEvent>[];
+    for (final action in actions) {
+      final encoded = cEngineAction(action);
+      final result = encoded == null ? -1 : engine.applyManual(encoded);
+      if (result != 0) {
+        _replaceEngine(rollback);
+        onError('Move rejected ($result)');
+        onStateChanged();
+        return;
+      }
+      transitions.addAll(engine.transitionEvents);
+    }
+    rollback.dispose();
+    actionLog = [...actionLog, ...actions];
+    gameLog = [...gameLog, ...actions];
+    setUiState(uiState().clearSelectionAfterAction(actions.last.kind));
     onError(null);
-    onGameUpdate(const GameEngineUpdate());
+    onGameUpdate(
+      GameEngineUpdate(action: actions.last, transitions: transitions),
+    );
     onStateChanged();
     onPersist();
   }
@@ -270,18 +277,10 @@ class LocalGameEngine implements GameEngine {
     final command = event.command;
     if (command is SubmitGameAction &&
         command.source == GameActionSource.human) {
-      final undoSnapshot = _pendingUndoSnapshot;
-      _pendingUndoSnapshot = null;
       if (!event.accepted) {
-        undoSnapshot?.dispose();
         onError('Move rejected (${event.errorCode})');
       } else {
         onError(null);
-        if (undoSnapshot != null) {
-          _undoStack.add(undoSnapshot);
-        } else {
-          clearUndoStack();
-        }
         actionLog = [...actionLog, command.action];
         gameLog = [...gameLog, command.action];
         setUiState(uiState().clearSelectionAfterAction(command.action.kind));
@@ -340,22 +339,6 @@ class LocalGameEngine implements GameEngine {
     }
   }
 
-  GameUndoSnapshot _snapshotForUndo() => GameUndoSnapshot(
-    engine: engine.clone(),
-    actionLog: List.of(actionLog),
-    localGameLog: List.of(gameLog),
-    uiState: uiState(),
-    revealedPlayerID: revealedPlayerID(),
-    lastSyncedPhase: lastSyncedPhase(),
-  );
-
-  void clearUndoStack() {
-    for (final snapshot in _undoStack) {
-      snapshot.dispose();
-    }
-    _undoStack.clear();
-  }
-
   @override
   void dispose() {
     if (_disposed) {
@@ -363,9 +346,6 @@ class LocalGameEngine implements GameEngine {
     }
     _disposed = true;
     clearAutomaticStepTimer();
-    clearUndoStack();
-    _pendingUndoSnapshot?.dispose();
-    _pendingUndoSnapshot = null;
     engine.dispose();
   }
 }

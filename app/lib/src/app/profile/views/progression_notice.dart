@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 
 class ProgressionNotice extends StatelessWidget {
   const ProgressionNotice({
@@ -43,11 +43,11 @@ class ProgressionNotice extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Flexible(
-              child: PixelText(
+              child: DisplayText(
                 message.toUpperCase(),
                 color: tokens.colors.cream,
-                size: PixelTextSize.caption,
-                variant: PixelTextVariant.heavy,
+                size: DisplayTextSize.caption,
+                variant: DisplayTextWeight.bold,
                 maxLines: 2,
               ),
             ),

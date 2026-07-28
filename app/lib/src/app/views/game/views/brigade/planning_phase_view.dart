@@ -8,7 +8,7 @@ import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.da
 import 'package:kolkhoz_app/src/app/views/game/views/plots/plots_view.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 
 class PlanningPhasePanel extends StatelessWidget {
   const PlanningPhasePanel({
@@ -143,13 +143,13 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
         mainAxisSize: MainAxisSize.min,
         spacing: 8,
         children: [
-          PixelText(
+          DisplayText(
             widget.language == KolkhozLanguage.en
                 ? 'REWARD REVEAL'
                 : 'ОТКРЫТИЕ НАГРАД',
             textAlign: TextAlign.center,
-            size: PixelTextSize.caption,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.caption,
+            variant: DisplayTextWeight.bold,
             color: widget.tokens.colors.gold,
           ),
           Row(
@@ -205,8 +205,9 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
                                       onPressed:
                                           option?.action != null &&
                                               widget.onAction != null
-                                          ? () =>
-                                                widget.onAction!(option!.action!)
+                                          ? () => widget.onAction!(
+                                              option!.action!,
+                                            )
                                           : null,
                                     );
                                   },
@@ -226,7 +227,7 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
                 ),
             ],
           ),
-          PixelText(
+          DisplayText(
             rewardsReady
                 ? widget.language.strings.boardviewChooseTrump
                 : (widget.language == KolkhozLanguage.en
@@ -234,8 +235,8 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
                       : 'ОТКРЫВАЕМ НАГРАДЫ…'),
             key: const Key('planning-reward-status'),
             textAlign: TextAlign.center,
-            size: PixelTextSize.xSmall,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.xSmall,
+            variant: DisplayTextWeight.bold,
             color: rewardsReady
                 ? widget.tokens.colors.gold
                 : widget.tokens.colors.cream,
@@ -327,11 +328,11 @@ class FinalTrumpRevealPanel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: 7,
         children: [
-          PixelText(
+          DisplayText(
             language == KolkhozLanguage.en ? 'REVEAL TRUMP' : 'ОТКРЫТЬ КОЗЫРЬ',
             textAlign: TextAlign.center,
-            size: PixelTextSize.caption,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.caption,
+            variant: DisplayTextWeight.bold,
             color: tokens.colors.gold,
           ),
           Row(
@@ -393,11 +394,11 @@ class PlanningTrumpPanel extends StatelessWidget {
         children: [
           SizedBox(
             width: planningTrumpPanelWidth,
-            child: PixelText(
+            child: DisplayText(
               title,
               textAlign: TextAlign.center,
-              size: PixelTextSize.caption,
-              variant: PixelTextVariant.heavy,
+              size: DisplayTextSize.caption,
+              variant: DisplayTextWeight.bold,
               color: isFamine ? tokens.colors.redBright : tokens.colors.gold,
               maxLines: 2,
               overflow: TextOverflow.clip,

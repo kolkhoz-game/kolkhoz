@@ -7,7 +7,7 @@ import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/shared/rule_content.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.dart';
@@ -84,9 +84,12 @@ enum OptionsMenuTab {
 
   String get iconAsset {
     return switch (this) {
-      OptionsMenuTab.assist => 'assets/ui/Icons/icon-settings-assist.png',
-      OptionsMenuTab.display => 'assets/ui/Icons/icon-settings-display.png',
-      OptionsMenuTab.rules => 'assets/ui/Icons/icon-settings-rules.png',
+      OptionsMenuTab.assist =>
+        'assets/art/field_plan/shared/pictograms/settings-assist.png',
+      OptionsMenuTab.display =>
+        'assets/art/field_plan/shared/pictograms/settings-display.png',
+      OptionsMenuTab.rules =>
+        'assets/art/field_plan/shared/pictograms/settings-rules.png',
     };
   }
 }
@@ -400,21 +403,21 @@ class OptionsMenuTabButton extends StatelessWidget {
   }
 }
 
-PixelTextSize _optionsMenuTabTextSize(double height) {
+DisplayTextSize _optionsMenuTabTextSize(double height) {
   final targetFontSize = height * 0.58;
   if (targetFontSize <= 10.5) {
-    return PixelTextSize.small;
+    return DisplayTextSize.small;
   }
   if (targetFontSize <= 12) {
-    return PixelTextSize.caption2;
+    return DisplayTextSize.caption2;
   }
   if (targetFontSize <= 15) {
-    return PixelTextSize.caption;
+    return DisplayTextSize.caption;
   }
   if (targetFontSize <= 18.5) {
-    return PixelTextSize.headline;
+    return DisplayTextSize.headline;
   }
-  return PixelTextSize.title;
+  return DisplayTextSize.title;
 }
 
 class OptionsMenuTabBody extends StatelessWidget {
@@ -530,7 +533,7 @@ class OptionsMenuHeader extends StatelessWidget {
         ),
         ChromePixelLabel(
           language.strings.boardOptionspanelMenu,
-          size: PixelTextSize.title,
+          size: DisplayTextSize.title,
           color: tokens.colors.gold,
         ),
       ],
@@ -594,8 +597,8 @@ class OptionsSessionControls extends StatelessWidget {
   Widget _sectionTitle(String text) {
     return ChromePixelLabel(
       text,
-      size: PixelTextSize.caption,
-      variant: PixelTextVariant.regular,
+      size: DisplayTextSize.caption,
+      variant: DisplayTextWeight.regular,
       color: tokens.colors.smoke,
     );
   }
@@ -629,7 +632,7 @@ class OptionsSessionControls extends StatelessWidget {
                   color: tokens.colors.gold.withValues(alpha: 0.42),
                 ),
                 textColor: tokens.colors.creamDim,
-                textSize: PixelTextSize.caption,
+                textSize: DisplayTextSize.caption,
                 onPressed: onTutorial,
                 iconAsset: fieldPlanHowToPlayPictogram.fieldPlanPath,
                 iconMuted: true,
@@ -652,7 +655,7 @@ class OptionsSessionControls extends StatelessWidget {
                   color: tokens.colors.steel.withValues(alpha: 0.5),
                 ),
                 textColor: tokens.colors.creamDim,
-                textSize: PixelTextSize.caption,
+                textSize: DisplayTextSize.caption,
                 onPressed: onReturnToLobby,
                 iconAsset: fieldPlanNavigationMenuPath,
                 iconMuted: true,
@@ -721,8 +724,8 @@ class OptionsAssistControls extends StatelessWidget {
       children: [
         ChromePixelLabel(
           language.strings.boardOptionspanelMoveHelp,
-          size: PixelTextSize.caption,
-          variant: PixelTextVariant.regular,
+          size: DisplayTextSize.caption,
+          variant: DisplayTextWeight.regular,
           color: tokens.colors.smoke,
         ),
         OptionsSettingToggle(
@@ -782,8 +785,8 @@ class OptionsDisplayControls extends StatelessWidget {
       children: [
         ChromePixelLabel(
           language.strings.boardOptionspanelDisplay,
-          size: PixelTextSize.caption,
-          variant: PixelTextVariant.regular,
+          size: DisplayTextSize.caption,
+          variant: DisplayTextWeight.regular,
           color: tokens.colors.smoke,
         ),
         Center(
@@ -792,20 +795,21 @@ class OptionsDisplayControls extends StatelessWidget {
             spacing: optionsMenuChromeToggleSpacing,
             children: [
               OptionsChromeToggle(
-                iconPath: 'assets/ui/Icons/${language.toggleIconAsset}',
+                iconPath: language.toggleIconAsset,
                 label: language.toggleTitle,
                 tokens: tokens,
                 onPressed: onLanguageToggle,
               ),
               OptionsChromeToggle(
-                iconPath: 'assets/ui/Icons/${appearance.toggleIconAsset}',
+                iconPath: appearance.toggleIconAsset,
                 label: appearance.toggleTitle(language),
                 tokens: tokens,
                 onPressed: onAppearanceToggle,
               ),
               OptionsChromeToggle(
-                iconPath:
-                    'assets/ui/Icons/icon-sound-${soundEnabled ? 'on' : 'off'}.png',
+                iconPath: soundEnabled
+                    ? 'assets/art/field_plan/shared/pictograms/sound-on.png'
+                    : 'assets/art/field_plan/shared/pictograms/sound-off.png',
                 label: language == KolkhozLanguage.en
                     ? soundEnabled
                           ? 'Mute sound cues'
@@ -863,8 +867,8 @@ class OptionsCardBackPicker extends StatelessWidget {
       children: [
         ChromePixelLabel(
           language.strings.appsettingsCardBacks,
-          size: PixelTextSize.caption,
-          variant: PixelTextVariant.regular,
+          size: DisplayTextSize.caption,
+          variant: DisplayTextWeight.regular,
           color: tokens.colors.smoke,
         ),
         Wrap(
@@ -1050,7 +1054,7 @@ class OptionsSettingToggle extends StatelessWidget {
                     children: [
                       ChromePixelLabel(
                         label,
-                        size: PixelTextSize.caption,
+                        size: DisplayTextSize.caption,
                         color: value ? tokens.colors.gold : foreground,
                       ),
                       Text(
@@ -1092,7 +1096,7 @@ class OptionsMenuRules extends StatelessWidget {
       children: [
         ChromePixelLabel(
           language.strings.boardOptionspanelRules,
-          size: PixelTextSize.headline,
+          size: DisplayTextSize.headline,
           color: tokens.colors.gold,
         ),
         for (final rule in optionsRuleSummaries)
@@ -1123,6 +1127,7 @@ class OptionsChromeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fieldPlanIcon = iconPath.startsWith('assets/art/field_plan/');
     return Tooltip(
       message: label,
       child: GestureDetector(
@@ -1143,7 +1148,10 @@ class OptionsChromeToggle extends StatelessWidget {
                 iconPath,
                 width: optionsChromeToggleIconSize,
                 height: optionsChromeToggleIconSize,
-                filterQuality: FilterQuality.none,
+                filterQuality: fieldPlanIcon
+                    ? FilterQuality.medium
+                    : FilterQuality.none,
+                isAntiAlias: fieldPlanIcon,
               ),
             ],
           ),
@@ -1184,7 +1192,7 @@ class AnimationSpeedControl extends StatelessWidget {
         children: [
           ChromePixelLabel(
             language.strings.boardOptionspanelAnimationSpeed,
-            size: PixelTextSize.caption,
+            size: DisplayTextSize.caption,
             color: tokens.colors.smoke,
           ),
           Row(
@@ -1247,7 +1255,7 @@ class AnimationSpeedSegment extends StatelessWidget {
             fit: BoxFit.scaleDown,
             child: ChromePixelLabel(
               animationSpeedLabel(speed, language),
-              size: PixelTextSize.caption2,
+              size: DisplayTextSize.caption2,
               color: color,
             ),
           ),
@@ -1303,7 +1311,7 @@ class MenuRuleRow extends StatelessWidget {
               children: [
                 ChromePixelLabel(
                   title.toUpperCase(),
-                  size: PixelTextSize.caption,
+                  size: DisplayTextSize.caption,
                   color: tokens.colors.gold,
                 ),
                 Text(

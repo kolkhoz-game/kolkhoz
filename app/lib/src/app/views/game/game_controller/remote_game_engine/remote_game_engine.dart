@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_engine.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/models/engine_action_projection.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_lobby.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_ui_state.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/game_session_models.dart';
@@ -68,6 +69,8 @@ class RemoteGameEngine implements GameEngine {
   OnlineSessionUpdate get update => _update;
   @override
   GameEngineMode get mode => GameEngineMode.remote;
+  @override
+  bool get humanActionInFlight => _channel.commandInFlight;
 
   OnlineReaction? get activeReaction => _activeReaction;
   bool get hasUnreadReactions => _hasUnreadReactions;
@@ -81,6 +84,26 @@ class RemoteGameEngine implements GameEngine {
     legalActions: _channel.commandInFlight ? const [] : _update.legalActions,
     uiState: uiState(),
   ).project();
+
+  @override
+  void sendHumanActions(List<EngineAction> actions) {
+    if (_channel.commandInFlight || actions.isEmpty) {
+      return;
+    }
+    final committedCardIDs = {
+      for (final assignment in _update.snapshot.pendingAssignments)
+        cardID(assignment.card.valueObject),
+    };
+    final pending = [
+      for (final action in actions)
+        if (action.kind != actionAssign ||
+            action.card == null ||
+            !committedCardIDs.contains(action.card!.id))
+          action,
+    ];
+    unawaited(_channel.send(SubmitGameActions(pending)));
+    onStateChanged();
+  }
 
   @override
   void sendHumanAction(LegalAction action) {
@@ -143,7 +166,8 @@ class RemoteGameEngine implements GameEngine {
           onStateChanged();
         }
       case GameCommandCompleted():
-        if (event.command is SubmitGameAction) {
+        if (event.command is SubmitGameAction ||
+            event.command is SubmitGameActions) {
           _selectionBeforeCommand = null;
           scheduleMicrotask(() {
             if (!_disposed) onStateChanged();
@@ -151,7 +175,8 @@ class RemoteGameEngine implements GameEngine {
         }
         onError(null);
       case GameCommandFailed():
-        if (event.command is SubmitGameAction) {
+        if (event.command is SubmitGameAction ||
+            event.command is SubmitGameActions) {
           final selection = _selectionBeforeCommand;
           _selectionBeforeCommand = null;
           if (selection != null) {
@@ -171,9 +196,10 @@ class RemoteGameEngine implements GameEngine {
     final previousRevision = _update.reactions.isEmpty
         ? 0
         : _update.reactions.last.revision;
-    _update = update;
-    onUpdate(update);
-    final newRemoteReactions = update.reactions.where(
+    final acceptedUpdate = update.retainingPlayerProfilesFrom(_update);
+    _update = acceptedUpdate;
+    onUpdate(acceptedUpdate);
+    final newRemoteReactions = acceptedUpdate.reactions.where(
       (reaction) =>
           reaction.revision > previousRevision && reaction.playerID != playerID,
     );

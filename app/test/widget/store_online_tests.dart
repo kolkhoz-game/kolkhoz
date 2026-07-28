@@ -1,6 +1,167 @@
 part of '../widget_test.dart';
 
+GamePresentationTransition soundTransition({
+  int id = 1,
+  required TableViewModel before,
+  required TableViewModel after,
+  EngineAction? action,
+  EngineTransitionEvent? event,
+  bool startsUpdate = false,
+  List<String> assignmentCardIDs = const [],
+  Map<String, String> assignmentTargets = const {},
+}) => GamePresentationTransition(
+  id: id,
+  before: before,
+  after: after,
+  action: action,
+  event: event,
+  startsUpdate: startsUpdate,
+  assignmentCardIDs: assignmentCardIDs,
+  assignmentTargets: assignmentTargets,
+);
+
+EngineTransitionEvent playedCardTransition({
+  required int playerID,
+  required int suit,
+  required int value,
+}) => EngineTransitionEvent(
+  kind: kcTransitionCardMoved,
+  playerID: playerID,
+  card: EngineCardValue(suit: suit, value: value),
+  fromZone: kcObjectZoneHand,
+  toZone: kcObjectZoneCurrentTrick,
+  fromOwner: playerID,
+  toOwner: playerID,
+  targetSuit: -1,
+);
+
+Map<String, Object?> assignmentOnlineUpdateJson({
+  int revision = 0,
+  List<Map<String, Object?>> pendingAssignments = const [],
+  bool submitted = false,
+}) {
+  final json = onlineUpdateJson();
+  final cards = [
+    onlineCardJson(0, 9),
+    onlineCardJson(1, 10),
+    onlineCardJson(2, 11),
+    onlineCardJson(3, 12),
+  ];
+  json['actionLogCount'] = revision;
+  json['legalActions'] = submitted
+      ? <Object?>[]
+      : [
+          for (final card in cards)
+            for (var targetSuit = 0; targetSuit < 4; targetSuit++)
+              OnlineEngineAction(
+                kind: kcActionAssign,
+                playerID: 0,
+                card: OnlineEngineCard.fromJson(card),
+                targetSuit: targetSuit,
+              ).toJson(),
+        ];
+  final snapshot = json['snapshot'] as Map<String, Object?>;
+  snapshot['phase'] = submitted ? kcPhaseRequisition : kcPhaseAssignment;
+  snapshot['currentPlayer'] = 0;
+  snapshot['waitingPlayer'] = 0;
+  snapshot['lastWinner'] = 0;
+  snapshot['lastTrick'] = [
+    for (final (playerID, card) in cards.indexed)
+      {'playerID': playerID, 'card': card},
+  ];
+  snapshot['pendingAssignments'] = pendingAssignments;
+  snapshot['transitionEvents'] = <Object?>[];
+  return json;
+}
+
+class AssignmentDraftFakeOnlineHttpClient extends FakeOnlineHttpClient {
+  int revision = 0;
+  final List<Map<String, Object?>> pendingAssignments = [];
+
+  List<FakeOnlineRequestRecord> get actionRequests => requests
+      .where((request) => request.route.endsWith('/actions'))
+      .toList(growable: false);
+
+  @override
+  FakeOnlineHttpClientResponse route(
+    String method,
+    Uri uri,
+    String body,
+    Map<String, List<Object>> headers,
+  ) {
+    if (method == 'POST' && uri.path == '/sessions') {
+      requests.add(
+        FakeOnlineRequestRecord(
+          method: method,
+          uri: uri,
+          body: body,
+          headers: headers,
+        ),
+      );
+      return FakeOnlineHttpClientResponse.json({
+        'sessionID': '11111111-1111-1111-1111-111111111111',
+        'inviteCode': 'ABCDE',
+        'playerID': 0,
+        'seatToken': 'seat-token-0',
+        'update': assignmentOnlineUpdateJson(),
+      });
+    }
+    if (method == 'POST' && uri.path.endsWith('/actions')) {
+      requests.add(
+        FakeOnlineRequestRecord(
+          method: method,
+          uri: uri,
+          body: body,
+          headers: headers,
+        ),
+      );
+      final action = jsonDecode(body) as Map<String, Object?>;
+      final actionJson = action['action'] as Map<String, Object?>;
+      revision += 1;
+      final submitted = actionJson['kind'] == kcActionSubmitAssignments;
+      if (!submitted) {
+        pendingAssignments.add({
+          'card': actionJson['card']!,
+          'targetSuit': actionJson['targetSuit']!,
+        });
+      }
+      return FakeOnlineHttpClientResponse.json(
+        assignmentOnlineUpdateJson(
+          revision: revision,
+          pendingAssignments: pendingAssignments,
+          submitted: submitted,
+        ),
+      );
+    }
+    return super.route(method, uri, body, headers);
+  }
+}
+
 void registerStoreAndOnlineTests() {
+  testWidgets('deadline countdown ticks locally without network rebuilds', (
+    tester,
+  ) async {
+    final deadline =
+        tester.binding.clock.now().millisecondsSinceEpoch / 1000.0 + 2.0;
+    Widget countdown() => MaterialApp(
+      home: DeadlineCountdownBuilder(
+        deadlineEpochSeconds: deadline,
+        now: tester.binding.clock.now,
+        builder: (context, seconds) => Text('$seconds'),
+      ),
+    );
+
+    await tester.pumpWidget(countdown());
+    expect(find.text('2'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 1100));
+    expect(find.text('1'), findsOneWidget);
+
+    await tester.pumpWidget(countdown());
+    await tester.pump(const Duration(milliseconds: 1000));
+    expect(find.text('0'), findsOneWidget);
+  });
+
   test('bot assignments stay on Brigade while cards fly to job gauges', () {
     final base = runtimeModel();
     final assignedCard = testCard(
@@ -308,6 +469,7 @@ void registerStoreAndOnlineTests() {
         states.every((state) => state.panels.active == panelBrigade),
         isTrue,
       );
+      expect(needsFinalPresentationBoundary(states.last, after), isTrue);
     },
   );
 
@@ -691,6 +853,35 @@ void registerStoreAndOnlineTests() {
     expect(seat.ready, isTrue);
   });
 
+  test('active online updates retain remote names across partial packets', () {
+    final namedJson = onlineUpdateJson();
+    namedJson['playerProfiles'] = [
+      {
+        'playerID': 1,
+        'userID': 'user-1',
+        'displayName': 'Bingie',
+        'avatarURL': 'worker2',
+      },
+    ];
+    final namedUpdate = OnlineSessionUpdate.fromJson(namedJson);
+    final partialJson = onlineUpdateJson();
+    partialJson['actionLogCount'] = 1;
+    partialJson.remove('playerProfiles');
+
+    final retainedUpdate = OnlineSessionUpdate.fromJson(
+      partialJson,
+    ).retainingPlayerProfilesFrom(namedUpdate);
+    final model = OnlineTableProjection(
+      update: retainedUpdate,
+      lobby: gameLobbyFromOnlineUpdate(retainedUpdate, viewerSeatID: 0),
+      playerID: 0,
+      legalActions: const [],
+    ).project();
+
+    expect(retainedUpdate.playerProfiles.single.displayName, 'Bingie');
+    expect(model.table.seats[1].name, 'Bingie');
+  });
+
   testWidgets(
     'game controller owns four players and routes Central Planner reveals',
     (tester) async {
@@ -704,6 +895,7 @@ void registerStoreAndOnlineTests() {
       )..animationSpeed = GameAnimationSpeed.instant;
       addTearDown(store.dispose);
       expect(store.lifecycle, GameControllerLifecycle.lobby);
+      expect(store.hasActiveLocalGame, isFalse);
       expect(store.model, isNull);
       expect(store.lobby.seats, hasLength(4));
       expect(store.lobby.players, orderedEquals(store.players));
@@ -724,6 +916,7 @@ void registerStoreAndOnlineTests() {
       );
       store.startGame(persist: false);
 
+      expect(store.hasActiveLocalGame, isTrue);
       expect(store.players, hasLength(4));
       expect(store.players[0], isA<HumanPlayer>());
       expect(store.players[1], isA<HeuristicAIPlayer>());
@@ -832,6 +1025,7 @@ void registerStoreAndOnlineTests() {
         actionSwap: 3,
         actionUndoSwap: 4,
       };
+      var verifiedLocalAssignmentDraft = false;
       for (var guard = 0; guard < 1000; guard += 1) {
         final transition = store.currentTransition;
         if (transition != null) {
@@ -846,13 +1040,44 @@ void registerStoreAndOnlineTests() {
                 (priority[left.kind] ?? 9).compareTo(priority[right.kind] ?? 9),
           );
         if (actions.isNotEmpty) {
-          store.applyLegalAction(actions.first);
+          final selectedAssignmentCardID =
+              store.model?.selection.assignmentCardID;
+          final action =
+              actions.first.kind == actionAssign &&
+                  selectedAssignmentCardID != null
+              ? actions.firstWhere(
+                  (candidate) =>
+                      candidate.kind == actionAssign &&
+                      candidate.engineAction.card?.id ==
+                          selectedAssignmentCardID,
+                )
+              : actions.first;
+          if (!verifiedLocalAssignmentDraft && action.kind == actionAssign) {
+            final actionCount = store.actionLog.length;
+            store.applyLegalAction(action);
+            expect(store.actionLog, hasLength(actionCount));
+            expect(store.canUndo, isTrue);
+            store.undoLastAction();
+            expect(store.actionLog, hasLength(actionCount));
+            store.applyLegalAction(action);
+            verifiedLocalAssignmentDraft = true;
+          } else {
+            store.applyLegalAction(action);
+          }
         }
         await tester.pump(const Duration(milliseconds: 1));
       }
 
       final finished = store.finishedGameLobby;
-      expect(store.lifecycle, GameControllerLifecycle.finished);
+      expect(
+        store.lifecycle,
+        GameControllerLifecycle.finished,
+        reason:
+            'phase=${store.model?.table.phase} error=${store.error} '
+            'actions=${store.actionLog.length} legal='
+            '${store.model?.legalActions.map((action) => action.kind).toList()}',
+      );
+      expect(verifiedLocalAssignmentDraft, isTrue);
       expect(store.hasActiveEngine, isFalse);
       expect(finished, isNotNull);
       expect(finished!.model.table.phase, phaseGameOver);
@@ -1061,7 +1286,7 @@ void registerStoreAndOnlineTests() {
     expect(onlineGameRealtimeRefreshInterval, const Duration(seconds: 15));
   });
 
-  test('game sound cues follow authoritative action and phase transitions', () {
+  test('game sound cues follow presented events and phase transitions', () {
     final trick = runtimeModelWith(
       phase: phaseTrick,
       selection: SelectionState.empty,
@@ -1077,68 +1302,64 @@ void registerStoreAndOnlineTests() {
       selection: SelectionState.empty,
       jobs: runtimeModel().table.jobs,
     );
-    const play = EngineAction(
-      kind: actionPlayCard,
-      playerID: 0,
-      card: EngineCard(suit: 'wheat', value: 9),
-    );
-    const assign = EngineAction(
-      kind: actionAssign,
-      playerID: 0,
-      card: EngineCard(suit: 'wheat', value: 9),
-      targetSuit: 'wheat',
-    );
-    const submitAssignments = EngineAction(
-      kind: actionSubmitAssignments,
-      playerID: 0,
-    );
 
     expect(
       gameSoundCueForTransition(
-        previous: trick,
-        next: trick,
-        previousActionCount: 0,
-        actions: const [play],
+        transition: soundTransition(
+          before: trick,
+          after: trick,
+          event: playedCardTransition(playerID: 0, suit: 0, value: 9),
+        ),
       ),
       GameSoundCue.cardPlay,
     );
     expect(
       gameSoundCueForTransition(
-        previous: trick,
-        next: assignment,
-        previousActionCount: 0,
-        actions: const [play],
+        transition: soundTransition(before: trick, after: assignment),
       ),
       GameSoundCue.trickWin,
     );
     expect(
       gameSoundCueForTransition(
-        previous: assignment,
-        next: assignment,
-        previousActionCount: 0,
-        actions: const [assign],
+        transition: soundTransition(before: assignment, after: assignment),
       ),
       isNull,
     );
     expect(
       gameSoundCueForTransition(
-        previous: assignment,
-        next: assignment,
-        previousActionCount: 0,
-        actions: const [submitAssignments],
+        transition: soundTransition(before: assignment, after: trick),
       ),
       GameSoundCue.assignment,
     );
     expect(
       gameSoundCueForTransition(
-        previous: assignment,
-        next: requisition,
-        previousActionCount: 1,
-        actions: const [assign],
+        transition: soundTransition(before: assignment, after: requisition),
       ),
       GameSoundCue.requisition,
     );
   });
+
+  test(
+    'game sound cues follow queued events without consulting later actions',
+    () {
+      final trick = runtimeModelWith(
+        phase: phaseTrick,
+        selection: SelectionState.empty,
+        jobs: runtimeModel().table.jobs,
+      );
+      expect(
+        gameSoundCueForTransition(
+          transition: soundTransition(
+            id: 7,
+            before: trick,
+            after: trick,
+            event: playedCardTransition(playerID: 2, suit: 0, value: 9),
+          ),
+        ),
+        GameSoundCue.cardPlay,
+      );
+    },
+  );
 
   test('face-card voices replace only the standard card-play sound', () {
     const voice = 'audio/voice_lines/jack-wheat.wav';
@@ -1159,32 +1380,26 @@ void registerStoreAndOnlineTests() {
       selection: SelectionState.empty,
       jobs: runtimeModel().table.jobs,
     );
-    const potato = EngineAction(
-      kind: actionAssign,
-      playerID: 0,
-      card: EngineCard(suit: 'potato', value: 9),
-      targetSuit: 'potato',
-    );
     expect(
       assignmentWorkAssetsForTransition(
-        previous: model,
-        previousActionCount: 0,
-        actions: const [potato],
+        transition: soundTransition(
+          before: model,
+          after: model,
+          assignmentCardIDs: const ['potato-9'],
+          assignmentTargets: const {'potato-9': 'potato'},
+        ),
       ),
       const ['audio/assignment_potato.wav'],
     );
 
-    const saboteur = EngineAction(
-      kind: actionAssign,
-      playerID: 0,
-      card: EngineCard(suit: wreckerSuit, value: 0),
-      targetSuit: 'beet',
-    );
     expect(
       assignmentWorkAssetsForTransition(
-        previous: model,
-        previousActionCount: 0,
-        actions: const [saboteur],
+        transition: soundTransition(
+          before: model,
+          after: model,
+          assignmentCardIDs: const ['wrecker-0'],
+          assignmentTargets: const {'wrecker-0': 'beet'},
+        ),
       ),
       const ['audio/assignment_beet.wav', 'audio/assignment_saboteur.wav'],
     );
@@ -1210,17 +1425,13 @@ void registerStoreAndOnlineTests() {
         winnerSeatID: null,
       ),
     );
-    const queenAction = EngineAction(
-      kind: actionPlayCard,
-      playerID: 2,
-      card: EngineCard(suit: 'sunflower', value: 12),
-    );
     expect(
       faceCardVoiceAssetForTransition(
-        previous: base,
-        next: ordinaryQueen,
-        previousActionCount: 0,
-        actions: const [queenAction],
+        transition: soundTransition(
+          before: base,
+          after: ordinaryQueen,
+          event: playedCardTransition(playerID: 2, suit: 1, value: 12),
+        ),
       ),
       'audio/voice_lines/queen-sunflower.wav',
     );
@@ -1244,17 +1455,13 @@ void registerStoreAndOnlineTests() {
         winnerSeatID: 1,
       ),
     );
-    const kingAction = EngineAction(
-      kind: actionPlayCard,
-      playerID: 1,
-      card: EngineCard(suit: 'beet', value: 13),
-    );
     expect(
       faceCardVoiceAssetForTransition(
-        previous: base,
-        next: nomenklaturaKing,
-        previousActionCount: 0,
-        actions: const [kingAction],
+        transition: soundTransition(
+          before: base,
+          after: nomenklaturaKing,
+          event: playedCardTransition(playerID: 1, suit: 3, value: 13),
+        ),
       ),
       'audio/voice_lines/nomenklatura-king-beet.wav',
     );
@@ -1278,31 +1485,23 @@ void registerStoreAndOnlineTests() {
         jobs: runtimeModel().table.jobs,
         year: 1,
       );
-      const saboteur = EngineAction(
-        kind: actionPlayCard,
-        playerID: 1,
-        card: EngineCard(suit: wreckerSuit, value: 0),
-      );
       expect(
         faceCardVoiceAssetForTransition(
-          previous: yearOne,
-          next: yearOne,
-          previousActionCount: 0,
-          actions: const [saboteur],
+          transition: soundTransition(
+            before: yearOne,
+            after: yearOne,
+            event: playedCardTransition(playerID: 1, suit: 4, value: 0),
+          ),
         ),
         'audio/voice_lines/saboteur-wrench.wav',
       );
-      const numberCard = EngineAction(
-        kind: actionPlayCard,
-        playerID: 0,
-        card: EngineCard(suit: 'wheat', value: 10),
-      );
       expect(
         faceCardVoiceAssetForTransition(
-          previous: yearOne,
-          next: yearOne,
-          previousActionCount: 0,
-          actions: const [numberCard],
+          transition: soundTransition(
+            before: yearOne,
+            after: yearOne,
+            event: playedCardTransition(playerID: 0, suit: 0, value: 10),
+          ),
         ),
         isNull,
       );
@@ -1327,9 +1526,9 @@ void registerStoreAndOnlineTests() {
     ]);
     expect(englishPresetLabels, isNot(contains('Saboteur')));
     expect(OptionsMenuTab.values.map((tab) => tab.iconAsset), [
-      'assets/ui/Icons/icon-settings-assist.png',
-      'assets/ui/Icons/icon-settings-display.png',
-      'assets/ui/Icons/icon-settings-rules.png',
+      'assets/art/field_plan/shared/pictograms/settings-assist.png',
+      'assets/art/field_plan/shared/pictograms/settings-display.png',
+      'assets/art/field_plan/shared/pictograms/settings-rules.png',
     ]);
     expect(
       variantsFromJson(variantsToJson(KolkhozGameVariants.kolkhoz)).wreckerCard,
@@ -1479,8 +1678,22 @@ void registerStoreAndOnlineTests() {
     expect(const KolkhozAppSettings().displayName, defaultProfileDisplayName);
     expect(const KolkhozAppSettings().cardBack, KolkhozCardBack.classic);
     expect(KolkhozCardBack.fromStoredValue('missing'), KolkhozCardBack.classic);
-    expect(KolkhozAppearance.dark.toggleIconAsset, 'icon-appearance-light.png');
-    expect(KolkhozAppearance.light.toggleIconAsset, 'icon-appearance-dark.png');
+    expect(
+      KolkhozLanguage.ru.toggleIconAsset,
+      'assets/art/field_plan/shared/pictograms/language-en.png',
+    );
+    expect(
+      KolkhozLanguage.en.toggleIconAsset,
+      'assets/art/field_plan/shared/pictograms/language-ru.png',
+    );
+    expect(
+      KolkhozAppearance.dark.toggleIconAsset,
+      'assets/art/field_plan/shared/pictograms/appearance-light.png',
+    );
+    expect(
+      KolkhozAppearance.light.toggleIconAsset,
+      'assets/art/field_plan/shared/pictograms/appearance-dark.png',
+    );
     expect(
       const KolkhozAppSettings().portraitAsset,
       defaultProfilePortraitAsset,
@@ -1888,16 +2101,6 @@ void registerStoreAndOnlineTests() {
     },
   );
 
-  test('store rollback undo is limited to pending assignment edits', () {
-    expect(actionCapturesUndoSnapshot(actionAssign), isTrue);
-    expect(actionCapturesUndoSnapshot(actionPlayCard), isFalse);
-    expect(actionCapturesUndoSnapshot(actionSwap), isFalse);
-    expect(actionCapturesUndoSnapshot(actionUndoSwap), isFalse);
-    expect(actionCapturesUndoSnapshot(actionConfirmSwap), isFalse);
-    expect(actionCapturesUndoSnapshot(actionSubmitAssignments), isFalse);
-    expect(actionCapturesUndoSnapshot(actionContinueAfterRequisition), isFalse);
-  });
-
   test('assignment helper resolves selected card and job to real action', () {
     final model = assignmentModel(selectedCardID: 'wheat-9');
     final wheatJob = model.table.jobs.first;
@@ -1960,6 +2163,143 @@ void registerStoreAndOnlineTests() {
     ]);
     expect(action?.engineAction.card?.id, 'beet-10');
     expect(action?.engineAction.targetSuit, 'wheat');
+  });
+
+  test(
+    'online assignment draft stays local and enables confirm at four cards',
+    () {
+      final cards = [
+        testCard(id: 'wheat-9', suit: 'wheat', value: 9),
+        testCard(id: 'sunflower-10', suit: 'sunflower', value: 10),
+        testCard(id: 'potato-11', suit: 'potato', value: 11),
+        testCard(id: 'beet-12', suit: 'beet', value: 12),
+      ];
+      final model = runtimeModelWith(
+        phase: phaseAssignment,
+        selection: SelectionState.empty,
+        jobs: assignmentModel(selectedCardID: null).table.jobs,
+        lastTrick: Trick(
+          plays: [
+            for (final (index, card) in cards.indexed)
+              TrickPlay(seatID: index, card: card),
+          ],
+          winnerSeatID: 0,
+        ),
+        legalActions: assignmentModel(selectedCardID: null).legalActions,
+      );
+      final draft = [
+        for (final card in cards)
+          EngineAction(
+            kind: actionAssign,
+            playerID: 0,
+            card: EngineCard(suit: card.suit, value: card.value),
+            targetSuit: 'wheat',
+          ),
+      ];
+
+      final partial = withAssignmentDraft(
+        model,
+        draft.take(3),
+        playerID: 0,
+        canSubmit: true,
+      );
+      expect(assignmentControlCards(partial).map((card) => card.id), [
+        'beet-12',
+      ]);
+      expect(partial.table.jobs.first.assignedCards, hasLength(3));
+      expect(
+        partial.legalActions.any(
+          (action) => action.kind == actionSubmitAssignments,
+        ),
+        isFalse,
+      );
+
+      final complete = withAssignmentDraft(
+        model,
+        draft,
+        playerID: 0,
+        canSubmit: true,
+      );
+      expect(assignmentControlCards(complete), isEmpty);
+      expect(complete.table.jobs.first.assignedCards, hasLength(4));
+      expect(
+        complete.legalActions
+            .singleWhere((action) => action.kind == actionSubmitAssignments)
+            .engineAction
+            .playerID,
+        0,
+      );
+    },
+  );
+
+  test('online assignments reach the server only after confirmation', () async {
+    final httpClient = AssignmentDraftFakeOnlineHttpClient();
+    final store = GameController(
+      autosaveEnabled: false,
+      remoteGameEngineFactory: RemoteGameEngineFactory(
+        testGameRemoteConnection(
+          httpClient,
+          webSocketConnector: (_, _) async =>
+              throw const SocketException('offline'),
+        ),
+      ),
+    );
+    addTearDown(store.dispose);
+    await store.startOnlineGame(ranked: false, browserJoinable: false);
+
+    void assign(String cardID) {
+      store.selectAssignmentCard(cardID);
+      final action = assignmentActionForJob(
+        store.model!,
+        store.model!.table.jobs.first,
+      );
+      expect(action, isNotNull);
+      store.applyLegalAction(action!);
+    }
+
+    assign('wheat-9');
+    expect(store.canUndo, isTrue);
+    expect(httpClient.actionRequests, isEmpty);
+    store.undoLastAction();
+    expect(
+      assignmentControlCards(store.model!).map((card) => card.id),
+      contains('wheat-9'),
+    );
+    expect(store.model!.selection.assignmentCardID, 'wheat-9');
+    expect(httpClient.actionRequests, isEmpty);
+
+    for (final cardID in ['wheat-9', 'sunflower-10', 'potato-11', 'beet-12']) {
+      assign(cardID);
+    }
+    expect(assignmentControlCards(store.model!), isEmpty);
+    expect(httpClient.actionRequests, isEmpty);
+
+    final confirm = store.model!.legalActions.singleWhere(
+      (action) => action.kind == actionSubmitAssignments,
+    );
+    store.applyLegalAction(confirm);
+    for (
+      var attempts = 0;
+      attempts < 20 && httpClient.actionRequests.length < 5;
+      attempts++
+    ) {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+
+    expect(
+      httpClient.actionRequests.map((request) {
+        final body = jsonDecode(request.body) as Map<String, Object?>;
+        return (body['action'] as Map<String, Object?>)['kind'];
+      }),
+      [
+        kcActionAssign,
+        kcActionAssign,
+        kcActionAssign,
+        kcActionAssign,
+        kcActionSubmitAssignments,
+      ],
+    );
+    expect(store.onlineUpdate!.snapshot.phase, kcPhaseRequisition);
   });
 
   test(

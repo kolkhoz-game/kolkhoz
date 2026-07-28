@@ -18,6 +18,7 @@ import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/engine_values.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/commerce.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/settings/game_sound.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_view.dart';
@@ -39,6 +40,80 @@ import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_view.dart';
 export 'package:kolkhoz_app/src/app/views/main_menu/main_menu_view.dart';
 export 'package:kolkhoz_app/src/app/navigation/app_navigation_controller.dart'
     show KolkhozGameLaunchOrigin;
+
+ThemeData kolkhozTheme(DesignTokens tokens) {
+  final brightness = tokens.usesLightAppearance
+      ? Brightness.light
+      : Brightness.dark;
+  final colorScheme = ColorScheme(
+    brightness: brightness,
+    primary: tokens.colors.goldBright,
+    onPrimary: tokens.colors.onAccent,
+    secondary: tokens.colors.red,
+    onSecondary: tokens.colors.onAccent,
+    error: tokens.colors.redBright,
+    onError: tokens.colors.onAccent,
+    surface: tokens.colors.panel,
+    onSurface: tokens.colors.cream,
+  );
+  final base = ThemeData(
+    brightness: brightness,
+    colorScheme: colorScheme,
+    fontFamily: fieldPlanBodyFontFamily,
+  );
+  final bodyStyle = kolkhozFontStyle.copyWith(color: tokens.colors.cream);
+  final actionStyle = kolkhozFontStyle.copyWith(fontWeight: FontWeight.w800);
+  return base.copyWith(
+    scaffoldBackgroundColor: tokens.colors.background,
+    canvasColor: tokens.colors.panel,
+    cardColor: tokens.colors.panel,
+    dividerColor: tokens.colors.steel,
+    disabledColor: tokens.colors.smoke.withValues(alpha: 0.56),
+    textTheme: base.textTheme.apply(
+      fontFamily: fieldPlanBodyFontFamily,
+      bodyColor: tokens.colors.cream,
+      displayColor: tokens.colors.cream,
+    ),
+    iconTheme: IconThemeData(color: tokens.colors.cream),
+    dialogTheme: DialogThemeData(
+      backgroundColor: tokens.colors.panel,
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: bodyStyle.copyWith(
+        color: tokens.colors.gold,
+        fontSize: 21,
+        fontWeight: FontWeight.w900,
+      ),
+      contentTextStyle: bodyStyle.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: tokens.colors.goldBright,
+        disabledForegroundColor: tokens.colors.smoke,
+        textStyle: actionStyle,
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: tokens.colors.goldBright,
+      linearTrackColor: tokens.colors.black.withValues(alpha: 0.3),
+      circularTrackColor: tokens.colors.black.withValues(alpha: 0.3),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      labelStyle: bodyStyle.copyWith(color: tokens.colors.creamDim),
+      floatingLabelStyle: bodyStyle.copyWith(color: tokens.colors.gold),
+      hintStyle: bodyStyle.copyWith(
+        color: tokens.colors.creamDim.withValues(alpha: 0.72),
+      ),
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: tokens.colors.redDark,
+      selectionColor: tokens.colors.gold.withValues(alpha: 0.35),
+      selectionHandleColor: tokens.colors.gold,
+    ),
+  );
+}
 
 Future<bool> showGameControlConfirmation({
   required BuildContext context,
@@ -227,8 +302,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
   String? activeInviteDialogSessionID;
   String? recordedGameStatsKey;
   String? handledIdentityUserID;
-  TableViewModel? previousSoundModel;
-  int previousSoundActionCount = 0;
+  int? handledSoundTransitionID;
   bool onlineSessionCreatedByLocalPlayer = false;
   String? foremanHint;
   Timer? foremanHintTimer;
@@ -247,6 +321,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
       .byName(navigationController.settingsSection.name);
   bool get showingTutorial => navigationController.showingTutorial;
   bool get showingLobby => destination != AppDestination.game;
+  bool get showingHome => destination == AppDestination.home;
   bool get showingRules => destination == AppDestination.rules;
   bool get showingOnline => destination == AppDestination.online;
   bool get showingProfile => destination == AppDestination.profile;
@@ -403,6 +478,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = settings.appearance.tokens;
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
@@ -410,12 +486,9 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
       locale: Locale(settings.language.name),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(
-        fontFamily: 'Handjet',
-        textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Handjet'),
-      ),
+      theme: kolkhozTheme(tokens),
       builder: (context, child) => DefaultTextStyle.merge(
-        style: kolkhozFontStyle,
+        style: kolkhozFontStyle.copyWith(color: tokens.colors.cream),
         child: Stack(
           children: [
             child ?? const SizedBox.shrink(),
@@ -578,6 +651,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
               confirmMainMenu: settings.confirmMainMenu,
               showInvalidTapHints: settings.showInvalidTapHints,
               soundEnabled: settings.soundEnabled,
+              showingHome: showingHome,
               showingRules: showingRules,
               showingOnline: showingOnline,
               showingProfile: showingProfile,
@@ -631,6 +705,11 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
                   launchOrigin: KolkhozGameLaunchOrigin.created,
                 );
               },
+              onResumeLocalGame: store.hasActiveLocalGame
+                  ? () => navigationController.showGame(
+                      launchOrigin: KolkhozGameLaunchOrigin.created,
+                    )
+                  : null,
               onRememberStartedSetup: rememberStartedSetup,
               onPresetChanged: (preset) {
                 if (demoMode) {
@@ -760,6 +839,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
                   canSendReaction: store.canSendReaction,
                   onReaction: store.sendReaction,
                   activeReaction: store.activeReaction,
+                  turnDeadlineAt: store.onlineUpdate?.turnDeadlineAt,
                   gameOverReturnsToLobby:
                       store.onlineUpdate?.tournament != null ||
                       !(store.isOnlineGame &&
@@ -995,27 +1075,17 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
       navigationController.showGame();
     }
     final model = store.model;
-    if (model != null) {
-      final actions = store.gameLogActions;
-      final cue = gameSoundCueForTransition(
-        previous: previousSoundModel,
-        next: model,
-        previousActionCount: previousSoundActionCount,
-        actions: actions,
-      );
+    final soundTransition = store.currentTransition;
+    if (soundTransition != null &&
+        soundTransition.id != handledSoundTransitionID) {
+      handledSoundTransitionID = soundTransition.id;
+      final cue = gameSoundCueForTransition(transition: soundTransition);
       final faceCardVoice = faceCardVoiceAssetForTransition(
-        previous: previousSoundModel,
-        next: model,
-        previousActionCount: previousSoundActionCount,
-        actions: actions,
+        transition: soundTransition,
       );
       final assignmentWorkAssets = assignmentWorkAssetsForTransition(
-        previous: previousSoundModel,
-        previousActionCount: previousSoundActionCount,
-        actions: actions,
+        transition: soundTransition,
       );
-      previousSoundModel = model;
-      previousSoundActionCount = actions.length;
       unawaited(
         gameSounds.play(gameSoundCueWithVoiceOverride(cue, faceCardVoice)),
       );
@@ -1125,7 +1195,9 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
 
   void returnToLobby() {
     clearForemanHint();
-    store.leaveOnlineGame();
+    if (!store.hasActiveLocalGame) {
+      store.leaveOnlineGame();
+    }
     setState(() => onlineSessionCreatedByLocalPlayer = false);
     navigationController.returnFromGame();
   }

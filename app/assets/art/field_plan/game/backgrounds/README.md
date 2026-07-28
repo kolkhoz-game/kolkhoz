@@ -25,3 +25,22 @@ brigade and plots.
 `north-light.png` is the North layer above the fields. A second upward swipe reveals
 the barracks and the five-year exile archive; downward swipes retrace the route through
 the fields to the brigade and plots.
+
+## Static-hero day/night plates
+
+The production game panels use registered 1920 x 800 static-hero plates:
+
+- `static-hero-brigade-underlay-v1.png` and
+  `static-hero-brigade-underlay-night-v1.png`
+- `static-hero-fields-underlay-v1.png` and
+  `static-hero-fields-underlay-night-v1.png`
+- `static-hero-north-underlay-v1.png` and
+  `static-hero-north-underlay-night-v1.png`
+
+The night companions were produced with the built-in image editor on 2026-07-28 using
+the matching day plate as strict composition authority. The edit changed only
+time-of-day, illumination, and palette: moonlit indigo/blue-gray terrain, restrained
+amber practical lights, and preserved aged-lithograph texture. Geometry, crop,
+perspective, field boundaries, structures, route elements, and overlay-safe regions
+remain registered to the day plates. The generated 1942 x 809 outputs were normalized
+to the locked 1920 x 800 runtime registration.

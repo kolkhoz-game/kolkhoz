@@ -10,7 +10,7 @@ import 'package:kolkhoz_app/src/app/views/game/views/components/display/card_art
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
 import 'package:simple_animations/simple_animations.dart';
@@ -79,7 +79,7 @@ class ChromePixelLabel extends StatelessWidget {
     this.text, {
     required this.size,
     required this.color,
-    this.variant = PixelTextVariant.heavy,
+    this.variant = DisplayTextWeight.bold,
     this.textAlign = TextAlign.start,
     this.maxLines = 1,
     this.softWrap = false,
@@ -88,8 +88,8 @@ class ChromePixelLabel extends StatelessWidget {
   });
 
   final String text;
-  final PixelTextSize size;
-  final PixelTextVariant variant;
+  final DisplayTextSize size;
+  final DisplayTextWeight variant;
   final Color color;
   final TextAlign textAlign;
   final int? maxLines;
@@ -98,7 +98,7 @@ class ChromePixelLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PixelText(
+    return DisplayText(
       uppercase ? text.toUpperCase() : text,
       size: size,
       variant: variant,
@@ -344,16 +344,16 @@ class PanelTitleRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 2,
           children: [
-            PixelText(
+            DisplayText(
               title.toUpperCase(),
-              size: PixelTextSize.caption,
-              variant: PixelTextVariant.heavy,
+              size: DisplayTextSize.caption,
+              variant: DisplayTextWeight.bold,
               color: urgent ? tokens.colors.redBright : tokens.colors.gold,
             ),
             if (subtitle != null)
-              PixelText(
+              DisplayText(
                 subtitle!,
-                size: PixelTextSize.caption,
+                size: DisplayTextSize.caption,
                 color: tokens.colors.creamDim,
               ),
           ],
@@ -1291,9 +1291,8 @@ double cardBottomCornerRankDownOffset(TokenCardSize size) =>
     (size.cornerSuitSize * 0.2).clamp(1, 4).toDouble();
 
 double cardCornerRankVisualHeight(TokenCardSize size) {
-  final rankSize = pixelTextSizeForCardRank(size);
-  return (rankSize.value + PixelText.opticalYOffset) *
-      pixelTextScaleForCardRank(size);
+  final rankSize = displayTextSizeForCardRank(size);
+  return rankSize.value * displayTextScaleForCardRank(size);
 }
 
 enum CardCornerPlacement { top, bottom }
@@ -1322,8 +1321,8 @@ class CardCornerIndex extends StatelessWidget {
     final spacing = top
         ? cardCornerRankSuitGap(size)
         : cardBottomCornerRankSuitGap(size);
-    final rankSize = pixelTextSizeForCardRank(size);
-    final rankScale = pixelTextScaleForCardRank(size);
+    final rankSize = displayTextSizeForCardRank(size);
+    final rankScale = displayTextScaleForCardRank(size);
     final rankHeight = cardCornerRankVisualHeight(size);
     final suitSize = cardCornerSuitVisualSize(card, size);
     final frameHeight = rankHeight + suitSize + spacing;
@@ -1339,10 +1338,10 @@ class CardCornerIndex extends StatelessWidget {
         child: Transform.scale(
           scale: rankScale,
           alignment: top ? Alignment.centerLeft : Alignment.centerRight,
-          child: PixelText(
+          child: DisplayText(
             card.rank,
             size: rankSize,
-            variant: PixelTextVariant.heavy,
+            variant: DisplayTextWeight.bold,
             color: rankColor,
             textAlign: top ? TextAlign.start : TextAlign.end,
           ),
@@ -1351,10 +1350,10 @@ class CardCornerIndex extends StatelessWidget {
     );
     final valueText = Padding(
       padding: EdgeInsets.zero,
-      child: PixelText(
+      child: DisplayText(
         '${card.value}',
-        size: pixelTextSizeForCardFaceValue(size),
-        variant: PixelTextVariant.heavy,
+        size: displayTextSizeForCardFaceValue(size),
+        variant: DisplayTextWeight.bold,
         color: rankColor,
       ),
     );
@@ -1467,10 +1466,10 @@ class CardCenterFace extends StatelessWidget {
             spacing: 2,
             children: [
               SuitMark(suit: card.suit, tokens: tokens, size: 14),
-              PixelText(
+              DisplayText(
                 cardRankDisplayLabel(card),
-                size: PixelTextSize.caption2,
-                variant: PixelTextVariant.heavy,
+                size: DisplayTextSize.caption2,
+                variant: DisplayTextWeight.bold,
                 color: countsAsTrump ? tokens.colors.red : tokens.colors.cream,
               ),
             ],
@@ -1661,10 +1660,10 @@ class MiniRewardCard extends StatelessWidget {
                   child: SizedBox(
                     width: 24,
                     child: Center(
-                      child: PixelText(
+                      child: DisplayText(
                         cardRankDisplayLabel(card),
-                        size: PixelTextSize.caption,
-                        variant: PixelTextVariant.heavy,
+                        size: DisplayTextSize.caption,
+                        variant: DisplayTextWeight.bold,
                         color: tokens.colors.cardInk,
                       ),
                     ),

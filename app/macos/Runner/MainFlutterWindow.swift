@@ -8,10 +8,6 @@ class MainFlutterWindow: NSWindow {
     title = "Kolkhoz"
     isRestorable = false
     minSize = NSSize(width: 390, height: 600)
-    setAccessibilityElement(true)
-    setAccessibilityRole(.window)
-    setAccessibilitySubrole(.standardWindow)
-    setAccessibilityTitle("Kolkhoz")
     placeForInitialLaunch()
 
     let flutterViewController = FlutterViewController()

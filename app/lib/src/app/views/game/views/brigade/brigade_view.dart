@@ -22,7 +22,7 @@ import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_world_scene.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/game_session_models.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/profile/views/player_profile_panel.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/plot_display.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
@@ -953,6 +953,9 @@ class FarmsteadPlayerPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reactionIcon = reaction == null
+        ? null
+        : reactionAsset(reaction!.reactionID);
     return MotionTrackedRegion(
       motionKey: playerCardMotionSourceKey(seat.id),
       child: Semantics(
@@ -973,7 +976,7 @@ class FarmsteadPlayerPortrait extends StatelessWidget {
                   height: constraints.maxHeight,
                   badgeVisible: false,
                 ),
-                if (reaction != null)
+                if (reactionIcon != null)
                   DecoratedBox(
                     decoration: BoxDecoration(
                       color: tokens.colors.black.withValues(alpha: 0.62),
@@ -982,8 +985,16 @@ class FarmsteadPlayerPortrait extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(10),
                       child: Image.asset(
-                        'assets/ui/Icons/${reactionAsset(reaction!.reactionID)}',
-                        filterQuality: FilterQuality.none,
+                        reactionIcon.startsWith('assets/')
+                            ? reactionIcon
+                            : 'assets/ui/Icons/$reactionIcon',
+                        filterQuality:
+                            reactionIcon.startsWith('assets/art/field_plan/')
+                            ? FilterQuality.high
+                            : FilterQuality.none,
+                        isAntiAlias: reactionIcon.startsWith(
+                          'assets/art/field_plan/',
+                        ),
                       ),
                     ),
                   ),
@@ -1053,10 +1064,10 @@ class FarmsteadCellarCount extends StatelessWidget {
             isAntiAlias: true,
           ),
           const SizedBox(width: 4),
-          PixelText(
+          DisplayText(
             '${seat.plot.effectiveHiddenCardCount}',
-            size: PixelTextSize.title,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.title,
+            variant: DisplayTextWeight.bold,
             color: tokens.colors.cream,
           ),
         ],
@@ -2157,9 +2168,12 @@ class PlayerBadge extends StatelessWidget {
     return [
       if (active)
         isHumanControlledSeat(seat)
-            ? 'icon-status-current-turn.png'
-            : 'icon-status-ai-thinking.png',
-      if (seat.isBrigadeLeader) 'icon-status-brigade-leader.png',
+            ? 'assets/art/field_plan/shared/pictograms/'
+                  'status-current-turn.png'
+            : 'assets/art/field_plan/shared/pictograms/'
+                  'status-ai-thinking.png',
+      if (seat.isBrigadeLeader)
+        'assets/art/field_plan/shared/pictograms/status-brigade-leader.png',
     ];
   }
 }
@@ -2252,10 +2266,10 @@ class ExpandedPlayerInfoPanel extends StatelessWidget {
         ? language.strings.kolkhozappAccept
         : language.strings.kolkhozappAddComrade;
     final actionIcon = isComrade
-        ? 'assets/ui/Icons/icon-comrade.png'
+        ? 'assets/art/field_plan/shared/pictograms/comrade.png'
         : hasOutgoingRequest
-        ? 'assets/ui/Icons/icon-status-connecting.png'
-        : 'assets/ui/Icons/icon-add-friend.png';
+        ? 'assets/art/field_plan/shared/pictograms/status-connecting.png'
+        : 'assets/art/field_plan/shared/pictograms/add-friend.png';
     final actionEnabled =
         showComradeAction && !isComrade && !hasOutgoingRequest;
 
@@ -2269,19 +2283,19 @@ class ExpandedPlayerInfoPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          PixelText(
+          DisplayText(
             language.strings.kolkhozappPlayer,
-            size: PixelTextSize.xSmall,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.xSmall,
+            variant: DisplayTextWeight.bold,
             color: tokens.colors.gold,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 3),
-          PixelText(
+          DisplayText(
             title,
-            size: PixelTextSize.caption,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.caption,
+            variant: DisplayTextWeight.bold,
             color: tokens.colors.cream,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -2323,10 +2337,10 @@ class ExpandedPlayerInfoPanel extends StatelessWidget {
               child: SizedBox(
                 height: 26,
                 child: Center(
-                  child: PixelText(
+                  child: DisplayText(
                     language.strings.kolkhozappCancel,
-                    size: PixelTextSize.xSmall,
-                    variant: PixelTextVariant.heavy,
+                    size: DisplayTextSize.xSmall,
+                    variant: DisplayTextWeight.bold,
                     color: tokens.colors.gold,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -2440,10 +2454,10 @@ class PlayerPlotScoreStat extends StatelessWidget {
         child: FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerRight,
-          child: PixelText(
+          child: DisplayText(
             '$score',
-            size: PixelTextSize.headline,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.headline,
+            variant: DisplayTextWeight.bold,
             color: tokens.colors.smoke,
           ),
         ),
@@ -2474,10 +2488,10 @@ class PlayerPlotScoreStat extends StatelessWidget {
             child: Transform.scale(
               scale: scale,
               alignment: Alignment.centerLeft,
-              child: PixelText(
+              child: DisplayText(
                 '$score',
-                size: PixelTextSize.headline,
-                variant: PixelTextVariant.heavy,
+                size: DisplayTextSize.headline,
+                variant: DisplayTextWeight.bold,
                 color: tokens.colors.smoke,
               ),
             ),
@@ -2759,12 +2773,14 @@ class CardSlot extends StatelessWidget {
         height: height,
         child: Center(
           child: active && showPrompt
-              ? PixelText(
+              ? DisplayText(
                   human
                       ? language.strings.boardviewYourTurn
                       : language.strings.boardviewWait,
-                  size: human ? PixelTextSize.headline : PixelTextSize.caption2,
-                  variant: PixelTextVariant.heavy,
+                  size: human
+                      ? DisplayTextSize.headline
+                      : DisplayTextSize.caption2,
+                  variant: DisplayTextWeight.bold,
                   color: human
                       ? tokens.colors.goldBright
                       : tokens.colors.redBright,

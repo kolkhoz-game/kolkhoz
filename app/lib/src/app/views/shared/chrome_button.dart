@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 
-const kolkhozFontStyle = TextStyle(fontFamily: 'Handjet');
+const kolkhozFontStyle = TextStyle(fontFamily: fieldPlanBodyFontFamily);
 
 const commandButtonProminentWidth = commandButtonProminentMinHeight * 4;
 const commandButtonProminentMinHeight = 58.0;
@@ -51,7 +52,7 @@ class ChromeScaledLabel extends StatelessWidget {
     this.text, {
     required this.color,
     required this.size,
-    this.variant = PixelTextVariant.heavy,
+    this.variant = DisplayTextWeight.bold,
     this.textAlign = TextAlign.center,
     this.uppercase = true,
     super.key,
@@ -59,8 +60,8 @@ class ChromeScaledLabel extends StatelessWidget {
 
   final String text;
   final Color color;
-  final PixelTextSize size;
-  final PixelTextVariant variant;
+  final DisplayTextSize size;
+  final DisplayTextWeight variant;
   final TextAlign textAlign;
   final bool uppercase;
 
@@ -68,7 +69,7 @@ class ChromeScaledLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return FittedBox(
       fit: BoxFit.scaleDown,
-      child: PixelText(
+      child: DisplayText(
         uppercase ? text.toUpperCase() : text,
         size: size,
         variant: variant,
@@ -186,16 +187,18 @@ class ChromeNineSliceConfig {
 ChromeNineSliceConfig? chromeButtonNineSliceConfig(String asset) {
   return switch (asset) {
     chromeButtonSecondaryAsset => const ChromeNineSliceConfig(
-      left: 96,
-      top: 96,
-      right: 96,
-      bottom: 96,
+      left: 32,
+      top: 32,
+      right: 32,
+      bottom: 32,
+      tileSampleSize: 64,
     ),
     chromeButtonPrimaryAsset => const ChromeNineSliceConfig(
-      left: 96,
-      top: 96,
-      right: 96,
-      bottom: 96,
+      left: 32,
+      top: 32,
+      right: 32,
+      bottom: 32,
+      tileSampleSize: 64,
     ),
     _ => null,
   };
@@ -452,7 +455,7 @@ class ChromeAssetButton extends StatelessWidget {
     required this.label,
     required this.tokens,
     required bool prominent,
-    this.textSize = PixelTextSize.headline,
+    this.textSize = DisplayTextSize.headline,
     this.onPressed,
     this.iconAsset,
     this.iconSize = 20,
@@ -481,7 +484,7 @@ class ChromeAssetButton extends StatelessWidget {
   final String label;
   final DesignTokens tokens;
   final Color textColor;
-  final PixelTextSize textSize;
+  final DisplayTextSize textSize;
   final String? backgroundAsset;
   final Color? backgroundColor;
   final BoxBorder? border;

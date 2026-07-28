@@ -453,17 +453,17 @@ void registerTutorialAndLayoutTests() {
     );
     expect(pipPositions(12), hasLength(10));
     expect(
-      pixelTextSizeForCardRank(defaultDesignTokens.card.small),
-      PixelTextSize.xSmall,
+      displayTextSizeForCardRank(defaultDesignTokens.card.small),
+      DisplayTextSize.xSmall,
     );
     expect(
-      pixelTextSizeForCardRank(defaultDesignTokens.card.large),
-      PixelTextSize.cardRank,
+      displayTextSizeForCardRank(defaultDesignTokens.card.large),
+      DisplayTextSize.cardRank,
     );
-    expect(pixelTextScaleForCardRank(defaultDesignTokens.card.large), 1);
+    expect(displayTextScaleForCardRank(defaultDesignTokens.card.large), 1);
     expect(
-      pixelTextSizeForCardFaceValue(defaultDesignTokens.card.large),
-      PixelTextSize.caption2,
+      displayTextSizeForCardFaceValue(defaultDesignTokens.card.large),
+      DisplayTextSize.caption2,
     );
     expect(cardCornerHorizontalInset(defaultDesignTokens.card.large), 0);
     expect(
@@ -511,8 +511,8 @@ void registerTutorialAndLayoutTests() {
       defaultDesignTokens.card.large,
       404,
     );
-    expect(pixelTextSizeForCardRank(oversizedCard), PixelTextSize.cardRank);
-    expect(pixelTextScaleForCardRank(oversizedCard), cardRankTextMaxScale);
+    expect(displayTextSizeForCardRank(oversizedCard), DisplayTextSize.cardRank);
+    expect(displayTextScaleForCardRank(oversizedCard), cardRankTextMaxScale);
     expect(cardCornerRankVisualHeight(oversizedCard), closeTo(40.6, 0.001));
   });
 

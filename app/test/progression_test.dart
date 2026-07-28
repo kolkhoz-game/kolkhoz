@@ -5,7 +5,7 @@ import 'package:kolkhoz_app/src/app/views/game/views/settings/game_settings_view
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/progression.dart';
 import 'package:kolkhoz_app/src/app/profile/views/progression_overview.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 
 void main() {
   test('completed games advance challenges and unlock their rewards once', () {
@@ -181,26 +181,26 @@ void main() {
 
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is PixelText && widget.text == 'ACTIVE CHALLENGES',
+        (widget) => widget is DisplayText && widget.text == 'ACTIVE CHALLENGES',
       ),
       findsOneWidget,
     );
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is PixelText && widget.text == '3/5',
+        (widget) => widget is DisplayText && widget.text == '3/5',
       ),
       findsOneWidget,
     );
     await tester.scrollUntilVisible(
       find.byWidgetPredicate(
-        (widget) => widget is PixelText && widget.text == 'ACHIEVEMENTS',
+        (widget) => widget is DisplayText && widget.text == 'ACHIEVEMENTS',
       ),
       300,
       scrollable: find.byType(Scrollable).first,
     );
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is PixelText && widget.text == 'ACHIEVEMENTS',
+        (widget) => widget is DisplayText && widget.text == 'ACHIEVEMENTS',
       ),
       findsOneWidget,
     );
@@ -211,7 +211,7 @@ void main() {
     );
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is PixelText && widget.text == 'DONE',
+        (widget) => widget is DisplayText && widget.text == 'DONE',
       ),
       findsWidgets,
     );

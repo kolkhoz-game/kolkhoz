@@ -6,7 +6,7 @@ import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/game_session_models.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.dart';
 
@@ -20,13 +20,13 @@ const reactionIDs = [
 ];
 
 String reactionAsset(String reactionID) => switch (reactionID) {
-  'comrade' => 'icon-comrade.png',
+  'comrade' => 'assets/art/field_plan/shared/pictograms/comrade.png',
   'medal' => fieldPlanMedalIconPath,
-  'protected' => 'icon-status-protected.png',
+  'protected' => 'assets/art/field_plan/shared/pictograms/status-protected.png',
   'warning' => 'icon-warning.png',
   'wheat' => fieldPlanWheatIconPath,
   'wrecker' => fieldPlanWreckerIconPath,
-  _ => 'icon-comrade.png',
+  _ => 'assets/art/field_plan/shared/pictograms/comrade.png',
 };
 
 class GameLogPanel extends StatelessWidget {
@@ -55,10 +55,10 @@ class GameLogPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PixelText(
+          DisplayText(
             language == KolkhozLanguage.en ? 'GAME LOG' : 'ЖУРНАЛ ИГРЫ',
-            size: PixelTextSize.title,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.title,
+            variant: DisplayTextWeight.bold,
             color: tokens.colors.gold,
           ),
           const SizedBox(height: 6),
@@ -67,11 +67,11 @@ class GameLogPanel extends StatelessWidget {
               key: const Key('game-log-list'),
               children: [
                 if (years.isEmpty)
-                  PixelText(
+                  DisplayText(
                     language == KolkhozLanguage.en
                         ? 'The first action will appear here.'
                         : 'Первое действие появится здесь.',
-                    size: PixelTextSize.caption,
+                    size: DisplayTextSize.caption,
                     color: tokens.colors.creamDim,
                   ),
                 for (final year in years)
@@ -271,10 +271,10 @@ class _LogExpansionState extends State<_LogExpansion> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: PixelText(
+                      child: DisplayText(
                         widget.title,
-                        size: PixelTextSize.headline,
-                        variant: PixelTextVariant.heavy,
+                        size: DisplayTextSize.headline,
+                        variant: DisplayTextWeight.bold,
                         color: widget.tokens.colors.cream,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -453,10 +453,10 @@ class _LogEventRow extends StatelessWidget {
               runSpacing: 3,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                PixelText(
+                DisplayText(
                   seat.name,
-                  size: PixelTextSize.caption,
-                  variant: PixelTextVariant.heavy,
+                  size: DisplayTextSize.caption,
+                  variant: DisplayTextWeight.bold,
                   color: tokens.colors.cream,
                 ),
                 ...children,
@@ -477,9 +477,9 @@ class _InlineLogText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PixelText(
+    return DisplayText(
       text,
-      size: PixelTextSize.caption,
+      size: DisplayTextSize.caption,
       color: tokens.colors.creamDim,
     );
   }
@@ -523,10 +523,10 @@ class _InlineCard extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PixelText(
+        DisplayText(
           '${card.value}',
-          size: PixelTextSize.caption,
-          variant: PixelTextVariant.heavy,
+          size: DisplayTextSize.caption,
+          variant: DisplayTextWeight.bold,
           color: tokens.colors.gold,
         ),
         const SizedBox(width: 3),

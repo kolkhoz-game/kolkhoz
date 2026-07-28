@@ -165,11 +165,6 @@ class OnlineTableProjection {
         !presence.connected) {
       return 'OFF';
     }
-    if (update.turnPlayerID == seatID && update.turnDeadlineAt != null) {
-      final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
-      final remaining = (update.turnDeadlineAt! - now).ceil().clamp(0, 999);
-      return '${remaining}s';
-    }
     return '';
   }
 

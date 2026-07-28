@@ -104,6 +104,12 @@ abstract class AppLocalizations {
   /// **'Create Game'**
   String get lobbyCreateGame;
 
+  /// No description provided for @lobbyResumeGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume Match'**
+  String get lobbyResumeGame;
+
   /// No description provided for @lobbyPlayDemo.
   ///
   /// In en, this message translates to:

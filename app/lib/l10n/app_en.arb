@@ -1,6 +1,7 @@
 {
   "@@locale": "en",
   "lobbyCreateGame": "Create Game",
+  "lobbyResumeGame": "Resume Match",
   "lobbyPlayDemo": "Play Demo",
   "lobbyJoinGame": "Join Game",
   "lobbyHowToPlay": "How to Play",

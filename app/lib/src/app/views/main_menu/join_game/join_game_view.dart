@@ -15,9 +15,10 @@ import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_controller/menu_re
 import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_controller/main_menu_controller.dart';
 import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
+import 'package:kolkhoz_app/src/app/views/shared/deadline_countdown.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/profile/models/player_profile.dart';
 import 'package:kolkhoz_app/src/app/profile/views/player_profile_panel.dart';
 import '../main_menu_view.dart';
@@ -405,7 +406,7 @@ class _OnlinePanelState extends State<JoinGameView> {
           spacing: 8,
           children: [
             const MainMenuAssetIcon(
-              'assets/ui/Icons/icon-online.png',
+              'assets/art/field_plan/shared/pictograms/online.png',
               size: 26,
             ),
             Text(
@@ -502,7 +503,7 @@ class _OnlinePanelState extends State<JoinGameView> {
                   label: widget.language.strings.kolkhozappRefresh,
                   prominent: false,
                   tokens: widget.tokens,
-                  iconAsset: 'assets/ui/Icons/icon-status-connecting.png',
+                  iconAsset: 'assets/art/field_plan/shared/pictograms/status-connecting.png',
                   onPressed: busy ? null : refreshSessions,
                 ),
               ),
@@ -664,8 +665,13 @@ class OnlineWaitingRoomPanel extends StatelessWidget {
   final VoidCallback? onCancelOnlineGame;
 
   @override
-  Widget build(BuildContext context) {
-    final countdownSeconds = update.lobbyCountdownSeconds;
+  Widget build(BuildContext context) => DeadlineCountdownBuilder(
+    deadlineEpochSeconds: update.started ? null : update.lobbyCountdownEndsAt,
+    maxSeconds: 30,
+    builder: (context, countdownSeconds) => _buildContent(countdownSeconds),
+  );
+
+  Widget _buildContent(int? countdownSeconds) {
     final status = update.started
         ? language.strings.kolkhozappJoinGame
         : countdownSeconds != null
@@ -715,7 +721,7 @@ class OnlineWaitingRoomPanel extends StatelessWidget {
                   ),
                 ),
               const MainMenuAssetIcon(
-                'assets/ui/Icons/icon-status-connected.png',
+                'assets/art/field_plan/shared/pictograms/status-connected.png',
                 size: 26,
               ),
               Expanded(
@@ -902,7 +908,7 @@ class WaitingRoomEnterButton extends StatelessWidget {
                       spacing: 8,
                       children: [
                         const MainMenuAssetIcon(
-                          'assets/ui/Icons/icon-status-connecting.png',
+                          'assets/art/field_plan/shared/pictograms/status-connecting.png',
                           size: 22,
                         ),
                         Flexible(
@@ -911,7 +917,7 @@ class WaitingRoomEnterButton extends StatelessWidget {
                             builder: (label) => ChromeScaledLabel(
                               label,
                               color: tokens.colors.onAccent,
-                              size: PixelTextSize.headline,
+                              size: DisplayTextSize.headline,
                             ),
                           ),
                         ),
@@ -1013,7 +1019,7 @@ class _OnlineWaitingRoomSeatCard extends StatelessWidget {
               label: language.strings.kolkhozappKick,
               iconAsset: 'assets/ui/Icons/icon-warning.png',
               onPressed: onKick,
-              textSize: PixelTextSize.caption2,
+              textSize: DisplayTextSize.caption2,
             )
           : null,
     );
@@ -1106,7 +1112,7 @@ Future<void> _showLobbyPlayerProfile({
                           ? KolkhozText.kolkhozappAccept
                           : KolkhozText.kolkhozappAddComrade,
                     ),
-                    iconAsset: 'assets/ui/Icons/icon-add-friend.png',
+                    iconAsset: 'assets/art/field_plan/shared/pictograms/add-friend.png',
                     prominent: hasIncomingRequest,
                     onPressed: () => unawaited(onComradeRequestToUser(userID)),
                   )
@@ -1463,7 +1469,7 @@ class _HostedInviteCodeCard extends StatelessWidget {
                   onPressed: onCopy,
                   iconAsset: fieldPlanToolbarConfirmIconPath,
                   iconSize: 20,
-                  textSize: PixelTextSize.caption,
+                  textSize: DisplayTextSize.caption,
                   expandLabel: false,
                 ),
               );
@@ -1475,7 +1481,7 @@ class _HostedInviteCodeCard extends StatelessWidget {
                     spacing: 9,
                     children: [
                       const MainMenuAssetIcon(
-                        'assets/ui/Icons/icon-online.png',
+                        'assets/art/field_plan/shared/pictograms/online.png',
                         size: 26,
                       ),
                       Expanded(
@@ -1565,7 +1571,7 @@ class OnlineStatusBanner extends StatelessWidget {
           MainMenuAssetIcon(
             isError
                 ? 'assets/ui/Icons/icon-warning.png'
-                : 'assets/ui/Icons/icon-status-connected.png',
+                : 'assets/art/field_plan/shared/pictograms/status-connected.png',
             size: 18,
           ),
           Expanded(
@@ -1705,7 +1711,7 @@ class _OnlineBrowserFooter extends StatelessWidget {
           Expanded(
             child: _OnlineBrowserFooterItem(
               tokens: tokens,
-              iconAsset: 'assets/ui/Icons/icon-profile.png',
+              iconAsset: 'assets/art/field_plan/shared/pictograms/profile.png',
               message: citizensOnlineMessage!,
             ),
           )
@@ -1714,7 +1720,7 @@ class _OnlineBrowserFooter extends StatelessWidget {
         Expanded(
           child: _OnlineBrowserFooterItem(
             tokens: tokens,
-            iconAsset: 'assets/ui/Icons/icon-status-connecting.png',
+            iconAsset: 'assets/art/field_plan/shared/pictograms/status-connecting.png',
             message: refreshMessage,
             alignment: MainAxisAlignment.end,
           ),
@@ -1846,25 +1852,29 @@ class _OpenSessionRow extends StatelessWidget {
                         spacing: 4,
                         children: [
                           VariantPixelLine(
-                            height: pixelTextSlotHeight(PixelTextSize.caption),
-                            child: PixelText(
+                            height: displayTextSlotHeight(
+                              DisplayTextSize.caption,
+                            ),
+                            child: DisplayText(
                               title,
                               color: titleColor,
-                              size: PixelTextSize.caption,
-                              variant: PixelTextVariant.heavy,
+                              size: DisplayTextSize.caption,
+                              variant: DisplayTextWeight.bold,
                               maxLines: 1,
                               overflow: TextOverflow.clip,
                             ),
                           ),
                           VariantPixelLine(
-                            height: pixelTextSlotHeight(PixelTextSize.caption2),
-                            child: PixelText(
+                            height: displayTextSlotHeight(
+                              DisplayTextSize.caption2,
+                            ),
+                            child: DisplayText(
                               language.strings.kolkhozappOpenOpenseats(
                                 openSeats: openSeats,
                               ),
                               color: bodyColor,
-                              size: PixelTextSize.caption2,
-                              variant: PixelTextVariant.regular,
+                              size: DisplayTextSize.caption2,
+                              variant: DisplayTextWeight.regular,
                               maxLines: 1,
                               overflow: TextOverflow.clip,
                             ),
@@ -1876,7 +1886,7 @@ class _OpenSessionRow extends StatelessWidget {
                       _OpenSessionBadgeIcon(
                         tokens: tokens,
                         label: language.strings.kolkhozappComrade,
-                        asset: 'assets/ui/Icons/icon-comrade.png',
+                        asset: 'assets/art/field_plan/shared/pictograms/comrade.png',
                       ),
                   ],
                 ),
@@ -2152,10 +2162,10 @@ class _OpenSessionPlayerCard extends StatelessWidget {
         ? language.strings.kolkhozappAccept
         : language.strings.kolkhozappAddComrade;
     final actionIcon = isComrade
-        ? 'assets/ui/Icons/icon-comrade.png'
+        ? 'assets/art/field_plan/shared/pictograms/comrade.png'
         : hasOutgoingRequest
-        ? 'assets/ui/Icons/icon-status-connecting.png'
-        : 'assets/ui/Icons/icon-add-friend.png';
+        ? 'assets/art/field_plan/shared/pictograms/status-connecting.png'
+        : 'assets/art/field_plan/shared/pictograms/add-friend.png';
     final actionEnabled =
         showComradeAction && !isComrade && !hasOutgoingRequest;
     return PlayerProfileBadge(
@@ -2182,7 +2192,7 @@ class _OpenSessionPlayerCard extends StatelessWidget {
           : language.strings.kolkhozappOpen,
       subtitleIconAsset: occupied
           ? fieldPlanMedalIconPath
-          : 'assets/ui/Icons/icon-human-seat.png',
+          : 'assets/art/field_plan/shared/pictograms/human-seat.png',
       portraitSize: 46,
       minHeight: 82,
       active: currentTurn,

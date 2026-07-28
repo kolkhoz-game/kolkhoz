@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
-import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/progression.dart';
 
 class ProgressionOverview extends StatelessWidget {
@@ -86,11 +86,11 @@ class _ProgressionHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                PixelText(
+                DisplayText(
                   'COLLECTIVE RECORD',
                   color: tokens.colors.goldBright,
-                  size: PixelTextSize.headline,
-                  variant: PixelTextVariant.heavy,
+                  size: DisplayTextSize.headline,
+                  variant: DisplayTextWeight.bold,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -114,11 +114,11 @@ class _SectionTitle extends StatelessWidget {
   final DesignTokens tokens;
 
   @override
-  Widget build(BuildContext context) => PixelText(
+  Widget build(BuildContext context) => DisplayText(
     label,
     color: tokens.colors.gold,
-    size: PixelTextSize.caption,
-    variant: PixelTextVariant.heavy,
+    size: DisplayTextSize.caption,
+    variant: DisplayTextWeight.bold,
   );
 }
 
@@ -165,11 +165,11 @@ class _ProgressionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                PixelText(
+                DisplayText(
                   definition.title.toUpperCase(),
                   color: tokens.colors.cream,
-                  size: PixelTextSize.caption,
-                  variant: PixelTextVariant.heavy,
+                  size: DisplayTextSize.caption,
+                  variant: DisplayTextWeight.bold,
                   maxLines: 1,
                 ),
                 const SizedBox(height: 3),
@@ -197,11 +197,11 @@ class _ProgressionRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          PixelText(
+          DisplayText(
             completed ? 'DONE' : '$value/${definition.target}',
             color: accent,
-            size: PixelTextSize.caption2,
-            variant: PixelTextVariant.heavy,
+            size: DisplayTextSize.caption2,
+            variant: DisplayTextWeight.bold,
           ),
         ],
       ),

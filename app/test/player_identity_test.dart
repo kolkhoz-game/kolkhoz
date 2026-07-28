@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/player_identity.dart';
+import 'package:kolkhoz_app/src/app/remote_connection/remote_error.dart';
 
 void main() {
   test('platform authentication retries are bounded', () {
@@ -15,6 +16,33 @@ void main() {
     expect(
       shouldRetryPlatformAuthenticationError(1, 'game_center_authentication'),
       isTrue,
+    );
+  });
+
+  test('an already-linked platform identity signs into its existing profile', () {
+    expect(
+      shouldSignIntoExistingPlatformIdentity(
+        RemoteRequestException(
+          statusCode: 409,
+          uri: Uri(path: 'identity/platform/game_center'),
+          responseBody:
+              '{"detail":"this platform identity is already linked to another player"}',
+          sentAuthorization: true,
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      shouldSignIntoExistingPlatformIdentity(
+        RemoteRequestException(
+          statusCode: 409,
+          uri: Uri(path: 'identity/platform/game_center'),
+          responseBody:
+              '{"detail":"this player already has a different platform identity"}',
+          sentAuthorization: true,
+        ),
+      ),
+      isFalse,
     );
   });
 
