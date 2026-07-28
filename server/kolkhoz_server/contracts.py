@@ -253,7 +253,12 @@ def snapshot_json(
         "trickCount": int(state.trick_count),
         "isFamine": bool(state.is_famine),
         "players": [
-            player_to_json(state.players[i], viewer_id) for i in range(PLAYER_COUNT)
+            player_to_json(
+                state.players[i],
+                viewer_id,
+                reveal_hidden=game_over,
+            )
+            for i in range(PLAYER_COUNT)
         ],
         "jobPiles": redacted_suit_cards(SUIT_COUNT),
         "revealedJobs": revealed_jobs_json(state),
@@ -336,20 +341,26 @@ def listing_json(
     }
 
 
-def player_to_json(player: KCPlayer, viewer_id: int | None) -> JsonObject:
+def player_to_json(
+    player: KCPlayer,
+    viewer_id: int | None,
+    *,
+    reveal_hidden: bool = False,
+) -> JsonObject:
     is_viewer = viewer_id == int(player.id)
+    can_see_hidden = is_viewer or reveal_hidden
     return {
         "id": int(player.id),
         "hand": card_list_json(player.hand) if is_viewer else [],
         "revealedPlot": card_list_json(player.plot_revealed),
-        "hiddenPlot": card_list_json(player.plot_hidden) if is_viewer else [],
+        "hiddenPlot": card_list_json(player.plot_hidden) if can_see_hidden else [],
         "hiddenPlotCount": int(player.plot_hidden.count),
         "medals": int(player.medals),
         "bankedMedals": int(player.plot_medals),
         "brigadeLeader": bool(player.brigade_leader),
         "wonTrickThisYear": bool(player.has_won_trick_this_year),
         "stacks": [
-            stack_json(player.stacks[i], is_viewer)
+            stack_json(player.stacks[i], can_see_hidden)
             for i in range(int(player.stack_count))
         ],
     }
