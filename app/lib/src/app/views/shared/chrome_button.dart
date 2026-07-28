@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 
 const kolkhozFontStyle = TextStyle(fontFamily: 'Handjet');
@@ -17,12 +18,10 @@ const commandButtonProminentBottomPadding = 10.0;
 const commandButtonProminentOuterShadowOpacity = 0.34;
 const commandButtonProminentOuterShadowRadius = 8.0;
 const commandButtonProminentOuterShadowYOffset = 3.0;
-const chromeButtonPrimaryAsset = 'assets/ui/ui-nav-button-active.png';
-const chromeButtonSecondaryAsset = 'assets/ui/ui-nav-button-inactive.png';
-const chromeButtonPrimaryCurrentAsset =
-    'assets/ui/ui-nav-button-active-current.png';
-const chromeButtonSecondaryCurrentAsset =
-    'assets/ui/ui-nav-button-inactive-current.png';
+const chromeButtonPrimaryAsset = fieldPlanNavigationActiveFramePath;
+const chromeButtonSecondaryAsset = fieldPlanNavigationInactiveFramePath;
+const chromeButtonPrimaryCurrentAsset = fieldPlanNavigationActiveFramePath;
+const chromeButtonSecondaryCurrentAsset = fieldPlanNavigationInactiveFramePath;
 const chromeIconMutedOpacity = 0.82;
 const chromeIconMutedSaturationMatrix = <double>[
   0.76378,
@@ -102,12 +101,14 @@ class ChromeAssetIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fieldPlanAsset = asset.startsWith('assets/art/field_plan/');
     final image = Image.asset(
       asset,
       width: width,
       height: height ?? width,
       fit: fit,
-      filterQuality: FilterQuality.none,
+      filterQuality: fieldPlanAsset ? FilterQuality.high : FilterQuality.none,
+      isAntiAlias: fieldPlanAsset,
       errorBuilder: errorBuilder,
     );
     final icon = muted
@@ -135,10 +136,12 @@ class ChromeButtonBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final config = chromeButtonNineSliceConfig(asset);
     if (config == null) {
+      final fieldPlanAsset = asset.startsWith('assets/art/field_plan/');
       return Image.asset(
         asset,
         fit: BoxFit.fill,
-        filterQuality: FilterQuality.none,
+        filterQuality: fieldPlanAsset ? FilterQuality.high : FilterQuality.none,
+        isAntiAlias: fieldPlanAsset,
       );
     }
     return FutureBuilder<ui.Image>(

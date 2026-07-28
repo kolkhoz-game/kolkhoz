@@ -6,6 +6,7 @@ import 'package:kolkhoz_app/src/app/settings/animation_speed.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/shared/rule_content.dart';
@@ -522,7 +523,7 @@ class OptionsMenuHeader extends StatelessWidget {
       spacing: optionsMenuHeaderSpacing,
       children: [
         Image.asset(
-          'assets/ui/Icons/icon-menu.png',
+          fieldPlanNavigationMenuPath,
           width: optionsMenuHeaderIconSize,
           height: optionsMenuHeaderIconSize,
           filterQuality: FilterQuality.none,
@@ -630,7 +631,7 @@ class OptionsSessionControls extends StatelessWidget {
                 textColor: tokens.colors.creamDim,
                 textSize: PixelTextSize.caption,
                 onPressed: onTutorial,
-                iconAsset: 'assets/ui/Icons/icon-foreman-misha.png',
+                iconAsset: fieldPlanHowToPlayPictogram.fieldPlanPath,
                 iconMuted: true,
                 iconSize: optionsMenuActionIconSize,
                 width: optionsMenuActionWidth,
@@ -653,7 +654,7 @@ class OptionsSessionControls extends StatelessWidget {
                 textColor: tokens.colors.creamDim,
                 textSize: PixelTextSize.caption,
                 onPressed: onReturnToLobby,
-                iconAsset: 'assets/ui/Icons/icon-menu.png',
+                iconAsset: fieldPlanNavigationMenuPath,
                 iconMuted: true,
                 iconSize: optionsMenuActionIconSize,
                 width: optionsMenuActionWidth,

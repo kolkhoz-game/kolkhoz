@@ -7,6 +7,7 @@ import 'package:simple_animations/simple_animations.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_view.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
@@ -739,7 +740,7 @@ class TutorialCallout extends StatelessWidget {
         children: [
           Image.asset(
             satisfied
-                ? 'assets/ui/Icons/icon-check.png'
+                ? fieldPlanToolbarConfirmIconPath
                 : 'assets/ui/Embellishments/tutorial-focus-spark.png',
             width: 20,
             height: 20,

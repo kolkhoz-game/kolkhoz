@@ -548,7 +548,7 @@ class _VariantPanelState extends State<CreateGameView> {
         label: widget.language.strings.kolkhozappBackToSetup,
         prominent: false,
         tokens: widget.tokens,
-        iconAsset: 'assets/ui/Icons/icon-toolbar-undo.png',
+        iconAsset: fieldPlanToolbarUndoIconPath,
         iconSize: widget.compactRail ? 18 : 22,
         textSize: widget.compactRail
             ? PixelTextSize.caption
@@ -700,7 +700,7 @@ class _VariantPanelState extends State<CreateGameView> {
                                   ),
                                 ),
                                 const MainMenuAssetIcon(
-                                  'assets/ui/Icons/icon-check.png',
+                                  fieldPlanToolbarConfirmIconPath,
                                   size: 18,
                                 ),
                               ],
@@ -843,7 +843,7 @@ class _VariantPanelState extends State<CreateGameView> {
     if (_startButtonShowsBan()) {
       return 'assets/ui/Icons/icon-warning.png';
     }
-    return 'assets/ui/Icons/icon-create-game.png';
+    return fieldPlanCreateGamePictogram.fieldPlanPath;
   }
 }
 
@@ -956,8 +956,8 @@ class _PresetSummaryStrip extends StatelessWidget {
                 : KolkhozText.kolkhozappCasual,
           ),
           iconAsset: ranked!
-              ? 'assets/ui/Icons/icon-medal-star.png'
-              : 'assets/ui/Icons/icon-foreman-misha.png',
+              ? fieldPlanMedalIconPath
+              : fieldPlanHowToPlayPictogram.fieldPlanPath,
         ),
     ];
     return Align(

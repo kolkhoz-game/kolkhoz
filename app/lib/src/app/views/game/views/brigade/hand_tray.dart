@@ -10,6 +10,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/models/assignment
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/card_display.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
@@ -92,12 +93,12 @@ String lowerBarActionLabel(
 
 String lowerBarActionIconAsset(LegalAction action) {
   return switch (action.kind) {
-    actionSwap => 'icon-toolbar-swap.png',
-    actionUndoSwap => 'icon-toolbar-undo.png',
+    actionSwap => fieldPlanToolbarSwapIconPath,
+    actionUndoSwap => fieldPlanToolbarUndoIconPath,
     actionConfirmSwap ||
     actionSubmitAssignments ||
-    actionContinueAfterRequisition => 'icon-toolbar-confirm.png',
-    _ => 'icon-toolbar-confirm.png',
+    actionContinueAfterRequisition => fieldPlanToolbarConfirmIconPath,
+    _ => fieldPlanToolbarConfirmIconPath,
   };
 }
 
@@ -535,6 +536,7 @@ class HandTray extends StatelessWidget {
     required this.tokens,
     required this.language,
     required this.visibleTrayHeight,
+    this.actionsEnabled = true,
     this.leadingInset = 0,
     this.onAction,
     this.onSwapHandCardTap,
@@ -554,6 +556,7 @@ class HandTray extends StatelessWidget {
   final DesignTokens tokens;
   final KolkhozLanguage language;
   final double visibleTrayHeight;
+  final bool actionsEnabled;
   final double leadingInset;
   final ValueChanged<LegalAction>? onAction;
   final ValueChanged<String>? onSwapHandCardTap;
@@ -574,9 +577,10 @@ class HandTray extends StatelessWidget {
       ..sort(compareCardsForHand);
     final assignmentCards = assignmentControlCards(model);
     final selectedPlayAction = selectedHandCardPlayAction(model);
-    final consoleActionsEnabled = contentOverride == null;
+    final consoleActionsEnabled = contentOverride == null && actionsEnabled;
     final showAssignmentCommandBar =
         contentOverride == null &&
+        actionsEnabled &&
         assignmentCards.isNotEmpty &&
         assignmentCommandBarVisible(model);
     final confirmAction =
@@ -590,7 +594,7 @@ class HandTray extends StatelessWidget {
         : language.strings.lowerbaractionsConfirm;
     final primaryCommand = HandTrayCommand(
       label: primaryLabel,
-      iconAsset: 'icon-toolbar-confirm.png',
+      iconAsset: fieldPlanToolbarConfirmIconPath,
       prominent: true,
       onPressed:
           !consoleActionsEnabled || confirmAction == null || onAction == null
@@ -601,7 +605,7 @@ class HandTray extends StatelessWidget {
     final secondaryCommand = switch (model.table.phase) {
       phaseTrick => HandTrayCommand(
         label: language.strings.boardHandtrayUndo,
-        iconAsset: 'icon-toolbar-undo.png',
+        iconAsset: fieldPlanToolbarUndoIconPath,
         prominent: false,
         onPressed:
             !consoleActionsEnabled ||
@@ -619,7 +623,7 @@ class HandTray extends StatelessWidget {
                 language: language,
               ),
         iconAsset: swapSecondaryAction == null
-            ? 'icon-toolbar-swap.png'
+            ? fieldPlanToolbarSwapIconPath
             : lowerBarActionIconAsset(swapSecondaryAction),
         prominent: false,
         onPressed:
@@ -635,27 +639,28 @@ class HandTray extends StatelessWidget {
             : (language == KolkhozLanguage.en
                   ? 'Pass right'
                   : 'Передать вправо'),
-        iconAsset: 'icon-pass.png',
+        iconAsset: fieldPlanVariantPassCards.fieldPlanPath,
         flipHorizontally: passIconFlipsHorizontally(model.table.year),
         prominent: false,
       ),
       phaseAssignment => HandTrayCommand(
         label: language.strings.boardHandtrayUndo,
-        iconAsset: 'icon-toolbar-undo.png',
+        iconAsset: fieldPlanToolbarUndoIconPath,
         prominent: false,
         onPressed: consoleActionsEnabled && canUndo ? onUndo : null,
       ),
       phaseRequisition => HandTrayCommand(
         label: language.strings.boardBoardrailTheNorth,
-        iconAsset: 'icon-north.png',
+        iconAsset: fieldPlanNavigationNorthPath,
         prominent: false,
+        motionKey: northConsoleCardMotionTargetKey,
         onPressed: !consoleActionsEnabled || onPanelSelected == null
             ? null
             : () => onPanelSelected!(panelNorth),
       ),
       _ => HandTrayCommand(
         label: language.strings.boardHandtrayUndo,
-        iconAsset: 'icon-toolbar-undo.png',
+        iconAsset: fieldPlanToolbarUndoIconPath,
         prominent: false,
       ),
     };
@@ -723,32 +728,37 @@ class HandTray extends StatelessWidget {
                                           model,
                                           card,
                                         );
-                                        final onTap = switch (model
-                                            .table
-                                            .phase) {
-                                          phaseTrick =>
-                                            playAction != null &&
-                                                    onHandCardTap != null
-                                                ? () => onHandCardTap!(card.id)
-                                                : handCardCanShowInvalidHint(
-                                                    model,
-                                                    card,
-                                                  )
-                                                ? onInvalidHandCardTap
-                                                : null,
-                                          phaseSwap =>
-                                            onSwapHandCardTap == null
-                                                ? null
-                                                : () => onSwapHandCardTap!(
-                                                    card.id,
-                                                  ),
-                                          phasePass =>
-                                            passAction == null ||
-                                                    onHandCardTap == null
-                                                ? null
-                                                : () => onHandCardTap!(card.id),
-                                          _ => null,
-                                        };
+                                        final onTap = !actionsEnabled
+                                            ? null
+                                            : switch (model.table.phase) {
+                                                phaseTrick =>
+                                                  playAction != null &&
+                                                          onHandCardTap != null
+                                                      ? () => onHandCardTap!(
+                                                          card.id,
+                                                        )
+                                                      : handCardCanShowInvalidHint(
+                                                          model,
+                                                          card,
+                                                        )
+                                                      ? onInvalidHandCardTap
+                                                      : null,
+                                                phaseSwap =>
+                                                  onSwapHandCardTap == null
+                                                      ? null
+                                                      : () =>
+                                                            onSwapHandCardTap!(
+                                                              card.id,
+                                                            ),
+                                                phasePass =>
+                                                  passAction == null ||
+                                                          onHandCardTap == null
+                                                      ? null
+                                                      : () => onHandCardTap!(
+                                                          card.id,
+                                                        ),
+                                                _ => null,
+                                              };
                                         final displayCard = handTrayCard(
                                           model,
                                           card,
@@ -756,26 +766,29 @@ class HandTray extends StatelessWidget {
                                               planningTrumpFocusedSuit,
                                         );
                                         final playable =
-                                            switch (model.table.phase) {
+                                            actionsEnabled &&
+                                            (switch (model.table.phase) {
                                               phaseTrick => playAction != null,
                                               phaseSwap => card.highlighted,
                                               phasePass => passAction != null,
                                               _ => displayCard.highlighted,
-                                            };
+                                            });
                                         final invalid =
+                                            actionsEnabled &&
                                             playAction == null &&
                                             handCardCanShowInvalidHint(
                                               model,
                                               card,
                                             );
                                         final actionable =
-                                            switch (model.table.phase) {
+                                            actionsEnabled &&
+                                            (switch (model.table.phase) {
                                               phaseTrick =>
                                                 playAction != null || invalid,
                                               phaseSwap => card.highlighted,
                                               phasePass => passAction != null,
                                               _ => false,
-                                            };
+                                            });
                                         return NaturalSizeViewport(
                                           width: largeCardSize.width,
                                           height: visibleTrayHeight,
@@ -1071,16 +1084,31 @@ class HandConsole extends StatelessWidget {
                 scale: buttonScale,
                 onPressed: primary.onPressed,
               ),
-              ActionIconButton(
-                key: const Key('hand-console-secondary'),
-                label: secondary.label,
-                iconAsset: secondary.iconAsset,
-                tokens: tokens,
-                prominent: secondary.prominent,
-                flipHorizontally: secondary.flipHorizontally,
-                scale: buttonScale,
-                onPressed: secondary.onPressed,
-              ),
+              if (secondary.motionKey case final motionKey?)
+                MotionTrackedRegion(
+                  motionKey: motionKey,
+                  child: ActionIconButton(
+                    key: const Key('hand-console-secondary'),
+                    label: secondary.label,
+                    iconAsset: secondary.iconAsset,
+                    tokens: tokens,
+                    prominent: secondary.prominent,
+                    flipHorizontally: secondary.flipHorizontally,
+                    scale: buttonScale,
+                    onPressed: secondary.onPressed,
+                  ),
+                )
+              else
+                ActionIconButton(
+                  key: const Key('hand-console-secondary'),
+                  label: secondary.label,
+                  iconAsset: secondary.iconAsset,
+                  tokens: tokens,
+                  prominent: secondary.prominent,
+                  flipHorizontally: secondary.flipHorizontally,
+                  scale: buttonScale,
+                  onPressed: secondary.onPressed,
+                ),
             ],
           ),
         ],
@@ -1095,6 +1123,7 @@ class HandTrayCommand {
     required this.iconAsset,
     required this.prominent,
     this.flipHorizontally = false,
+    this.motionKey,
     this.onPressed,
   });
 
@@ -1102,6 +1131,7 @@ class HandTrayCommand {
   final String iconAsset;
   final bool prominent;
   final bool flipHorizontally;
+  final MotionAnchor? motionKey;
   final VoidCallback? onPressed;
 }
 
@@ -1360,12 +1390,18 @@ class ActionIconButton extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Positioned.fill(
-            child: ChromeButtonBackground(asset: chromeButtonSecondaryAsset),
+            child: ChromeButtonBackground(
+              asset: prominent
+                  ? fieldPlanNavigationActiveFramePath
+                  : fieldPlanNavigationInactiveFramePath,
+            ),
           ),
           Transform.flip(
             flipX: flipHorizontally,
             child: ChromeAssetIcon(
-              asset: 'assets/ui/Icons/$iconAsset',
+              asset: iconAsset.startsWith('assets/')
+                  ? iconAsset
+                  : 'assets/ui/Icons/$iconAsset',
               width: handTrayActionIconSize * scale,
               height: handTrayActionIconSize * scale,
               fit: BoxFit.contain,

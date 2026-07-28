@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/player_identity.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/profile_remote_connection.dart';
-import 'package:kolkhoz_app/src/app/profile/profile_controller/supabase_config.dart';
 import 'package:kolkhoz_app/src/app/remote_connection/remote_connection.dart';
 import 'package:kolkhoz_app/src/app/profile/models/profile_remote_models.dart';
 import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_controller/menu_remote_models.dart';
@@ -49,20 +48,10 @@ class ProfileController extends ChangeNotifier {
     required String installationID,
     required String displayName,
   }) async {
-    final legacy = KolkhozSupabaseRuntime.instance;
-    await legacy.start();
-    if (legacy.isConfigured && !legacy.isReady) {
-      message =
-          'Could not check for an existing account. No guest account was created.';
-      messageIsError = true;
-      notifyListeners();
-      return;
-    }
     await _identity.start(
       remoteConnection: _connection,
       installationID: installationID,
       displayName: displayName,
-      legacyAccessToken: legacy.client?.auth.currentSession?.accessToken,
     );
   }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:kolkhoz_app/src/app/settings/animation_speed.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_engine.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/game_lobby.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/c_engine_action_codec.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/c_engine_bridge.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/engine_action_projection.dart';
@@ -18,6 +19,7 @@ class LocalGameEngine implements GameEngine {
   LocalGameEngine({
     required this.engine,
     required this.players,
+    required this.lobby,
     required this.animationSpeed,
     required this.uiState,
     required this.setUiState,
@@ -35,6 +37,7 @@ class LocalGameEngine implements GameEngine {
        gameLog = List.of(gameLog);
 
   final List<GamePlayer> Function() players;
+  final GameLobby Function() lobby;
   final GameAnimationSpeed Function() animationSpeed;
   final GameUiState Function() uiState;
   final void Function(GameUiState) setUiState;
@@ -70,6 +73,7 @@ class LocalGameEngine implements GameEngine {
     engine: engine,
     uiState: uiState(),
     revealedPlayerID: revealedPlayerID(),
+    lobby: lobby(),
   );
 
   @override

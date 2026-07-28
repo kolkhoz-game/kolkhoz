@@ -8,6 +8,7 @@ class GamePresentationTransition {
     required this.after,
     this.action,
     this.event,
+    this.startsUpdate = false,
     this.assignmentCardIDs = const [],
     this.assignmentTargets = const {},
     this.suppressedCardIDs = const {},
@@ -18,6 +19,7 @@ class GamePresentationTransition {
   final TableViewModel after;
   final EngineAction? action;
   final EngineTransitionEvent? event;
+  final bool startsUpdate;
   final List<String> assignmentCardIDs;
   final Map<String, String> assignmentTargets;
   final Set<String> suppressedCardIDs;

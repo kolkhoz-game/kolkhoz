@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,6 +21,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engin
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_player.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/terminal_game_record.dart';
+import 'package:kolkhoz_app/src/app/profile/models/player_profile.dart';
 import 'local_game_engine/local_game_engine.dart';
 import 'local_game_engine/local_game_engine_factory.dart';
 import 'remote_game_engine/remote_game_engine.dart';
@@ -138,6 +140,7 @@ class GameController extends ChangeNotifier {
   TableViewModel? _model;
   TableViewModel? _authoritativeModel;
   final GamePresentationQueue _presentationQueue = GamePresentationQueue();
+  Timer? _onlinePresentationPaceTimer;
   TableViewModel? get model => finishedGameLobby?.model ?? _model;
   FinishedGameLobby? finishedGameLobby;
   bool get hasActiveEngine => _engine != null;
@@ -145,11 +148,13 @@ class GameController extends ChangeNotifier {
   String? error;
   String? _lastSyncedPhase;
   bool _disposed = false;
+  PlayerProfile? _localProfile;
   bool get _hasSession => _engine != null;
 
   void configureLobby({
     required KolkhozGameVariants variants,
     required List<KolkhozPlayerController> controllers,
+    PlayerProfile? localProfile,
   }) {
     if (lifecycle != GameControllerLifecycle.lobby || _hasSession) {
       throw StateError(
@@ -157,6 +162,7 @@ class GameController extends ChangeNotifier {
       );
     }
     _replaceLocalPlayers(controllers);
+    _localProfile = localProfile;
     currentVariants = variants;
     lobby = _buildLobby(variants, spectators: lobby.spectators);
     notifyListeners();
@@ -588,6 +594,7 @@ class GameController extends ChangeNotifier {
         before: before,
         after: presentedAfter,
         action: action,
+        startsUpdate: true,
       );
     } else {
       final visibleStates = projectPresentationBatch(
@@ -624,6 +631,7 @@ class GameController extends ChangeNotifier {
           after: visibleStates[lastIndex],
           action: index == 0 ? action : null,
           event: lastIndex == index ? event : null,
+          startsUpdate: index == 0,
           assignmentCardIDs: assignmentCardIDs,
           assignmentTargets: assignmentTarget == null
               ? const {}
@@ -741,7 +749,7 @@ class GameController extends ChangeNotifier {
     );
     currentVariants = update.variants;
     currentSeed = update.seed ?? currentSeed;
-    lobby = gameLobbyFromOnlineUpdate(
+    lobby = _buildOnlineLobby(
       update,
       viewerSeatID: spectator ? null : playerID,
       spectators: spectator
@@ -811,12 +819,42 @@ class GameController extends ChangeNotifier {
     variants: variants,
     seats: [
       for (final player in _players)
-        GameSeat(seatID: player.seatID, player: player),
+        GameSeat(
+          seatID: player.seatID,
+          player: player,
+          profile: _localProfile?.seatID == player.seatID
+              ? _localProfile
+              : null,
+          isViewer: _localProfile?.seatID == player.seatID,
+        ),
     ],
     spectators: spectators,
   );
 
   void completeTransition(int transitionID) {
+    if (_presentationQueue.current?.id != transitionID) {
+      return;
+    }
+    final shouldPaceNextOnlineUpdate =
+        _remoteEngine != null &&
+        _presentationQueue.next?.startsUpdate == true &&
+        animationSpeed.automaticStepDelay != Duration.zero;
+    if (shouldPaceNextOnlineUpdate) {
+      if (_onlinePresentationPaceTimer != null) {
+        return;
+      }
+      _onlinePresentationPaceTimer = Timer(
+        animationSpeed.automaticStepDelay,
+        () {
+          _onlinePresentationPaceTimer = null;
+          if (_disposed || !_presentationQueue.complete(transitionID)) {
+            return;
+          }
+          _presentCurrentTransition();
+        },
+      );
+      return;
+    }
     if (!_presentationQueue.complete(transitionID)) {
       return;
     }
@@ -826,7 +864,7 @@ class GameController extends ChangeNotifier {
   void _acceptOnlineUpdate(OnlineSessionUpdate update) {
     final online = _remoteEngine;
     final playerID = online?.playerID;
-    lobby = gameLobbyFromOnlineUpdate(
+    lobby = _buildOnlineLobby(
       update,
       viewerSeatID: online?.spectator == true ? null : playerID,
       spectators: lobby.spectators,
@@ -834,6 +872,49 @@ class GameController extends ChangeNotifier {
     _players = lobby.players;
     currentVariants = update.variants;
     currentSeed = update.seed ?? currentSeed;
+  }
+
+  GameLobby _buildOnlineLobby(
+    OnlineSessionUpdate update, {
+    required int? viewerSeatID,
+    List<GameSpectator> spectators = const [],
+  }) {
+    final onlineLobby = gameLobbyFromOnlineUpdate(
+      update,
+      viewerSeatID: viewerSeatID,
+      spectators: spectators,
+    );
+    final localProfile = _localProfile;
+    if (viewerSeatID == null ||
+        localProfile == null ||
+        viewerSeatID < 0 ||
+        viewerSeatID >= onlineLobby.seats.length ||
+        onlineLobby.seats[viewerSeatID].profile != null) {
+      return onlineLobby;
+    }
+    final viewerProfile = PlayerProfile(
+      seatID: viewerSeatID,
+      userID: localProfile.userID,
+      displayName: localProfile.displayName,
+      avatarURL: localProfile.avatarURL,
+      stats: localProfile.stats,
+    );
+    return onlineLobby.copyWith(
+      seats: [
+        for (final seat in onlineLobby.seats)
+          if (seat.seatID == viewerSeatID)
+            GameSeat(
+              seatID: seat.seatID,
+              player: seat.player,
+              ready: seat.ready,
+              profile: viewerProfile,
+              presence: seat.presence,
+              isViewer: seat.isViewer,
+            )
+          else
+            seat,
+      ],
+    );
   }
 
   bool _restoreAutosave() {
@@ -881,6 +962,7 @@ class GameController extends ChangeNotifier {
 
   LocalGameEngineBindings get _localEngineBindings => LocalGameEngineBindings(
     players: () => _players,
+    lobby: () => lobby,
     animationSpeed: () => animationSpeed,
     uiState: () => uiState,
     setUiState: (value) => uiState = value,
@@ -895,6 +977,8 @@ class GameController extends ChangeNotifier {
   );
 
   void _clearSession() {
+    _onlinePresentationPaceTimer?.cancel();
+    _onlinePresentationPaceTimer = null;
     final engine = _engine;
     _engine = null;
     engine?.dispose();

@@ -97,11 +97,7 @@ String faceAssetPath(TableCard card) {
   if (fieldPlanPath != null) {
     return fieldPlanPath;
   }
-  if (card.suit == wreckerSuit) {
-    return 'assets/ui/Cards/face-wrecker.png';
-  }
-  final variant = card.nomenclature ? '-nomenklatura' : '';
-  return 'assets/ui/Cards/face-$rank-${card.suit}$variant.png';
+  return 'assets/art/field_plan/cards/faces/face-saboteur.png';
 }
 
 bool cardUsesFieldPlanFaceArt(TableCard card) =>
@@ -117,19 +113,11 @@ String suitAssetPath(String suit, {bool mip = false}) {
   if (fieldPlanPath != null) {
     return fieldPlanPath;
   }
-  return 'assets/ui/Icons/icon-$suit.png';
+  return fieldPlanCardSuitAssetPaths[wreckerSuit]!;
 }
 
 String? aceAssetPath(TableCard card) =>
     card.value == 1 ? fieldPlanCardAceAssetPath(card.suit) : null;
-
-String genericFaceAssetPath(TableCard card) {
-  if (card.suit == wreckerSuit) {
-    return 'assets/ui/Cards/face-wrecker.png';
-  }
-  final rank = faceRankName(card);
-  return 'assets/ui/Cards/face-$rank.png';
-}
 
 String faceRankName(TableCard card) {
   if (card.suit == wreckerSuit) {
@@ -184,17 +172,7 @@ String? physicalDeckFaceCaption(TableCard card) {
 }
 
 String portraitAssetPath(Seat seat) {
-  final asset = switch (seat.portraitAsset) {
-    'worker1' || 'worker-forewoman' => fieldPlanPlayerForewoman,
-    'worker2' || 'worker-mechanic' => fieldPlanPlayerMechanic,
-    'worker3' || 'worker-agronomist' => fieldPlanPlayerAgronomist,
-    'worker4' || 'worker-beekeeper' => fieldPlanPlayerBeekeeper,
-    _ => null,
-  };
-  if (asset != null) {
-    return asset.fieldPlanPath;
-  }
-  return 'assets/ui/${seat.portraitAsset}.png';
+  return fieldPlanPlayerPortraitPath(seat.portraitAsset);
 }
 
 String cardTemplateAssetPath({

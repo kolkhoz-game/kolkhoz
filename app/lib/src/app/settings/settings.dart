@@ -234,14 +234,6 @@ Map<String, Object?> profileStatsToJson(KolkhozProfileStats stats) {
   };
 }
 
-// Transitional aliases for tests and older callers while profile persistence moves
-// from Supabase to the Kolkhoz server.
-KolkhozProfileStats profileStatsFromSupabaseJson(Object? value) =>
-    profileStatsFromJson(value);
-
-Map<String, Object?> profileStatsToSupabaseJson(KolkhozProfileStats stats) =>
-    profileStatsToJson(stats);
-
 int _dbInt(Object? value) {
   if (value is int && value >= 0) {
     return value;
@@ -471,27 +463,10 @@ enum KolkhozAppearance {
 }
 
 enum KolkhozCardBack {
-  classic(
-    assetPath: 'assets/ui/Cards/card-back.png',
-    iconAssetPath: 'assets/ui/Cards/card-back-icon.png',
-  ),
-  harvest(
-    assetPath: 'assets/ui/Cards/card-back-harvest.png',
-    iconAssetPath: 'assets/ui/Cards/card-back-harvest-icon.png',
-  ),
-  granary(
-    assetPath: 'assets/ui/Cards/card-back-granary.png',
-    iconAssetPath: 'assets/ui/Cards/card-back-granary-icon.png',
-  ),
-  winter(
-    assetPath: 'assets/ui/Cards/card-back-winter.png',
-    iconAssetPath: 'assets/ui/Cards/card-back-winter-icon.png',
-  );
-
-  const KolkhozCardBack({required this.assetPath, required this.iconAssetPath});
-
-  final String assetPath;
-  final String iconAssetPath;
+  classic,
+  harvest,
+  granary,
+  winter;
 
   String get displayedAssetPath => fieldPlanCardBackAssetPath;
   String get displayedIconAssetPath => fieldPlanCardBackAssetPath;

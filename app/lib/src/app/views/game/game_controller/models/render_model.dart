@@ -93,6 +93,7 @@ class Seat {
     required this.hiddenHandCount,
     required this.plot,
     required this.medals,
+    this.bankedMedals = 0,
     required this.visibleScore,
     this.profileStats,
     this.profileUserID,
@@ -110,6 +111,8 @@ class Seat {
   final int hiddenHandCount;
   final PlotState plot;
   final int medals;
+  final int bankedMedals;
+  int get totalMedals => medals + bankedMedals;
   final int visibleScore;
   final KolkhozProfileStats? profileStats;
   final String? profileUserID;

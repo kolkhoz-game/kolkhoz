@@ -141,6 +141,7 @@ class OnlineTableProjection {
         ],
       ),
       medals: player?.medals ?? 0,
+      bankedMedals: player?.bankedMedals ?? 0,
       visibleScore: scoreFor(seatID).visibleScore,
       profileStats: profile?.stats,
       profileUserID: profile?.userID,

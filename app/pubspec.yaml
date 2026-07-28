@@ -44,7 +44,6 @@ dependencies:
   simple_animations: ^5.3.0
   mobile_scanner: ^7.3.0
   qr_flutter: ^4.1.0
-  supabase_flutter: ^2.16.0
 
 dev_dependencies:
   build_runner: ^2.15.1
@@ -74,11 +73,8 @@ flutter:
 
   assets:
     - assets/ui/
-    - assets/ui/ui-header-counter.png
     - assets/ui/Icons/
-    - assets/ui/Cards/
     - assets/ui/Embellishments/
-    - assets/ui/Fonts/Bitmap/
     - assets/art/field_plan/
     - assets/art/field_plan/shared/textures/
     - assets/art/field_plan/shared/pictograms/
@@ -89,12 +85,8 @@ flutter:
     - assets/art/field_plan/ledger/actions/
     - assets/art/field_plan/game/players/
     - assets/art/field_plan/game/backgrounds/
-    - assets/art/field_plan/world_depth/
-    - assets/art/field_plan/world_lab_north/
-    - assets/art/field_plan/world_lab_corridor_proof/
-    - assets/art/field_plan/world_lab_rm40_y0/
-    - assets/art/field_plan/world_lab_north_route_cards/
-    - assets/art/field_plan/world_lab_route_components/
+    - assets/art/field_plan/game/ui/navigation/
+    - assets/art/field_plan/game/ui/icons/
     - assets/art/field_plan/cards/suits/
     - assets/art/field_plan/cards/suits/mip/
     - assets/art/field_plan/cards/aces/

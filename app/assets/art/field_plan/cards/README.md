@@ -1,8 +1,7 @@
 # Field-Plan Card Art
 
-This directory contains the parallel light-mode card artwork selected by
-`KOLKHOZ_ART_STYLE=field_plan`. Until a complete card family exists, card rendering must
-fall back to the corresponding asset under `assets/ui/Cards/`.
+This directory contains the production card artwork used by the app. The complete
+field-plan family is authoritative; there is no legacy pixel-card fallback.
 
 ## Suits
 

@@ -8,6 +8,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_const
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_ui_state.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/table_model_assembler.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
+import 'package:kolkhoz_app/src/app/profile/models/player_profile.dart';
 
 class TableViewProjection {
   const TableViewProjection({
@@ -17,6 +18,7 @@ class TableViewProjection {
     this.variants = KolkhozGameVariants.kolkhoz,
     this.uiState = const GameUiState(),
     this.revealedPlayerID,
+    this.profiles = const {},
   });
 
   final KolkhozCEngineBridge bridge;
@@ -25,6 +27,7 @@ class TableViewProjection {
   final KolkhozGameVariants variants;
   final GameUiState uiState;
   final int? revealedPlayerID;
+  final Map<int, PlayerProfile> profiles;
 
   TableViewModel project() {
     final phase = phaseName(bridge.phase(engine));
@@ -80,54 +83,72 @@ class TableViewProjection {
   }) {
     return [
       for (var playerID = 0; playerID < kolkhozPlayerCount; playerID++)
-        Seat(
-          id: playerID,
-          name: seatNameForController(
-            playerID: playerID,
-            controller: controllers[playerID],
-          ),
-          controller: renderControllerName(controllers[playerID]),
-          portraitAsset: 'worker${playerID + 1}',
-          isViewer: playerID == viewerSeatID,
-          isCurrentTurn: bridge.currentPlayer(engine) == playerID,
-          isBrigadeLeader: bridge.playerBrigadeLeader(engine, playerID),
-          hand: cards(
-            bridge.handCount(engine, playerID),
-            (index) => bridge.handCard(engine, playerID, index),
-            highlightedIDs: handActionCardIDs(engineActions, playerID),
-          ),
-          hiddenHandCount: playerID == viewerSeatID
-              ? 0
-              : bridge.handCount(engine, playerID),
-          plot: PlotState(
-            revealed: cards(
-              bridge.plotRevealedCount(engine, playerID),
-              (index) => bridge.plotRevealedCard(engine, playerID, index),
-              highlightedIDs: playerID == viewerSeatID
-                  ? plotActionCardIDs(
-                      engineActions,
-                      plotZoneRevealed,
-                      playerID: playerID,
-                    )
-                  : const {},
-            ),
-            hidden: cards(
-              bridge.plotHiddenCount(engine, playerID),
-              (index) => bridge.plotHiddenCard(engine, playerID, index),
-              highlightedIDs: playerID == viewerSeatID
-                  ? plotActionCardIDs(
-                      engineActions,
-                      plotZoneHidden,
-                      playerID: playerID,
-                    )
-                  : const {},
-            ),
-            stacks: plotStacks(playerID),
-          ),
-          medals: bridge.playerMedals(engine, playerID),
-          visibleScore: bridge.visibleScore(engine, playerID),
+        _seat(
+          playerID: playerID,
+          controller: controllers[playerID],
+          engineActions: engineActions,
+          viewerSeatID: viewerSeatID,
         ),
     ];
+  }
+
+  Seat _seat({
+    required int playerID,
+    required KolkhozPlayerController controller,
+    required List<CEngineActionValue> engineActions,
+    required int viewerSeatID,
+  }) {
+    final profile = profiles[playerID];
+    final profileName = profile?.displayName?.trim();
+    return Seat(
+      id: playerID,
+      name: profileName != null && profileName.isNotEmpty
+          ? profileName
+          : seatNameForController(playerID: playerID, controller: controller),
+      controller: renderControllerName(controller),
+      portraitAsset: profile?.portraitAsset ?? 'worker${playerID + 1}',
+      isViewer: playerID == viewerSeatID,
+      isCurrentTurn: bridge.currentPlayer(engine) == playerID,
+      isBrigadeLeader: bridge.playerBrigadeLeader(engine, playerID),
+      hand: cards(
+        bridge.handCount(engine, playerID),
+        (index) => bridge.handCard(engine, playerID, index),
+        highlightedIDs: handActionCardIDs(engineActions, playerID),
+      ),
+      hiddenHandCount: playerID == viewerSeatID
+          ? 0
+          : bridge.handCount(engine, playerID),
+      plot: PlotState(
+        revealed: cards(
+          bridge.plotRevealedCount(engine, playerID),
+          (index) => bridge.plotRevealedCard(engine, playerID, index),
+          highlightedIDs: playerID == viewerSeatID
+              ? plotActionCardIDs(
+                  engineActions,
+                  plotZoneRevealed,
+                  playerID: playerID,
+                )
+              : const {},
+        ),
+        hidden: cards(
+          bridge.plotHiddenCount(engine, playerID),
+          (index) => bridge.plotHiddenCard(engine, playerID, index),
+          highlightedIDs: playerID == viewerSeatID
+              ? plotActionCardIDs(
+                  engineActions,
+                  plotZoneHidden,
+                  playerID: playerID,
+                )
+              : const {},
+        ),
+        stacks: plotStacks(playerID),
+      ),
+      medals: bridge.playerMedals(engine, playerID),
+      bankedMedals: bridge.playerBankedMedals(engine, playerID),
+      visibleScore: bridge.visibleScore(engine, playerID),
+      profileStats: profile?.stats,
+      profileUserID: profile?.userID,
+    );
   }
 
   List<PlotStackState> plotStacks(int playerID) {

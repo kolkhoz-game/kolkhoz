@@ -1,6 +1,316 @@
 part of '../widget_test.dart';
 
 void registerStoreAndOnlineTests() {
+  test('bot assignments stay on Brigade while cards fly to job gauges', () {
+    final base = runtimeModel();
+    final assignedCard = testCard(
+      id: 'sunflower-9',
+      suit: 'sunflower',
+      value: 9,
+      pending: true,
+    );
+    final before = modelWithActivePanel(
+      runtimeModelWith(
+        phase: phaseAssignment,
+        currentPlayerID: 2,
+        selection: SelectionState.empty,
+        jobs: base.table.jobs,
+      ),
+      panelBrigade,
+    );
+    final after = runtimeModelWith(
+      phase: phaseAssignment,
+      currentPlayerID: 2,
+      selection: SelectionState.empty,
+      jobs: [
+        for (final job in base.table.jobs)
+          job.suit == 'wheat'
+              ? Job(
+                  suit: job.suit,
+                  hours: job.hours,
+                  requiredHours: job.requiredHours,
+                  claimed: job.claimed,
+                  reward: job.reward,
+                  assignedCards: [assignedCard],
+                  validAssignmentTarget: job.validAssignmentTarget,
+                  highlighted: job.highlighted,
+                )
+              : job,
+      ],
+    );
+    final states = projectPresentationBatch(
+      before: before,
+      after: after,
+      events: const [
+        EngineTransitionEvent(
+          kind: kcTransitionAssignmentTargeted,
+          playerID: 1,
+          card: EngineCardValue(suit: 1, value: 9),
+          fromZone: kcObjectZoneLastTrick,
+          toZone: kcObjectZonePendingAssignment,
+          fromOwner: 1,
+          toOwner: 0,
+          targetSuit: 0,
+        ),
+      ],
+    );
+
+    expect(states.single.panels.active, panelBrigade);
+    expect(states.single.table.phase, phaseAssignment);
+  });
+
+  test('presentation batch keeps future claimed rewards out of the plot', () {
+    final base = runtimeModel();
+    final reward = testCard(id: 'wheat-4', suit: 'wheat', value: 4);
+    final beforeJobs = [
+      for (final job in base.table.jobs)
+        job.suit == 'wheat'
+            ? Job(
+                suit: job.suit,
+                hours: jobRequiredHours,
+                requiredHours: job.requiredHours,
+                claimed: false,
+                reward: reward,
+                assignedCards: job.assignedCards,
+                validAssignmentTarget: job.validAssignmentTarget,
+                highlighted: job.highlighted,
+              )
+            : job,
+    ];
+    final before = runtimeModelWith(
+      phase: phaseAssignment,
+      selection: SelectionState.empty,
+      jobs: beforeJobs,
+    );
+    final after = modelWithActivePanel(
+      runtimeModelWith(
+        phase: phaseRequisition,
+        selection: SelectionState.empty,
+        jobs: [
+          for (final job in beforeJobs)
+            job.suit == 'wheat'
+                ? Job(
+                    suit: job.suit,
+                    hours: job.hours,
+                    requiredHours: job.requiredHours,
+                    claimed: true,
+                    reward: null,
+                    assignedCards: job.assignedCards,
+                    validAssignmentTarget: job.validAssignmentTarget,
+                    highlighted: job.highlighted,
+                  )
+                : job,
+        ],
+        seats: [
+          seatWithPlot(
+            base.table.seats[0],
+            PlotState(revealed: [reward], hidden: const [], stacks: const []),
+          ),
+          ...base.table.seats.skip(1),
+        ],
+      ),
+      panelNorth,
+    );
+    final events = [
+      const EngineTransitionEvent(
+        kind: kcTransitionAssignmentOpened,
+        playerID: 0,
+        card: EngineCardValue(suit: -1, value: 0),
+        fromZone: kcObjectZoneLastTrick,
+        toZone: kcObjectZonePendingAssignment,
+        fromOwner: 0,
+        toOwner: 0,
+        targetSuit: -1,
+      ),
+      const EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 0,
+        card: EngineCardValue(suit: 0, value: 4),
+        fromZone: kcObjectZoneRevealedJob,
+        toZone: kcObjectZonePlotRevealed,
+        fromOwner: 0,
+        toOwner: 0,
+        targetSuit: 0,
+      ),
+    ];
+
+    final states = projectPresentationBatch(
+      before: before,
+      after: after,
+      events: events,
+    );
+
+    expect(states[0].table.seats[0].plot.revealed, isEmpty);
+    expect(states[0].table.jobs.first.reward?.id, reward.id);
+    expect(states[0].table.jobs.first.claimed, isFalse);
+    expect(states[0].table.phase, phaseAssignment);
+    expect(states[0].panels.active, panelJobs);
+    expect(states[1].table.seats[0].plot.revealed.single.id, reward.id);
+    expect(states[1].table.jobs.first.reward, isNull);
+    expect(states[1].table.phase, phaseAssignment);
+    expect(states[1].panels.active, panelBrigade);
+  });
+
+  test(
+    'year-end cellar flights wait for reward claims and precede Requisition',
+    () {
+      final base = runtimeModel();
+      final reward = testCard(id: 'wheat-4', suit: 'wheat', value: 4);
+      final localCard = testCard(id: 'beet-8', suit: 'beet', value: 8);
+      final opponentCard = testCard(id: 'potato-9', suit: 'potato', value: 9);
+      Seat seatState(
+        Seat seat, {
+        required List<TableCard> hand,
+        required int hiddenHandCount,
+        required PlotState plot,
+      }) => Seat(
+        id: seat.id,
+        name: seat.name,
+        controller: seat.controller,
+        portraitAsset: seat.portraitAsset,
+        isViewer: seat.isViewer,
+        isCurrentTurn: seat.isCurrentTurn,
+        isBrigadeLeader: seat.isBrigadeLeader,
+        hand: hand,
+        hiddenHandCount: hiddenHandCount,
+        plot: plot,
+        medals: seat.medals,
+        visibleScore: seat.visibleScore,
+        statusText: seat.statusText,
+      );
+      final beforeJobs = [
+        for (final job in base.table.jobs)
+          job.suit == 'wheat'
+              ? Job(
+                  suit: job.suit,
+                  hours: jobRequiredHours,
+                  requiredHours: job.requiredHours,
+                  claimed: false,
+                  reward: reward,
+                  assignedCards: job.assignedCards,
+                  validAssignmentTarget: job.validAssignmentTarget,
+                  highlighted: job.highlighted,
+                )
+              : job,
+      ];
+      final before = runtimeModelWith(
+        phase: phaseAssignment,
+        selection: SelectionState.empty,
+        jobs: beforeJobs,
+        seats: [
+          seatState(
+            base.table.seats[0],
+            hand: [localCard],
+            hiddenHandCount: 0,
+            plot: const PlotState(revealed: [], hidden: [], stacks: []),
+          ),
+          base.table.seats[1],
+          ...base.table.seats.skip(2),
+        ],
+      );
+      final after = modelWithActivePanel(
+        runtimeModelWith(
+          phase: phaseRequisition,
+          selection: SelectionState.empty,
+          jobs: [
+            for (final job in beforeJobs)
+              job.suit == 'wheat'
+                  ? Job(
+                      suit: job.suit,
+                      hours: job.hours,
+                      requiredHours: job.requiredHours,
+                      claimed: true,
+                      reward: null,
+                      assignedCards: job.assignedCards,
+                      validAssignmentTarget: job.validAssignmentTarget,
+                      highlighted: job.highlighted,
+                    )
+                  : job,
+          ],
+          seats: [
+            seatState(
+              base.table.seats[0],
+              hand: const [],
+              hiddenHandCount: 0,
+              plot: PlotState(
+                revealed: [reward],
+                hidden: [localCard],
+                stacks: const [],
+              ),
+            ),
+            seatState(
+              base.table.seats[1],
+              hand: const [],
+              hiddenHandCount: 0,
+              plot: PlotState(
+                revealed: const [],
+                hidden: [opponentCard],
+                stacks: const [],
+              ),
+            ),
+            ...base.table.seats.skip(2),
+          ],
+        ),
+        panelNorth,
+      );
+      final states = projectPresentationBatch(
+        before: before,
+        after: after,
+        events: const [
+          EngineTransitionEvent(
+            kind: kcTransitionCardMoved,
+            playerID: 0,
+            card: EngineCardValue(suit: 0, value: 4),
+            fromZone: kcObjectZoneRevealedJob,
+            toZone: kcObjectZonePlotRevealed,
+            fromOwner: 0,
+            toOwner: 0,
+            targetSuit: 0,
+          ),
+          EngineTransitionEvent(
+            kind: kcTransitionCardMoved,
+            playerID: 0,
+            card: EngineCardValue(suit: 3, value: 8),
+            fromZone: kcObjectZoneHand,
+            toZone: kcObjectZonePlotHidden,
+            fromOwner: 0,
+            toOwner: 0,
+            targetSuit: -1,
+          ),
+          EngineTransitionEvent(
+            kind: kcTransitionCardMoved,
+            playerID: 1,
+            card: EngineCardValue(suit: 2, value: 9),
+            fromZone: kcObjectZoneHand,
+            toZone: kcObjectZonePlotHidden,
+            fromOwner: 1,
+            toOwner: 1,
+            targetSuit: -1,
+          ),
+        ],
+      );
+
+      expect(states[0].table.seats[0].hand.single.id, localCard.id);
+      expect(states[0].table.seats[0].plot.hidden, isEmpty);
+      expect(states[0].table.seats[1].hiddenHandCount, 1);
+      expect(states[0].table.seats[1].plot.hidden, isEmpty);
+      expect(states[1].table.seats[0].hand, isEmpty);
+      expect(states[1].table.seats[0].plot.hidden.single.id, localCard.id);
+      expect(states[1].table.seats[1].hiddenHandCount, 1);
+      expect(states[1].table.seats[1].plot.hidden, isEmpty);
+      expect(states[2].table.seats[1].hiddenHandCount, 0);
+      expect(states[2].table.seats[1].plot.hidden.single.id, opponentCard.id);
+      expect(
+        states.every((state) => state.table.phase == phaseAssignment),
+        isTrue,
+      );
+      expect(
+        states.every((state) => state.panels.active == panelBrigade),
+        isTrue,
+      );
+    },
+  );
+
   test(
     'presentation batch keeps the completed trick visible before assignment',
     () {
@@ -439,6 +749,33 @@ void registerStoreAndOnlineTests() {
     },
   );
 
+  test('local game projects the viewer profile name and portrait', () {
+    final store = GameController(autosaveEnabled: false);
+    addTearDown(store.dispose);
+    store.configureLobby(
+      variants: KolkhozGameVariants.demoKolkhoz,
+      controllers: const [
+        KolkhozPlayerController.human,
+        KolkhozPlayerController.heuristicAI,
+        KolkhozPlayerController.heuristicAI,
+        KolkhozPlayerController.heuristicAI,
+      ],
+      localProfile: const PlayerProfile(
+        seatID: 0,
+        userID: 'profile-1',
+        displayName: 'Nadezhda',
+        avatarURL: 'worker4',
+      ),
+    );
+
+    store.startGame(persist: false);
+
+    final viewer = store.model!.table.seats[0];
+    expect(viewer.name, 'Nadezhda');
+    expect(viewer.portraitAsset, 'worker4');
+    expect(viewer.profileUserID, 'profile-1');
+  });
+
   test('game controller gates local actions while a transition is active', () {
     final store = GameController(autosaveEnabled: false);
     addTearDown(store.dispose);
@@ -591,6 +928,12 @@ void registerStoreAndOnlineTests() {
       store.configureLobby(
         variants: draftVariants,
         controllers: draftControllers,
+        localProfile: const PlayerProfile(
+          seatID: 0,
+          userID: 'profile-1',
+          displayName: 'Nadezhda',
+          avatarURL: 'worker4',
+        ),
       );
 
       expect(httpClient.requests, isEmpty);
@@ -614,6 +957,8 @@ void registerStoreAndOnlineTests() {
       expect(store.players, everyElement(isA<ServerGamePlayer>()));
       expect(store.players, everyElement(isNot(isA<LocalGamePlayer>())));
       expect(store.lobby.seats[0].isViewer, isTrue);
+      expect(store.lobby.seats[0].profile?.displayName, 'Nadezhda');
+      expect(store.model!.table.seats[0].name, 'Nadezhda');
       expect(store.lobby.seats[1].isViewer, isFalse);
       expect(store.lobby.seats.map((seat) => seat.ready), [
         false,
@@ -1193,7 +1538,12 @@ void registerStoreAndOnlineTests() {
     );
 
     final image = tester.widget<Image>(find.byType(Image));
-    expect((image.image as AssetImage).assetName, fieldPlanCardBackAssetPath);
+    expect(
+      (image.image as AssetImage).assetName,
+      fieldPlanCardBackAssetPathFor(
+        dark: !defaultDesignTokens.usesLightAppearance,
+      ),
+    );
   });
 
   testWidgets('game control confirmation resolves through navigator context', (
@@ -1261,7 +1611,7 @@ void registerStoreAndOnlineTests() {
     expect(firstToggleTop, lessThan(newGameBottom));
   });
 
-  testWidgets('left rail uses generic icon assets', (tester) async {
+  testWidgets('left rail uses field-plan navigation assets', (tester) async {
     const tokens = defaultDesignTokens;
     final metrics = ResponsiveBoardMetrics.fromSize(
       const Size(844, 390),
@@ -1285,13 +1635,12 @@ void registerStoreAndOnlineTests() {
       ),
     );
 
-    expect(findAssetImage('assets/ui/Icons/icon-year-2.png'), findsOneWidget);
-    expect(findAssetImage('assets/ui/Icons/icon-menu.png'), findsOneWidget);
-    expect(findAssetImage('assets/ui/Icons/icon-brigade.png'), findsOneWidget);
-    expect(findAssetImage('assets/ui/Icons/icon-jobs.png'), findsOneWidget);
-    expect(findAssetImage('assets/ui/Icons/icon-north.png'), findsOneWidget);
-    expect(findAssetImage('assets/ui/Icons/icon-plot.png'), findsNothing);
-    expect(findAssetImage('assets/ui/Icons/icon-game-log.png'), findsOneWidget);
+    expect(findAssetImage(fieldPlanYearIconPath(2)), findsOneWidget);
+    expect(findAssetImage(fieldPlanNavigationMenuPath), findsOneWidget);
+    expect(findAssetImage(fieldPlanNavigationBrigadePath), findsOneWidget);
+    expect(findAssetImage(fieldPlanNavigationJobsPath), findsOneWidget);
+    expect(findAssetImage(fieldPlanNavigationNorthPath), findsOneWidget);
+    expect(findAssetImage(fieldPlanNavigationLogPath), findsOneWidget);
     expect(find.byType(RailStatusIcon), findsOneWidget);
     expect(find.byType(RailButton), findsNWidgets(5));
   });
@@ -1897,16 +2246,27 @@ void registerStoreAndOnlineTests() {
 
     expect(find.byType(PlanningRewardsPanel), findsOneWidget);
     final planningOverlay = find.byKey(const Key('planning-phase-overlay'));
+    final planningContent = find.byKey(
+      const Key('planning-phase-content-bounds'),
+    );
     final panelPosition = tester.widget<Positioned>(
       find.byKey(const Key('planning-phase-panel-insets')),
     );
     final expectedInset = planningPhaseOverlayInsetForSize(
-      tester.getSize(planningOverlay),
+      tester.getSize(planningContent),
     );
     expect(panelPosition.left, expectedInset);
     expect(panelPosition.top, expectedInset);
     expect(panelPosition.bottom, expectedInset);
     expect(panelPosition.right, isNull);
+    expect(
+      tester.getTopLeft(planningContent).dy,
+      planningPhaseOverlayTopClearance(metrics),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const Key('planning-phase-panel-fit'))).dy,
+      greaterThanOrEqualTo(tester.getTopLeft(planningContent).dy),
+    );
     expect(
       tester.getCenter(find.byKey(const Key('planning-phase-panel-fit'))).dx,
       lessThan(tester.getCenter(planningOverlay).dx),
@@ -1972,6 +2332,53 @@ void registerStoreAndOnlineTests() {
     expect(
       planningPhaseOverlayInsetForSize(const Size(900, 520)),
       closeTo(62.4, 0.001),
+    );
+  });
+
+  testWidgets('planning overlay scales below the landscape top bar', (
+    tester,
+  ) async {
+    const size = Size(640, 360);
+    const tokens = defaultDesignTokens;
+    final metrics = ResponsiveBoardMetrics.fromSize(size, tokens);
+    final model = runtimeModelWith(
+      phase: phasePlanning,
+      selection: SelectionState.empty,
+      jobs: runtimeModel().table.jobs,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: size.width,
+          height: size.height,
+          child: BoardPlayArea(
+            model: model,
+            tokens: tokens,
+            metrics: metrics,
+            language: KolkhozLanguage.en,
+            appearance: KolkhozAppearance.dark,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final topBar = find.byType(TopInfoStrip);
+    final content = find.byKey(const Key('planning-phase-content-bounds'));
+    final panel = find.byKey(const Key('planning-phase-panel-fit'));
+    expect(topBar, findsOneWidget);
+    expect(
+      tester.getTopLeft(content).dy,
+      greaterThanOrEqualTo(tester.getBottomLeft(topBar).dy),
+    );
+    expect(
+      tester.getTopLeft(panel).dy,
+      greaterThanOrEqualTo(tester.getTopLeft(content).dy),
+    );
+    expect(
+      tester.getBottomLeft(panel).dy,
+      lessThanOrEqualTo(tester.getBottomLeft(content).dy),
     );
   });
 
@@ -2085,22 +2492,26 @@ void registerStoreAndOnlineTests() {
       value: 5,
     );
     final seats = [
-      base.table.seats[0],
-      seatWithPlot(
-        base.table.seats[1],
-        PlotState(
-          revealed: [opponentPlotCard],
-          hidden: [opponentCellarCard],
-          stacks: [
-            PlotStackState(
-              revealed: [opponentStackRevealedCard],
-              hidden: [opponentStackHiddenCard],
-            ),
-          ],
+      seatWithMedals(base.table.seats[0], 1, bankedMedals: 2),
+      seatWithMedals(
+        seatWithPlot(
+          base.table.seats[1],
+          PlotState(
+            revealed: [opponentPlotCard],
+            hidden: [opponentCellarCard],
+            stacks: [
+              PlotStackState(
+                revealed: [opponentStackRevealedCard],
+                hidden: [opponentStackHiddenCard],
+              ),
+            ],
+          ),
         ),
+        2,
+        bankedMedals: 2,
       ),
-      base.table.seats[2],
-      base.table.seats[3],
+      seatWithMedals(base.table.seats[2], 1, bankedMedals: 5),
+      seatWithMedals(base.table.seats[3], 0, bankedMedals: 1),
     ];
     const gameOverScores = [
       Score(seatID: 0, visibleScore: 30, finalScore: 30),
@@ -2155,43 +2566,17 @@ void registerStoreAndOnlineTests() {
     );
 
     expect(find.byType(GameOverPlotPanel), findsOneWidget);
-    expect(find.byKey(const Key('game-over-seed')), findsOneWidget);
-    expect(
-      find.ancestor(
-        of: find.byKey(const Key('game-over-seed')),
-        matching: find.byType(Material),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('game-over-seed')), findsNothing);
     expect(
       find.byKey(const Key('game-over-copy-result-button')),
       findsOneWidget,
     );
-    expect(find.byType(PlotOverviewView), findsOneWidget);
-    expect(find.byType(OpponentPlotPanel), findsNWidgets(3));
-    expect(find.byType(LocalPlotColumn), findsNWidgets(2));
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is GameCard && widget.card.id == opponentCellarCard.id,
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is ScaledHighlightableCardBack &&
-            widget.card.id == opponentCellarCard.id,
-      ),
-      findsNothing,
-    );
-    final opponentSections = tester
-        .widgetList<OpponentPlotMiniSection>(
-          find.byType(OpponentPlotMiniSection),
-        )
-        .toList();
-    expect(opponentSections.first.value, '17');
-    expect(opponentSections.first.hidden, isFalse);
+    expect(find.byKey(const Key('game-over-poster')), findsOneWidget);
+    expect(find.byKey(const Key('game-over-poster-sheet')), findsOneWidget);
+    expect(find.byKey(const Key('game-over-plan-ribbon')), findsOneWidget);
+    expect(find.byKey(const Key('game-over-winning-score')), findsNothing);
+    expect(find.byType(PlotOverviewView), findsNothing);
+    expect(find.byType(TopInfoStrip), findsNothing);
     expect(find.byType(GameOverFinalScoreStrip), findsOneWidget);
     expect(find.byType(PanelTitleRow), findsNothing);
     final scoreTiles = tester
@@ -2199,7 +2584,44 @@ void registerStoreAndOnlineTests() {
         .toList();
     expect(
       scoreTiles.map((tile) => tile.score),
-      orderedEquals([10, 20, 30, 40]),
+      orderedEquals([40, 30, 20, 10]),
+    );
+    expect(scoreTiles.map((tile) => tile.rank), orderedEquals([1, 2, 3, 4]));
+    expect(
+      scoreTiles.map((tile) => tile.seat.totalMedals),
+      orderedEquals([6, 3, 1, 4]),
+    );
+    for (final seat in seats) {
+      expect(
+        find.byKey(Key('game-over-cellar-total-${seat.id}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('game-over-cellar-box-${seat.id}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('game-over-plot-total-${seat.id}')),
+        findsOneWidget,
+      );
+      expect(find.byKey(Key('game-over-plot-box-${seat.id}')), findsOneWidget);
+      expect(find.byKey(Key('game-over-medals-${seat.id}')), findsOneWidget);
+      expect(find.byKey(Key('game-over-cellar-${seat.id}')), findsOneWidget);
+      expect(find.byKey(Key('game-over-plot-${seat.id}')), findsOneWidget);
+    }
+    final opponentCellar = tester.widget<GameOverScoreCardSection>(
+      find.byKey(const Key('game-over-cellar-1')),
+    );
+    expect(
+      opponentCellar.cards.map((card) => card.id),
+      orderedEquals([opponentCellarCard.id, opponentStackHiddenCard.id]),
+    );
+    final opponentPlot = tester.widget<GameOverScoreCardSection>(
+      find.byKey(const Key('game-over-plot-1')),
+    );
+    expect(
+      opponentPlot.cards.map((card) => card.id),
+      orderedEquals([opponentPlotCard.id, opponentStackRevealedCard.id]),
     );
     final winnerTile = find.byKey(Key('game-over-score-$gameOverWinnerID'));
     expect(
@@ -2207,32 +2629,12 @@ void registerStoreAndOnlineTests() {
         of: winnerTile,
         matching: find.byWidgetPredicate(
           (widget) =>
-              widget is ChromeButtonBackground &&
-              widget.asset == chromeButtonPrimaryAsset,
-        ),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: winnerTile,
-        matching: find.byWidgetPredicate(
-          (widget) =>
               widget is Image &&
               widget.image is AssetImage &&
-              (widget.image as AssetImage).assetName ==
-                  'assets/ui/Icons/icon-medal-star.png',
+              (widget.image as AssetImage).assetName == fieldPlanMedalIconPath,
         ),
       ),
       findsOneWidget,
-    );
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is ChromeButtonBackground &&
-            widget.asset == chromeButtonSecondaryAsset,
-      ),
-      findsNWidgets(5),
     );
     expect(find.byType(HandTray), findsNothing);
     expect(
@@ -2449,7 +2851,7 @@ void registerStoreAndOnlineTests() {
       find.byWidgetPredicate(
         (widget) => widget is GameCard && widget.card.id == localHiddenCard.id,
       ),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.byWidgetPredicate(
@@ -2457,7 +2859,7 @@ void registerStoreAndOnlineTests() {
             widget is ScaledHighlightableCardBack &&
             widget.card.id == localHiddenCard.id,
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.byWidgetPredicate(
@@ -2482,6 +2884,19 @@ void registerStoreAndOnlineTests() {
         (widget) => widget is GameCard && widget.card.id == localHiddenCard2.id,
       ),
       findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is GameCard && widget.card.id == localHiddenCard.id,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is GameCard && widget.card.id == opponentHiddenCard.id,
+      ),
+      findsNothing,
     );
     final localColumns = tester
         .widgetList<LocalPlotColumn>(find.byType(LocalPlotColumn))
@@ -3081,7 +3496,7 @@ void registerStoreAndOnlineTests() {
 
     expect(findAppText('Year 1'), findsOneWidget);
     expect(findAppText('Planning'), findsOneWidget);
-    expect(findAssetImage('assets/ui/Icons/icon-year-1.png'), findsOneWidget);
+    expect(findAssetImage(fieldPlanYearIconPath(1)), findsOneWidget);
     expect(
       findAssetImage('assets/ui/Icons/icon-crop-seal.png'),
       findsOneWidget,
@@ -3091,10 +3506,7 @@ void registerStoreAndOnlineTests() {
     expect(findAppText('Mira Petrov'), findsOneWidget);
     expect(findAppText('played'), findsOneWidget);
     expect(findAppText('10'), findsOneWidget);
-    expect(
-      findAssetImage('assets/ui/Icons/icon-sunflower.png'),
-      findsOneWidget,
-    );
+    expect(findAssetImage(fieldPlanSunflowerIconPath), findsOneWidget);
   });
 
   testWidgets('local requisition advances and logs one event per timer tick', (
@@ -3400,74 +3812,83 @@ void registerStoreAndOnlineTests() {
     expect(jsonDecode(httpClient.requests.last.body)['actionLogCount'], 0);
   });
 
-  test('game controller queues realtime snapshots for presentation', () async {
-    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    addTearDown(() => server.close(force: true));
-    final framesSent = Completer<void>();
-    server.listen((request) async {
-      final socket = await WebSocketTransformer.upgrade(request);
-      final revisionOne = onlineUpdateJson()..['actionLogCount'] = 1;
-      final revisionTwo = onlineUpdateJson()..['actionLogCount'] = 2;
-      socket.add(
-        jsonEncode({
-          'type': 'committed',
-          'revision': 1,
-          'updates': {
-            'sessionID': '11111111-1111-1111-1111-111111111111',
-            'actionLogCount': 1,
-            'updates': [
-              {
-                'revision': 1,
-                'action': const OnlineEngineAction(
-                  kind: kcActionSetTrump,
-                  playerID: 0,
-                  suit: 0,
-                ).toJson(),
-                'update': revisionOne,
-              },
-            ],
-            'resyncUpdate': null,
-          },
-        }),
-      );
-      socket.add(jsonEncode({'type': 'state', 'update': revisionTwo}));
-      socket.add(
-        jsonEncode({
-          'type': 'state',
-          'update': onlineUpdateJson()..['actionLogCount'] = 0,
-        }),
-      );
-      framesSent.complete();
-    });
-    final store = GameController(
-      autosaveEnabled: false,
-      remoteGameEngineFactory: RemoteGameEngineFactory(
-        testGameRemoteConnection(
-          FakeOnlineHttpClient(),
-          accessTokenProvider: () async => 'access-token',
-          webSocketConnector: (_, headers) => WebSocket.connect(
-            'ws://${server.address.address}:${server.port}',
-            headers: headers,
+  test(
+    'game controller paces queued realtime snapshots between updates',
+    () async {
+      late HttpServer server;
+      late GameController store;
+      final framesSent = Completer<void>();
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        final socket = await WebSocketTransformer.upgrade(request);
+        final revisionOne = onlineUpdateJson()..['actionLogCount'] = 1;
+        final revisionTwo = onlineUpdateJson()..['actionLogCount'] = 2;
+        socket.add(
+          jsonEncode({
+            'type': 'committed',
+            'revision': 1,
+            'updates': {
+              'sessionID': '11111111-1111-1111-1111-111111111111',
+              'actionLogCount': 1,
+              'updates': [
+                {
+                  'revision': 1,
+                  'action': const OnlineEngineAction(
+                    kind: kcActionSetTrump,
+                    playerID: 0,
+                    suit: 0,
+                  ).toJson(),
+                  'update': revisionOne,
+                },
+              ],
+              'resyncUpdate': null,
+            },
+          }),
+        );
+        socket.add(jsonEncode({'type': 'state', 'update': revisionTwo}));
+        socket.add(
+          jsonEncode({
+            'type': 'state',
+            'update': onlineUpdateJson()..['actionLogCount'] = 0,
+          }),
+        );
+        framesSent.complete();
+      });
+      store = GameController(
+        autosaveEnabled: false,
+        remoteGameEngineFactory: RemoteGameEngineFactory(
+          testGameRemoteConnection(
+            FakeOnlineHttpClient(),
+            accessTokenProvider: () async => 'access-token',
+            webSocketConnector: (_, headers) => WebSocket.connect(
+              'ws://${server.address.address}:${server.port}',
+              headers: headers,
+            ),
           ),
         ),
-      ),
-    );
-    addTearDown(store.dispose);
+      );
+      addTearDown(store.dispose);
 
-    await store.startOnlineGame(ranked: false, browserJoinable: false);
-    await framesSent.future;
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+      await store.startOnlineGame(ranked: false, browserJoinable: false);
+      await framesSent.future;
+      await Future<void>.delayed(const Duration(milliseconds: 20));
 
-    expect(store.onlineUpdate!.actionLogCount, 2);
-    expect(store.currentTransition?.id, 1);
-    expect(store.model!.legalActions, isEmpty);
-    store.completeTransition(1);
-    expect(store.currentTransition?.id, 2);
-    expect(store.model!.legalActions, isEmpty);
-    store.completeTransition(2);
-    expect(store.currentTransition, isNull);
-    expect(store.model!.legalActions, hasLength(1));
-  });
+      expect(store.onlineUpdate!.actionLogCount, 2);
+      expect(store.currentTransition?.id, 1);
+      expect(store.model!.legalActions, isEmpty);
+      store.completeTransition(1);
+      expect(store.currentTransition?.id, 1);
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(store.currentTransition?.id, 1);
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      expect(store.currentTransition?.id, 2);
+      expect(store.model!.legalActions, isEmpty);
+      store.completeTransition(2);
+      expect(store.currentTransition, isNull);
+      expect(store.model!.legalActions, hasLength(1));
+    },
+  );
 
   test(
     'realtime reconnect resumes after the latest accepted revision',

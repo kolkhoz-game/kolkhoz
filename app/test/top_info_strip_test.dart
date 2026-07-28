@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_view.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 
@@ -18,7 +19,7 @@ void main() {
             key: cellKey,
             width: 92,
             child: TopInfoCell(
-              icon: 'icon-plot.png',
+              icon: fieldPlanPlotIconPath,
               value: '125',
               tokens: defaultDesignTokens,
               height: 48,
@@ -65,10 +66,17 @@ void main() {
       find.byKey(const ValueKey('job-gauge-completed-suit-potato')),
       findsOneWidget,
     );
-    final check = tester.widget<Image>(find.byType(Image).first);
+    final check = tester
+        .widgetList<Image>(find.byType(Image))
+        .firstWhere(
+          (image) =>
+              image.image is AssetImage &&
+              (image.image as AssetImage).assetName ==
+                  fieldPlanToolbarConfirmIconPath,
+        );
     expect(
       (check.image as AssetImage).assetName,
-      'assets/ui/Icons/icon-check.png',
+      fieldPlanToolbarConfirmIconPath,
     );
   });
 

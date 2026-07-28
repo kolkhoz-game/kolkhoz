@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kolkhoz_app/src/app/settings/game_motion.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/game_session_models.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
@@ -20,11 +21,11 @@ const reactionIDs = [
 
 String reactionAsset(String reactionID) => switch (reactionID) {
   'comrade' => 'icon-comrade.png',
-  'medal' => 'icon-medal-star.png',
+  'medal' => fieldPlanMedalIconPath,
   'protected' => 'icon-status-protected.png',
   'warning' => 'icon-warning.png',
-  'wheat' => 'icon-wheat.png',
-  'wrecker' => 'icon-wrecker.png',
+  'wheat' => fieldPlanWheatIconPath,
+  'wrecker' => fieldPlanWreckerIconPath,
   _ => 'icon-comrade.png',
 };
 
@@ -79,8 +80,7 @@ class GameLogPanel extends StatelessWidget {
                     title: language == KolkhozLanguage.en
                         ? 'Year ${year.year}'
                         : 'Год ${year.year}',
-                    iconAsset:
-                        'assets/ui/Icons/icon-year-${year.year.clamp(1, 5)}.png',
+                    iconAsset: fieldPlanYearIconPath(year.year),
                     initiallyExpanded: year.year == latestYear,
                     tokens: tokens,
                     children: [
@@ -163,10 +163,17 @@ class ReactionTray extends StatelessWidget {
                         ? () => onReaction?.call(reactionID)
                         : null,
                     icon: Image.asset(
-                      'assets/ui/Icons/${reactionAsset(reactionID)}',
+                      reactionAsset(reactionID).startsWith('assets/')
+                          ? reactionAsset(reactionID)
+                          : 'assets/ui/Icons/${reactionAsset(reactionID)}',
                       width: 30,
                       height: 30,
-                      filterQuality: FilterQuality.none,
+                      filterQuality:
+                          reactionAsset(
+                            reactionID,
+                          ).startsWith('assets/art/field_plan/')
+                          ? FilterQuality.high
+                          : FilterQuality.none,
                     ),
                   ),
                 ),
@@ -364,7 +371,7 @@ class _SystemLogEventRow extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Image.asset(
-            'assets/ui/Icons/icon-requisition-north.png',
+            fieldPlanNavigationNorthPath,
             width: 22,
             height: 22,
             filterQuality: FilterQuality.none,
@@ -402,10 +409,17 @@ class _ReactionLine extends StatelessWidget {
         Tooltip(
           message: reaction.reactionID,
           child: Image.asset(
-            'assets/ui/Icons/${reactionAsset(reaction.reactionID)}',
+            reactionAsset(reaction.reactionID).startsWith('assets/')
+                ? reactionAsset(reaction.reactionID)
+                : 'assets/ui/Icons/${reactionAsset(reaction.reactionID)}',
             width: 20,
             height: 20,
-            filterQuality: FilterQuality.none,
+            filterQuality:
+                reactionAsset(
+                  reaction.reactionID,
+                ).startsWith('assets/art/field_plan/')
+                ? FilterQuality.high
+                : FilterQuality.none,
           ),
         ),
       ],
@@ -483,10 +497,11 @@ class _InlineSuitIcon extends StatelessWidget {
     return Tooltip(
       message: resolvedSuit,
       child: Image.asset(
-        'assets/ui/Icons/icon-$resolvedSuit.png',
+        fieldPlanGameCropIconPath(resolvedSuit),
         width: 18,
         height: 18,
-        filterQuality: FilterQuality.none,
+        filterQuality: FilterQuality.high,
+        isAntiAlias: true,
         errorBuilder: (_, _, _) => SizedBox(
           width: 18,
           height: 18,
@@ -621,14 +636,14 @@ String _phaseLabel(String phase, KolkhozLanguage language) {
 String _phaseIconAsset(String phase) {
   final icon = switch (phase) {
     phasePlanning => 'icon-crop-seal.png',
-    phaseSwap => 'icon-toolbar-swap.png',
-    phasePass => 'icon-pass.png',
-    phaseTrick => 'icon-toolbar-play.png',
-    phaseAssignment => 'icon-toolbar-assign.png',
-    phaseRequisition => 'icon-requisition-north.png',
-    _ => 'icon-game-log.png',
+    phaseSwap => fieldPlanToolbarSwapIconPath,
+    phasePass => fieldPlanVariantPassCards.fieldPlanPath,
+    phaseTrick => fieldPlanToolbarPlayIconPath,
+    phaseAssignment => fieldPlanToolbarAssignIconPath,
+    phaseRequisition => fieldPlanNavigationNorthPath,
+    _ => fieldPlanNavigationLogPath,
   };
-  return 'assets/ui/Icons/$icon';
+  return icon.startsWith('assets/') ? icon : 'assets/ui/Icons/$icon';
 }
 
 List<Widget> _actionWidgets(

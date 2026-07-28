@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_metrics.dart';
@@ -171,7 +172,7 @@ class _BoardViewMenuState extends State<BoardViewMenu> {
           if (!widget.dense) SizedBox(height: widget.metrics.railSpacing * 0.5),
           RailButton(
             key: const Key('board-view-menu-settings'),
-            asset: 'icon-menu.png',
+            asset: fieldPlanNavigationMenuPath,
             active: widget.activePanel == panelOptions,
             action: false,
             label: widget.language.strings.boardOptionspanelMenu,
@@ -204,18 +205,22 @@ RailButton boardViewButton({
 }) {
   final (asset, label, motionKey) = switch (panel) {
     panelBrigade => (
-      'icon-brigade.png',
+      fieldPlanNavigationBrigadePath,
       language.strings.boardBoardrailBrigade,
       null,
     ),
-    panelJobs => ('icon-jobs.png', language.strings.boardBoardrailJobs, null),
+    panelJobs => (
+      fieldPlanNavigationJobsPath,
+      language.strings.boardBoardrailJobs,
+      null,
+    ),
     panelNorth => (
-      'icon-north.png',
+      fieldPlanNavigationNorthPath,
       language.strings.boardBoardrailTheNorth,
       northRailCardMotionTargetKey,
     ),
     panelLog => (
-      'icon-game-log.png',
+      fieldPlanNavigationLogPath,
       language == KolkhozLanguage.en ? 'Game Log' : 'Журнал игры',
       null,
     ),
@@ -399,13 +404,13 @@ List<Widget> boardRailButtons({
 }) {
   return [
     RailStatusIcon(
-      asset: 'icon-year-${year.clamp(1, 5)}.png',
+      asset: fieldPlanYearIconPath(year),
       label: language.strings.lowerbaractionsYearValue1(value1: year),
       tokens: tokens,
       metrics: metrics,
     ),
     RailButton(
-      asset: 'icon-brigade.png',
+      asset: fieldPlanNavigationBrigadePath,
       active: activePanel == panelBrigade,
       action: actionPanel == panelBrigade,
       label: language.strings.boardBoardrailBrigade,
@@ -415,7 +420,7 @@ List<Widget> boardRailButtons({
       onTap: () => onPanelSelected?.call(panelBrigade),
     ),
     RailButton(
-      asset: 'icon-jobs.png',
+      asset: fieldPlanNavigationJobsPath,
       active: activePanel == panelJobs,
       action: actionPanel == panelJobs,
       label: language.strings.boardBoardrailJobs,
@@ -425,7 +430,7 @@ List<Widget> boardRailButtons({
       onTap: () => onPanelSelected?.call(panelJobs),
     ),
     RailButton(
-      asset: 'icon-north.png',
+      asset: fieldPlanNavigationNorthPath,
       active: activePanel == panelNorth,
       action: actionPanel == panelNorth,
       label: language.strings.boardBoardrailTheNorth,
@@ -436,7 +441,7 @@ List<Widget> boardRailButtons({
       onTap: () => onPanelSelected?.call(panelNorth),
     ),
     RailButton(
-      asset: 'icon-game-log.png',
+      asset: fieldPlanNavigationLogPath,
       active: activePanel == panelLog,
       action: false,
       label: language == KolkhozLanguage.en ? 'Game Log' : 'Журнал игры',
@@ -447,7 +452,7 @@ List<Widget> boardRailButtons({
       onTap: () => onPanelSelected?.call(panelLog),
     ),
     RailButton(
-      asset: 'icon-menu.png',
+      asset: fieldPlanNavigationMenuPath,
       active: activePanel == panelOptions,
       action: false,
       label: language.strings.boardOptionspanelMenu,
@@ -490,11 +495,11 @@ class RailStatusIcon extends StatelessWidget {
               children: [
                 const Positioned.fill(
                   child: ChromeButtonBackground(
-                    asset: 'assets/ui/ui-nav-button-inactive.png',
+                    asset: fieldPlanNavigationInactiveFramePath,
                   ),
                 ),
                 ChromeAssetIcon(
-                  asset: 'assets/ui/Icons/$asset',
+                  asset: asset,
                   width: metrics.railIconSize,
                   height: metrics.railIconSize,
                 ),
@@ -584,16 +589,14 @@ class RailButton extends StatelessWidget {
                     alignment: Alignment.center,
                     children: [
                       Positioned.fill(
-                        child: ChromeButtonBackground(
-                          asset: 'assets/ui/$backgroundAsset',
-                        ),
+                        child: ChromeButtonBackground(asset: backgroundAsset),
                       ),
                       Padding(
                         padding: EdgeInsets.only(
                           top: action ? _actionIconYOffset : 0,
                         ),
                         child: ChromeAssetIcon(
-                          asset: 'assets/ui/Icons/$asset',
+                          asset: asset,
                           width: iconSize ?? metrics.railIconSize,
                           height: iconSize ?? metrics.railIconSize,
                           muted: muted,
@@ -606,6 +609,22 @@ class RailButton extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (action)
+                        Positioned(
+                          right: 3,
+                          bottom: 3,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: tokens.colors.red,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: tokens.colors.cream,
+                                width: 1,
+                              ),
+                            ),
+                            child: const SizedBox(width: 8, height: 8),
+                          ),
+                        ),
                       if (unread)
                         Positioned(
                           top: 4,
@@ -638,12 +657,9 @@ class RailButton extends StatelessWidget {
   }
 
   String get backgroundAsset {
-    return switch ((active, action)) {
-      (true, true) => 'ui-nav-button-active-current.png',
-      (false, true) => 'ui-nav-button-inactive-current.png',
-      (true, false) => 'ui-nav-button-active.png',
-      (false, false) => 'ui-nav-button-inactive.png',
-    };
+    return active
+        ? fieldPlanNavigationActiveFramePath
+        : fieldPlanNavigationInactiveFramePath;
   }
 }
 

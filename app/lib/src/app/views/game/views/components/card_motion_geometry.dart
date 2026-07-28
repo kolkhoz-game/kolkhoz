@@ -88,6 +88,7 @@ enum MotionAnchorKind {
   jobFieldTarget,
   rewardPileSource,
   finalTrumpSource,
+  northConsoleTarget,
   northRailTarget,
   northExileTarget,
 }
@@ -117,6 +118,8 @@ class MotionAnchor {
     : this._(MotionAnchorKind.rewardPileSource, suit: suit);
   const MotionAnchor.finalTrumpSource()
     : this._(MotionAnchorKind.finalTrumpSource);
+  const MotionAnchor.northConsoleTarget()
+    : this._(MotionAnchorKind.northConsoleTarget);
   const MotionAnchor.northRailTarget()
     : this._(MotionAnchorKind.northRailTarget);
   const MotionAnchor.northExileTarget()
@@ -168,6 +171,7 @@ MotionAnchor jobFieldMotionTargetKey(String suit) =>
 MotionAnchor rewardPileMotionSourceKey(String suit) =>
     MotionAnchor.rewardPileSource(suit);
 const finalTrumpMotionSourceKey = MotionAnchor.finalTrumpSource();
+const northConsoleCardMotionTargetKey = MotionAnchor.northConsoleTarget();
 const northRailCardMotionTargetKey = MotionAnchor.northRailTarget();
 const northCardMotionTargetKey = MotionAnchor.northExileTarget();
 const cardMotionNorthExileZone = MotionZone.northExile();

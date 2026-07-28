@@ -6,6 +6,7 @@ import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/profile/models/profile_remote_models.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/profile/views/player_profile_panel.dart';
 import '../main_menu_view.dart';
@@ -228,7 +229,7 @@ class _LeaderboardPanelState extends State<LeaderboardView> {
                   label: 'RANKED',
                   prominent: view == _LeaderboardView.ranked,
                   tokens: widget.tokens,
-                  iconAsset: 'assets/ui/Icons/icon-medal-star.png',
+                  iconAsset: fieldPlanMedalIconPath,
                   expandLabel: false,
                   onPressed: () =>
                       setState(() => view = _LeaderboardView.ranked),

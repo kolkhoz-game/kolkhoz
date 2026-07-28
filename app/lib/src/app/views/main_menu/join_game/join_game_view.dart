@@ -16,6 +16,7 @@ import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_controller/main_me
 import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/profile/models/player_profile.dart';
 import 'package:kolkhoz_app/src/app/profile/views/player_profile_panel.dart';
@@ -560,7 +561,7 @@ class _OnlinePanelState extends State<JoinGameView> {
                     tokens: widget.tokens,
                     iconAsset: buttonShowsBan
                         ? 'assets/ui/Icons/icon-warning.png'
-                        : 'assets/ui/Icons/icon-join-game.png',
+                        : fieldPlanJoinGamePictogram.fieldPlanPath,
                     expandLabel: false,
                     onPressed: busy || buttonShowsBan
                         ? null
@@ -868,7 +869,7 @@ class WaitingRoomEnterButton extends StatelessWidget {
           label: language.strings.kolkhozappJoinGame,
           prominent: true,
           tokens: tokens,
-          iconAsset: 'assets/ui/Icons/icon-join-game.png',
+          iconAsset: fieldPlanJoinGamePictogram.fieldPlanPath,
           expandLabel: false,
           onPressed: onPressed,
         ),
@@ -1320,7 +1321,7 @@ class _WeeklyTournamentCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          MainMenuAssetIcon('assets/ui/Icons/icon-medal-star.png', size: 34),
+          MainMenuAssetIcon(fieldPlanMedalIconPath, size: 34),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1392,7 +1393,7 @@ class _WeeklyTournamentCard extends StatelessWidget {
               label: label,
               prominent: tableReady || canJoin,
               tokens: tokens,
-              iconAsset: 'assets/ui/Icons/icon-medal-star.png',
+              iconAsset: fieldPlanMedalIconPath,
               onPressed: busy ? null : action,
             ),
           ),
@@ -1460,7 +1461,7 @@ class _HostedInviteCodeCard extends StatelessWidget {
                   prominent: false,
                   tokens: tokens,
                   onPressed: onCopy,
-                  iconAsset: 'assets/ui/Icons/icon-check.png',
+                  iconAsset: fieldPlanToolbarConfirmIconPath,
                   iconSize: 20,
                   textSize: PixelTextSize.caption,
                   expandLabel: false,
@@ -1836,8 +1837,8 @@ class _OpenSessionRow extends StatelessWidget {
                           ? language.strings.kolkhozappRanked
                           : language.strings.kolkhozappCasual,
                       asset: session.ranked
-                          ? 'assets/ui/Icons/icon-medal-star.png'
-                          : 'assets/ui/Icons/icon-foreman-misha.png',
+                          ? fieldPlanMedalIconPath
+                          : fieldPlanHowToPlayPictogram.fieldPlanPath,
                     ),
                     Expanded(
                       child: Column(
@@ -2180,7 +2181,7 @@ class _OpenSessionPlayerCard extends StatelessWidget {
           ? '${language.strings.kolkhozappRating} $rating'
           : language.strings.kolkhozappOpen,
       subtitleIconAsset: occupied
-          ? 'assets/ui/Icons/icon-medal-star.png'
+          ? fieldPlanMedalIconPath
           : 'assets/ui/Icons/icon-human-seat.png',
       portraitSize: 46,
       minHeight: 82,

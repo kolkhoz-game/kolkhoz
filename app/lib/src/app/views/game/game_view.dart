@@ -11,6 +11,8 @@ import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_presentation_transition.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/engine_values.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_world_scene.dart';
@@ -31,7 +33,7 @@ import 'package:kolkhoz_app/src/app/views/game/views/brigade/planning_phase_view
 import 'package:kolkhoz_app/src/app/views/game/views/fields/fields_view.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/settings/game_settings_view.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/static_hero/static_hero_game_panel.dart';
-import 'package:kolkhoz_app/src/app/views/game/views/plots/plots_view.dart';
+import 'package:kolkhoz_app/src/app/views/game/views/plots/game_over_plot_panel.dart';
 
 export 'package:kolkhoz_app/src/app/views/game/views/components/board_chrome.dart';
 export 'package:kolkhoz_app/src/app/views/game/views/components/board_metrics.dart';
@@ -46,6 +48,7 @@ export 'package:kolkhoz_app/src/app/views/game/views/brigade/planning_phase_view
 export 'package:kolkhoz_app/src/app/views/game/views/fields/fields_view.dart';
 export 'package:kolkhoz_app/src/app/views/game/views/north/north_view.dart';
 export 'package:kolkhoz_app/src/app/views/game/views/settings/game_settings_view.dart';
+export 'package:kolkhoz_app/src/app/views/game/views/plots/game_over_plot_panel.dart';
 export 'package:kolkhoz_app/src/app/views/game/views/plots/plots_view.dart';
 export 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 
@@ -1058,6 +1061,11 @@ double? activePanelPreferredHeight({
 
 double planningPhaseOverlayInsetForSize(Size size) => size.height * 0.12;
 
+double planningPhaseOverlayTopClearance(ResponsiveBoardMetrics metrics) =>
+    metrics.playAreaHorizontalPadding +
+    metrics.topInfoHeight +
+    metrics.panelContentBottomPadding;
+
 class BoardPlayArea extends StatelessWidget {
   const BoardPlayArea({
     required this.model,
@@ -1182,6 +1190,8 @@ class BoardPlayArea extends StatelessWidget {
     final fieldPlanFocusHandler = BrigadeFieldsScope.focusSurfaceHandlerOf(
       context,
     );
+    final handActionsEnabled =
+        model.panels.active == actionPanelForPhase(model.table.phase);
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? metrics.playAreaHorizontalPadding : 0,
@@ -1339,46 +1349,59 @@ class BoardPlayArea extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final inset =
-                                        planningPhaseOverlayInsetForSize(
-                                          constraints.biggest,
-                                        );
-                                    return Stack(
-                                      key: const Key(
-                                        'planning-phase-panel-position',
-                                      ),
-                                      children: [
-                                        Positioned(
-                                          key: const Key(
-                                            'planning-phase-panel-insets',
-                                          ),
-                                          left: inset,
-                                          top: inset,
-                                          bottom: inset,
-                                          child: FittedBox(
-                                            key: const Key(
-                                              'planning-phase-panel-fit',
-                                            ),
-                                            fit: BoxFit.contain,
-                                            alignment: Alignment.centerLeft,
-                                            child: PlanningPhasePanel(
-                                              model: model,
-                                              tokens: tokens,
-                                              language: language,
-                                              focusedSuit:
-                                                  planningTrumpFocusedSuit,
-                                              onAction:
-                                                  onPlanningTrumpActionSelected,
-                                              onRewardsRevealed:
-                                                  onPlanningRewardsRevealed,
-                                            ),
-                                          ),
+                                Positioned(
+                                  key: const Key(
+                                    'planning-phase-content-bounds',
+                                  ),
+                                  left: 0,
+                                  top: fullBleedChrome
+                                      ? planningPhaseOverlayTopClearance(
+                                          metrics,
+                                        )
+                                      : 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final inset =
+                                          planningPhaseOverlayInsetForSize(
+                                            constraints.biggest,
+                                          );
+                                      return Stack(
+                                        key: const Key(
+                                          'planning-phase-panel-position',
                                         ),
-                                      ],
-                                    );
-                                  },
+                                        children: [
+                                          Positioned(
+                                            key: const Key(
+                                              'planning-phase-panel-insets',
+                                            ),
+                                            left: inset,
+                                            top: inset,
+                                            bottom: inset,
+                                            child: FittedBox(
+                                              key: const Key(
+                                                'planning-phase-panel-fit',
+                                              ),
+                                              fit: BoxFit.contain,
+                                              alignment: Alignment.centerLeft,
+                                              child: PlanningPhasePanel(
+                                                model: model,
+                                                tokens: tokens,
+                                                language: language,
+                                                focusedSuit:
+                                                    planningTrumpFocusedSuit,
+                                                onAction:
+                                                    onPlanningTrumpActionSelected,
+                                                onRewardsRevealed:
+                                                    onPlanningRewardsRevealed,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
@@ -1466,6 +1489,7 @@ class BoardPlayArea extends StatelessWidget {
                                     tokens: tokens,
                                     language: language,
                                     visibleTrayHeight: handTrayVisibleHeight,
+                                    actionsEnabled: handActionsEnabled,
                                     leadingInset: fullBleedChrome
                                         ? denseFullBleedChrome
                                               ? denseMenuButtonSize! +
@@ -1503,7 +1527,7 @@ class BoardPlayArea extends StatelessWidget {
                             ),
                         ],
                       ),
-                      if (!fieldPlanEnvironmentActive)
+                      if (!fieldPlanEnvironmentActive && !gameOver)
                         Positioned(
                           top: fullBleedChrome
                               ? metrics.playAreaHorizontalPadding
@@ -1700,7 +1724,11 @@ class _TopInfoStripState extends State<TopInfoStrip> {
   @override
   void didUpdateWidget(TopInfoStrip oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (openJobSuit != null &&
+    if (widget.model.panels.active == panelJobs && openJobSuit != null) {
+      jobOverlay?.remove();
+      jobOverlay = null;
+      openJobSuit = null;
+    } else if (openJobSuit != null &&
         !widget.model.table.jobs.any((job) => job.suit == openJobSuit)) {
       closeJobOverlay();
     } else {
@@ -1788,6 +1816,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
     final metrics = widget.metrics;
     final localPlayer = localSeat(model);
     final jobs = jobsInDisplayOrder(model.table.jobs);
+    final showJobGauges = model.panels.active != panelJobs;
     final cellarScore = localPlayer.plot.hidden.fold<int>(
       0,
       (score, card) => score + card.value,
@@ -1830,8 +1859,9 @@ class _TopInfoStripState extends State<TopInfoStrip> {
           );
           final gaugeFrameWidth =
               gaugeWidth * topInfo.gaugeFrameWidthMultiplier;
-          final gaugesWidth =
-              gaugeFrameWidth * jobs.length + gaugeSpacing * (jobs.length - 1);
+          final gaugesWidth = showJobGauges
+              ? gaugeFrameWidth * jobs.length + gaugeSpacing * (jobs.length - 1)
+              : 0.0;
           final scoreWidth = clampDouble(
             constraints.maxWidth * topInfo.scoreWidthFactor,
             topInfo.scoreWidthMin,
@@ -1841,13 +1871,14 @@ class _TopInfoStripState extends State<TopInfoStrip> {
           final yearWidth = widget.includeYear
               ? metrics.railButtonSize + rowSpacing
               : 0.0;
-          final contentWidth =
-              yearWidth +
-              gaugesWidth +
-              scoreGroupWidth +
-              rowSpacing +
-              (turnClock == null ? 0 : scoreWidth + rowSpacing);
           final horizontalPadding = widget.floating ? 8.0 : 0.0;
+          final contentWidth = showJobGauges
+              ? yearWidth +
+                    gaugesWidth +
+                    scoreGroupWidth +
+                    rowSpacing +
+                    (turnClock == null ? 0 : scoreWidth + rowSpacing)
+              : math.max(0, constraints.maxWidth - horizontalPadding * 2);
 
           return ClipRect(
             child: FittedBox(
@@ -1864,7 +1895,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                   children: [
                     if (widget.includeYear)
                       RailStatusIcon(
-                        asset: 'icon-year-${model.table.year.clamp(1, 5)}.png',
+                        asset: fieldPlanYearIconPath(model.table.year),
                         label: widget.language.strings
                             .lowerbaractionsYearValue1(
                               value1: model.table.year,
@@ -1872,56 +1903,58 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                         tokens: tokens,
                         metrics: metrics,
                       ),
-                    SizedBox(
-                      width: gaugesWidth,
-                      height: gaugeHeight,
-                      child: Row(
-                        spacing: gaugeSpacing,
-                        children: [
-                          for (final job in jobs)
-                            SizedBox(
-                              width: gaugeFrameWidth,
-                              child: Center(
-                                child: CompositedTransformTarget(
-                                  link: jobGaugeLinks[job.suit]!,
-                                  child: Semantics(
-                                    button: true,
-                                    label:
-                                        '${widget.language.suitName(job.suit)} job',
-                                    expanded: openJobSuit == job.suit,
-                                    child: GestureDetector(
-                                      key: ValueKey(
-                                        'job-gauge-button-${job.suit}',
-                                      ),
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: () => toggleJobOverlay(job.suit),
-                                      child: MotionTrackedRegion(
-                                        motionKey: jobGaugeMotionTargetKey(
-                                          job.suit,
+                    if (showJobGauges)
+                      SizedBox(
+                        width: gaugesWidth,
+                        height: gaugeHeight,
+                        child: Row(
+                          spacing: gaugeSpacing,
+                          children: [
+                            for (final job in jobs)
+                              SizedBox(
+                                width: gaugeFrameWidth,
+                                child: Center(
+                                  child: CompositedTransformTarget(
+                                    link: jobGaugeLinks[job.suit]!,
+                                    child: Semantics(
+                                      button: true,
+                                      label:
+                                          '${widget.language.suitName(job.suit)} job',
+                                      expanded: openJobSuit == job.suit,
+                                      child: GestureDetector(
+                                        key: ValueKey(
+                                          'job-gauge-button-${job.suit}',
                                         ),
-                                        child: JobGauge(
-                                          job: job,
-                                          highlighted:
-                                              model.table.trump == job.suit,
-                                          width:
-                                              gaugeWidth *
-                                              topInfo
-                                                  .gaugeContentWidthMultiplier,
-                                          height: gaugeHeight,
-                                          tokens: tokens,
-                                          hideReward:
-                                              model.table.phase ==
-                                              phasePlanning,
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () => toggleJobOverlay(job.suit),
+                                        child: MotionTrackedRegion(
+                                          motionKey: jobGaugeMotionTargetKey(
+                                            job.suit,
+                                          ),
+                                          child: JobGauge(
+                                            job: job,
+                                            highlighted:
+                                                model.table.trump == job.suit,
+                                            width:
+                                                gaugeWidth *
+                                                topInfo
+                                                    .gaugeContentWidthMultiplier,
+                                            height: gaugeHeight,
+                                            tokens: tokens,
+                                            hideReward:
+                                                model.table.phase ==
+                                                phasePlanning,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                    if (!showJobGauges) const Spacer(),
                     SizedBox(
                       width: scoreGroupWidth,
                       child: Row(
@@ -1932,7 +1965,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                             child: _TopInfoUnderlay(
                               tokens: tokens,
                               child: TopInfoCell(
-                                icon: 'icon-cellar.png',
+                                icon: fieldPlanCellarIconPath,
                                 value: '$cellarScore',
                                 iconSize: gaugeHeight * 0.8,
                                 contentSpacing: rowSpacing,
@@ -1946,7 +1979,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                             child: _TopInfoUnderlay(
                               tokens: tokens,
                               child: TopInfoCell(
-                                icon: 'icon-plot.png',
+                                icon: fieldPlanPlotIconPath,
                                 value: '$plotScore',
                                 iconSize: gaugeHeight * 0.8,
                                 contentSpacing: rowSpacing,
@@ -1959,7 +1992,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                       ),
                     ),
                     if (turnClock != null) ...[
-                      const Spacer(),
+                      if (showJobGauges) const Spacer(),
                       SizedBox(
                         key: const Key('online-turn-clock'),
                         width: scoreWidth,
@@ -2036,10 +2069,13 @@ class TopInfoCell extends StatelessWidget {
           spacing: contentSpacing,
           children: [
             Image.asset(
-              'assets/ui/Icons/$icon',
+              icon.startsWith('assets/') ? icon : 'assets/ui/Icons/$icon',
               width: iconSize,
               height: iconSize,
-              filterQuality: FilterQuality.none,
+              filterQuality: icon.startsWith('assets/art/field_plan/')
+                  ? FilterQuality.high
+                  : FilterQuality.none,
+              isAntiAlias: icon.startsWith('assets/art/field_plan/'),
             ),
             if (value.isNotEmpty)
               Expanded(
@@ -2158,140 +2194,220 @@ class _JobGaugeState extends State<JobGauge> {
         (job.claimed ? 3 : 0) +
         (containsWrecker ? pileEffectIconSize + 2 : 0) +
         nomenklaturaValues.length * (pileEffectIconSize + 2);
-    const contentSpacing = 4.0;
-    final contentWidth = width - markerWidth - contentSpacing;
     final pendingArrivalHours = pendingCardDeltas.values.fold<int>(
       0,
       (total, value) => total + value,
     );
     final displayedHours = displayedJobHours(job) - pendingArrivalHours;
+    final progress = (displayedHours / jobRequiredHours).clamp(0.0, 1.0);
+    const paper = Color(0xffe2d1a8);
+    const ink = Color(0xff2b2c26);
+    const red = Color(0xffa82e21);
+    const olive = Color(0xff6f7848);
+    final accent = widget.highlighted ? red : olive;
+    final trailingWidth = math.min(markerWidth, width * 0.42);
     return Stack(
       clipBehavior: Clip.none,
       children: [
         SizedBox(
           width: width,
           height: height,
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/ui/ui-header-counter.png'),
-                fit: BoxFit.fill,
-                filterQuality: FilterQuality.none,
+          child: Container(
+            decoration: BoxDecoration(
+              color: paper,
+              border: Border.all(
+                color: widget.highlighted ? red : ink,
+                width: widget.highlighted ? 2 : 1.4,
               ),
-            ),
-            child: Row(
-              spacing: contentSpacing,
-              children: [
-                SizedBox(
-                  width: markerWidth,
-                  height: height,
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: containsWrecker ? 2 : 0,
-                        children: [
-                          if (job.claimed)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              spacing: 2,
-                              children: [
-                                Image.asset(
-                                  'assets/ui/Icons/icon-check.png',
-                                  width:
-                                      height *
-                                      tokens
-                                          .layout
-                                          .topInfo
-                                          .checkIconHeightMultiplier,
-                                  height:
-                                      height *
-                                      tokens
-                                          .layout
-                                          .topInfo
-                                          .checkIconHeightMultiplier,
-                                  filterQuality: FilterQuality.none,
-                                ),
-                                SuitMark(
-                                  key: ValueKey(
-                                    'job-gauge-completed-suit-${job.suit}',
-                                  ),
-                                  suit: job.suit,
-                                  tokens: tokens,
-                                  size: height * 0.4,
-                                ),
-                              ],
-                            )
-                          else if (reward == null)
-                            EmptyRewardMarker(
-                              size: 34,
-                              checkSize: topInfoEmptyRewardCheckSize,
-                              tokens: tokens,
-                            )
-                          else
-                            Row(
-                              key: ValueKey('job-gauge-reward-${job.suit}'),
-                              mainAxisSize: MainAxisSize.min,
-                              spacing: 2,
-                              children: [
-                                PixelText(
-                                  reward.rank,
-                                  size: PixelTextSize.caption,
-                                  variant: PixelTextVariant.heavy,
-                                  color: tokens.colors.cardInk,
-                                ),
-                                SuitMark(
-                                  key: ValueKey(
-                                    'job-gauge-reward-suit-${job.suit}',
-                                  ),
-                                  suit: reward.suit,
-                                  tokens: tokens,
-                                  size: height * 0.4,
-                                ),
-                              ],
-                            ),
-                          if (containsWrecker)
-                            Image.asset(
-                              'assets/ui/Icons/icon-variant-saboteur.png',
-                              key: ValueKey('job-gauge-wrecker-${job.suit}'),
-                              width: pileEffectIconSize,
-                              height: pileEffectIconSize,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.none,
-                            ),
-                          for (final value in nomenklaturaValues)
-                            Image.asset(
-                              nomenklaturaPileIconAsset(value),
-                              key: ValueKey(
-                                'job-gauge-nomenklatura-$value-${job.suit}',
-                              ),
-                              width: pileEffectIconSize,
-                              height: pileEffectIconSize,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.none,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: contentWidth,
-                  height: height,
-                  child: Center(
-                    child: PixelText(
-                      '$displayedHours/$jobRequiredHours',
-                      textAlign: TextAlign.center,
-                      size: PixelTextSize.title,
-                      variant: PixelTextVariant.regular,
-                      color: widget.highlighted
-                          ? tokens.colors.red
-                          : tokens.colors.smoke,
-                    ),
-                  ),
-                ),
+              boxShadow: const [
+                BoxShadow(color: Color(0x6613120f), offset: Offset(2, 2)),
               ],
+            ),
+            child: ClipRect(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Opacity(
+                    opacity: 0.12,
+                    child: Image.asset(
+                      'assets/art/field_plan/shared/textures/paper-light.png',
+                      fit: BoxFit.none,
+                      repeat: ImageRepeat.repeat,
+                      filterQuality: FilterQuality.low,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: math.max(3, height * 0.1),
+                      child: ColoredBox(color: accent),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      height * 0.16,
+                      2,
+                      height * 0.1,
+                      2,
+                    ),
+                    child: Row(
+                      children: [
+                        SuitMark(
+                          key: job.claimed
+                              ? ValueKey('job-gauge-completed-suit-${job.suit}')
+                              : null,
+                          suit: job.suit,
+                          tokens: tokens,
+                          size: height * 0.52,
+                        ),
+                        SizedBox(width: height * 0.1),
+                        Container(
+                          width: 1,
+                          height: height * 0.58,
+                          color: ink.withValues(alpha: 0.42),
+                        ),
+                        SizedBox(width: height * 0.1),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  '$displayedHours/$jobRequiredHours',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  style: fieldPlanDisplayTextStyle.copyWith(
+                                    color: widget.highlighted ? red : ink,
+                                    fontSize: height * 0.46,
+                                    height: 0.9,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: math.max(1, height * 0.04)),
+                              ClipRect(
+                                child: SizedBox(
+                                  height: math.max(2, height * 0.07),
+                                  child: ColoredBox(
+                                    color: ink.withValues(alpha: 0.18),
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: FractionallySizedBox(
+                                        widthFactor: progress,
+                                        child: ColoredBox(color: accent),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (trailingWidth > 0) ...[
+                          SizedBox(width: height * 0.1),
+                          Container(
+                            width: 1,
+                            height: height * 0.58,
+                            color: ink.withValues(alpha: 0.42),
+                          ),
+                          SizedBox(
+                            width: trailingWidth,
+                            height: height,
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  spacing: containsWrecker ? 2 : 0,
+                                  children: [
+                                    if (job.claimed)
+                                      Image.asset(
+                                        fieldPlanToolbarConfirmIconPath,
+                                        width:
+                                            height *
+                                            tokens
+                                                .layout
+                                                .topInfo
+                                                .checkIconHeightMultiplier,
+                                        height:
+                                            height *
+                                            tokens
+                                                .layout
+                                                .topInfo
+                                                .checkIconHeightMultiplier,
+                                        filterQuality: FilterQuality.none,
+                                      )
+                                    else if (reward == null)
+                                      Text(
+                                        '—',
+                                        style: fieldPlanDisplayTextStyle
+                                            .copyWith(
+                                              color: ink.withValues(alpha: 0.6),
+                                              fontSize: height * 0.42,
+                                              height: 1,
+                                            ),
+                                      )
+                                    else
+                                      Row(
+                                        key: ValueKey(
+                                          'job-gauge-reward-${job.suit}',
+                                        ),
+                                        mainAxisSize: MainAxisSize.min,
+                                        spacing: 2,
+                                        children: [
+                                          Text(
+                                            reward.rank,
+                                            style: fieldPlanDisplayTextStyle
+                                                .copyWith(
+                                                  color: ink,
+                                                  fontSize: height * 0.38,
+                                                  height: 1,
+                                                ),
+                                          ),
+                                          SuitMark(
+                                            key: ValueKey(
+                                              'job-gauge-reward-suit-${job.suit}',
+                                            ),
+                                            suit: reward.suit,
+                                            tokens: tokens,
+                                            size: height * 0.36,
+                                          ),
+                                        ],
+                                      ),
+                                    if (containsWrecker)
+                                      Image.asset(
+                                        fieldPlanVariantSaboteur.fieldPlanPath,
+                                        key: ValueKey(
+                                          'job-gauge-wrecker-${job.suit}',
+                                        ),
+                                        width: pileEffectIconSize,
+                                        height: pileEffectIconSize,
+                                        fit: BoxFit.contain,
+                                        filterQuality: FilterQuality.none,
+                                      ),
+                                    for (final value in nomenklaturaValues)
+                                      Image.asset(
+                                        nomenklaturaPileIconAsset(value),
+                                        key: ValueKey(
+                                          'job-gauge-nomenklatura-$value-${job.suit}',
+                                        ),
+                                        width: pileEffectIconSize,
+                                        height: pileEffectIconSize,
+                                        fit: BoxFit.contain,
+                                        filterQuality: FilterQuality.none,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -2366,17 +2482,21 @@ class JobGaugeDeltaBadge extends StatelessWidget {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: tokens.colors.black.withValues(alpha: 0.82),
-          borderRadius: BorderRadius.circular(tokens.radius.sm),
-          border: Border.all(color: tokens.colors.green, width: 1.2),
+          color: const Color(0xffe2d1a8),
+          border: Border.all(color: const Color(0xff55713f), width: 1.4),
+          boxShadow: const [
+            BoxShadow(color: Color(0x6613120f), offset: Offset(2, 2)),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-          child: PixelText(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          child: Text(
             '+$delta',
-            size: PixelTextSize.caption,
-            variant: PixelTextVariant.heavy,
-            color: tokens.colors.green,
+            style: fieldPlanDisplayTextStyle.copyWith(
+              color: const Color(0xff55713f),
+              fontSize: 13,
+              height: 0.9,
+            ),
           ),
         ),
       ),

@@ -86,14 +86,7 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
     final previousCards = cardMotionCards(previousModel);
     final nextCards = cardMotionCards(nextModel);
     final event = widget.transition?.event;
-    final routesCardMotion =
-        (event?.kind == kcTransitionCardMoved ||
-            event?.kind == kcTransitionAssignmentTargeted) &&
-        !(event?.fromZone == kcObjectZoneJobPile &&
-            event?.toZone == kcObjectZoneRevealedJob);
-    final eventCardID = routesCardMotion && event?.card.isValid == true
-        ? engineTransitionCardID(event!.card)
-        : null;
+    final eventCardID = motionEventCardID(event);
     final explicitFromZone = event == null || eventCardID == null
         ? null
         : motionZoneForEngineTransition(
@@ -365,6 +358,17 @@ MotionZone? motionZoneForEngineTransition({
 
 String engineTransitionCardID(EngineCardValue card) =>
     '${engineSuitName(card.suit) ?? 'unknown'}-${card.value}';
+
+String? motionEventCardID(EngineTransitionEvent? event) {
+  final routesCardMotion =
+      (event?.kind == kcTransitionCardMoved ||
+          event?.kind == kcTransitionAssignmentTargeted) &&
+      !(event?.fromZone == kcObjectZoneJobPile &&
+          event?.toZone == kcObjectZoneRevealedJob);
+  return routesCardMotion && event?.card.isValid == true
+      ? engineTransitionCardID(event!.card)
+      : null;
+}
 
 bool _flightVisibleOnPanel(CardFlight flight, String activePanel) {
   return switch (flight.audiencePanel) {

@@ -125,7 +125,8 @@ void registerTutorialAndLayoutTests() {
                 bodyKey: KolkhozText.tutorialStep1Body,
                 tipKey: KolkhozText.tutorialStep1Tip,
                 calloutKey: KolkhozText.tutorialStep1Callout,
-                iconPath: 'assets/ui/Icons/icon-tutorial.png',
+                iconPath:
+                    'assets/art/field_plan/shared/pictograms/how-to-play.png',
               ),
             ],
           ),
@@ -404,7 +405,6 @@ void registerTutorialAndLayoutTests() {
       'assets/art/field_plan/cards/faces/face-queen-beet-nomenklatura.png',
     );
     expect(physicalDeckFaceCaption(nomenklaturaQueen), 'Доносчица');
-    expect(genericFaceAssetPath(queen), 'assets/ui/Cards/face-queen.png');
     expect(faceRankName(wrecker), 'saboteur');
     expect(cardRankDisplayLabel(wrecker), 'S 0');
     expect(faceArtWidth(defaultDesignTokens.card.large), 31.5);
@@ -417,7 +417,6 @@ void registerTutorialAndLayoutTests() {
       faceAssetPath(wrecker),
       'assets/art/field_plan/cards/faces/face-saboteur.png',
     );
-    expect(genericFaceAssetPath(wrecker), 'assets/ui/Cards/face-wrecker.png');
     expect(portraitAssetPath(seat), fieldPlanPlayerForewoman.fieldPlanPath);
     expect(
       cardTemplateAssetPath(

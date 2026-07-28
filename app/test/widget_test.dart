@@ -395,7 +395,7 @@ Seat seatWithHand(Seat seat, List<TableCard> hand) {
   );
 }
 
-Seat seatWithMedals(Seat seat, int medals) {
+Seat seatWithMedals(Seat seat, int medals, {int? bankedMedals}) {
   return Seat(
     id: seat.id,
     name: seat.name,
@@ -408,6 +408,7 @@ Seat seatWithMedals(Seat seat, int medals) {
     hiddenHandCount: seat.hiddenHandCount,
     plot: seat.plot,
     medals: medals,
+    bankedMedals: bankedMedals ?? seat.bankedMedals,
     visibleScore: seat.visibleScore,
     statusText: seat.statusText,
   );

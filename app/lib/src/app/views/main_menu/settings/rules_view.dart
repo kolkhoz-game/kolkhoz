@@ -88,7 +88,7 @@ class RulesView extends StatelessWidget {
               prominent: true,
               tokens: tokens,
               onPressed: onTutorialPressed,
-              iconAsset: 'assets/ui/Icons/icon-foreman-misha.png',
+              iconAsset: fieldPlanHowToPlayPictogram.fieldPlanPath,
               iconSize: 22,
             ),
           ),

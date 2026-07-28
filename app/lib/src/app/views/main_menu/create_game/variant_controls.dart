@@ -7,6 +7,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/models/engine_val
 import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import '../main_menu_view.dart';
 
@@ -127,8 +128,7 @@ class VariantRowData {
     titleFor: (variants, language) =>
         language.strings.variantValue1CardDeck(value1: variants.deckType),
     descriptionFor: (variants, language) => '',
-    iconAssetForVariants: (variants) =>
-        'assets/ui/Icons/icon-variant-deck-${variants.deckType}.png',
+    iconAssetForVariants: (variants) => fieldPlanVariantDeck.fieldPlanPath,
     valueOf: (variants) => true,
     withValue: (variants, value) => variants,
   );
@@ -138,7 +138,7 @@ class VariantRowData {
     descriptionFor: (variants, language) => '',
     iconAssetForVariants: (variants) {
       final yearIcon = variants.maxYears.clamp(1, 5).toInt();
-      return 'assets/ui/Icons/icon-year-$yearIcon.png';
+      return fieldPlanYearIconPath(yearIcon);
     },
     valueOf: (variants) => true,
     withValue: (variants, value) => variants,
@@ -153,7 +153,7 @@ class VariantRowData {
   static final allowSwap = VariantRowData(
     titleKey: KolkhozText.variantSwapTitle,
     descriptionKey: KolkhozText.variantSwapDescription,
-    iconAsset: 'assets/ui/Icons/icon-variant-swap.png',
+    iconAsset: fieldPlanVariantSwapCards.fieldPlanPath,
     valueOf: (variants) => variants.allowSwap,
     withValue: (variants, value) => variants.copyWith(allowSwap: value),
   );
@@ -196,7 +196,7 @@ class VariantRowData {
   static final accumulateJobs = VariantRowData(
     titleKey: KolkhozText.variantAccumulationTitle,
     descriptionKey: KolkhozText.variantAccumulationDescription,
-    iconAsset: 'assets/ui/Icons/icon-variant-accumulation.png',
+    iconAsset: fieldPlanVariantStakhanovite.fieldPlanPath,
     valueOf: (variants) => variants.accumulateJobs,
     withValue: (variants, value) => variants.copyWith(accumulateJobs: value),
     visibleInCustom: (variants) => variants.deckType != 36,
@@ -204,7 +204,7 @@ class VariantRowData {
   static final wrecker = VariantRowData(
     titleKey: KolkhozText.variantWreckerTitle,
     descriptionKey: KolkhozText.variantWreckerDescription,
-    iconAsset: 'assets/ui/Icons/icon-variant-saboteur.png',
+    iconAsset: fieldPlanVariantSaboteur.fieldPlanPath,
     valueOf: (variants) => variants.wreckerCard,
     withValue: (variants, value) => variants.copyWith(
       wreckerCard: value,
@@ -214,7 +214,7 @@ class VariantRowData {
   static final finalYearTrump = VariantRowData(
     titleKey: KolkhozText.variantFinalYearTrumpTitle,
     descriptionKey: KolkhozText.variantFinalYearTrumpDescription,
-    iconAsset: 'assets/ui/Icons/icon-final-year-trump.png',
+    iconAsset: fieldPlanVariantFinalYearTrump.fieldPlanPath,
     valueOf: (variants) => variants.finalYearTrump,
     withValue: (variants, value) => variants.copyWith(finalYearTrump: value),
     visibleInCustom: (variants) => variants.wreckerCard,
@@ -222,14 +222,14 @@ class VariantRowData {
   static final passCards = VariantRowData(
     titleKey: KolkhozText.variantPassCardsTitle,
     descriptionKey: KolkhozText.variantPassCardsDescription,
-    iconAsset: 'assets/ui/Icons/icon-pass.png',
+    iconAsset: fieldPlanVariantPassCards.fieldPlanPath,
     valueOf: (variants) => variants.passCards,
     withValue: (variants, value) => variants.copyWith(passCards: value),
   );
   static final highestCardsRequisition = VariantRowData(
     titleKey: KolkhozText.variantHighestCardsRequisitionTitle,
     descriptionKey: KolkhozText.variantHighestCardsRequisitionDescription,
-    iconAsset: 'assets/ui/Icons/icon-highest-cards-requisition.png',
+    iconAsset: fieldPlanVariantHighestCardsRequisition.fieldPlanPath,
     valueOf: (variants) => variants.highestCardsRequisition,
     withValue: (variants, value) =>
         variants.copyWith(highestCardsRequisition: value),
@@ -237,7 +237,7 @@ class VariantRowData {
   static final lottoRewards = VariantRowData(
     titleKey: KolkhozText.variantLottoRewardsTitle,
     descriptionKey: KolkhozText.variantLottoRewardsDescription,
-    iconAsset: 'assets/ui/Icons/icon-lotto-rewards.png',
+    iconAsset: fieldPlanVariantLottoRewards.fieldPlanPath,
     valueOf: (variants) => variants.lottoRewards,
     withValue: (variants, value) => variants.copyWith(lottoRewards: value),
     visibleInCustom: (variants) => variants.deckType != 36,
@@ -245,7 +245,7 @@ class VariantRowData {
   static final demoMode = VariantRowData(
     titleKey: KolkhozText.variantDemoModeTitle,
     descriptionKey: KolkhozText.variantDemoModeDescription,
-    iconAsset: 'assets/ui/Icons/icon-year-5.png',
+    iconAsset: fieldPlanYearIconPath(5),
     valueOf: (variants) => false,
     withValue: (variants, value) => variants,
     visibleInCustom: (variants) => false,
@@ -562,7 +562,7 @@ class _DeckVariantToggleRow extends StatelessWidget {
           child: ImageTabButton(
             tokens: tokens,
             label: language.strings.variantDeck52Cards,
-            iconAsset: 'assets/ui/Icons/icon-variant-deck-52.png',
+            iconAsset: fieldPlanVariantDeck.fieldPlanPath,
             iconSize: deckIconSize,
             selected: variants.deckType == 52,
             height: deckButtonHeight,
@@ -578,7 +578,7 @@ class _DeckVariantToggleRow extends StatelessWidget {
           child: ImageTabButton(
             tokens: tokens,
             label: language.strings.variantDeck36Cards,
-            iconAsset: 'assets/ui/Icons/icon-variant-deck-36.png',
+            iconAsset: fieldPlanVariantDeck.fieldPlanPath,
             iconSize: deckIconSize,
             selected: variants.deckType == 36,
             height: deckButtonHeight,
@@ -626,7 +626,7 @@ class _YearVariantToggleRow extends StatelessWidget {
           _VariantIconChip(
             tokens: tokens,
             label: language.strings.variantValue1YearPlan(value1: years),
-            iconAsset: 'assets/ui/Icons/icon-year-$years.png',
+            iconAsset: fieldPlanYearIconPath(years),
             selected: variants.maxYears == years,
             onPressed: () => onChanged(variants.copyWith(maxYears: years)),
           ),
@@ -864,7 +864,7 @@ class _VariantToggleRow extends StatelessWidget {
                   ),
                   child: value
                       ? MainMenuAssetIcon(
-                          'assets/ui/Icons/icon-check.png',
+                          fieldPlanToolbarConfirmIconPath,
                           size: toggleSize * 0.63,
                         )
                       : null,

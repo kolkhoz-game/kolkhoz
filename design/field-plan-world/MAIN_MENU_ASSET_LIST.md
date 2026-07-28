@@ -79,12 +79,12 @@ place before creating replacements:
 
 | Role | Existing asset |
 | --- | --- |
-| Create/local-game icon | `app/assets/ui/Icons/icon-create-game.png` |
-| Join/online-game icon | `app/assets/ui/Icons/icon-join-game.png` |
-| How-to-play icon/character | `app/assets/ui/Icons/icon-foreman-misha.png` |
+| Create/local-game icon | `app/assets/art/field_plan/shared/pictograms/create-game.png` |
+| Join/online-game icon | `app/assets/art/field_plan/shared/pictograms/join-game.png` |
+| How-to-play icon/character | `app/assets/art/field_plan/shared/pictograms/how-to-play.png` |
 | Profile utility icon | `app/assets/ui/Icons/icon-profile.png` |
-| Settings utility icon | `app/assets/ui/Icons/icon-gears.png` |
-| Star ornament | `app/assets/ui/Icons/icon-medal-star.png` |
+| Settings utility icon | `app/assets/art/field_plan/shared/pictograms/settings.png` |
+| Star ornament | `app/assets/art/field_plan/game/ui/icons/medal.png` |
 | Language controls | `app/assets/ui/Icons/icon-language-en.png`, `icon-language-ru.png` |
 | Appearance controls | `app/assets/ui/Icons/icon-appearance-light.png`, `icon-appearance-dark.png` |
 | Profile portraits | `app/assets/art/field_plan/game/players/*.png` |

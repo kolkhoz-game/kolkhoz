@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/progression.dart';
 
@@ -75,7 +76,7 @@ class _ProgressionHeader extends StatelessWidget {
       child: Row(
         children: [
           Image.asset(
-            'assets/ui/Icons/icon-medal-star.png',
+            fieldPlanMedalIconPath,
             width: 38,
             height: 38,
             filterQuality: FilterQuality.none,
@@ -152,8 +153,8 @@ class _ProgressionRow extends StatelessWidget {
             opacity: completed ? 1 : 0.45,
             child: Image.asset(
               completed
-                  ? 'assets/ui/Icons/icon-check.png'
-                  : 'assets/ui/Icons/icon-medal-star.png',
+                  ? fieldPlanToolbarConfirmIconPath
+                  : fieldPlanMedalIconPath,
               width: 24,
               height: 24,
               filterQuality: FilterQuality.none,

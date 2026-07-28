@@ -25,16 +25,6 @@ enum PlayerIdentityLinkState {
 }
 
 @visibleForTesting
-bool shouldMigrateLegacySession({
-  required String? storedIdentityToken,
-  required String? legacyAccessToken,
-  required bool migrationCompleted,
-}) =>
-    legacyAccessToken != null &&
-    legacyAccessToken.isNotEmpty &&
-    (!migrationCompleted || storedIdentityToken == null);
-
-@visibleForTesting
 bool shouldRetryPlatformAuthentication(int completedAttempts) =>
     completedAttempts < 3;
 
@@ -72,7 +62,6 @@ class KolkhozIdentityRuntime extends ChangeNotifier {
   static const _channel = MethodChannel('com.williamtheisen.kolkhoz/identity');
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'kolkhoz.player.session';
-  static const _legacyMigrationKey = 'kolkhoz.player.legacy-migrated';
 
   RemoteConnection? _remoteConnection;
   String? _installationID;
@@ -117,50 +106,12 @@ class KolkhozIdentityRuntime extends ChangeNotifier {
     required RemoteConnection remoteConnection,
     required String installationID,
     required String displayName,
-    String? legacyAccessToken,
   }) async {
     _installationID = installationID;
     _remoteConnection = remoteConnection;
-    final storedIdentityToken = await _storage.read(key: _tokenKey);
-    final migrationCompleted =
-        await _storage.read(key: _legacyMigrationKey) == 'true';
-    final migrateLegacy = shouldMigrateLegacySession(
-      storedIdentityToken: storedIdentityToken,
-      legacyAccessToken: legacyAccessToken,
-      migrationCompleted: migrationCompleted,
-    );
-    accessToken = migrateLegacy ? legacyAccessToken : storedIdentityToken;
+    accessToken = await _storage.read(key: _tokenKey);
     notifyListeners();
-    if (migrateLegacy) {
-      await migrateLegacySession();
-      return;
-    }
     await authenticate(displayName: displayName);
-  }
-
-  Future<void> migrateLegacySession() async {
-    if (_remoteConnection == null || _installationID == null || busy) return;
-    busy = true;
-    message = 'Moving your existing Kolkhoz account to the new login system…';
-    notifyListeners();
-    try {
-      final response = await _remoteConnection!.requestJson(
-        method: 'POST',
-        path: 'identity/legacy',
-        body: {'installationID': _installationID},
-      );
-      await _acceptSession(response);
-      await _storage.write(key: _legacyMigrationKey, value: 'true');
-      message = 'Your existing Kolkhoz account is ready on this device.';
-    } on RemoteRequestException catch (error) {
-      message =
-          'Your existing account is safe, but could not be moved yet. ${error.message}';
-    } catch (_) {
-      message = 'Your existing account is safe, but could not be moved yet.';
-    } finally {
-      busy = false;
-      notifyListeners();
-    }
   }
 
   Future<void> authenticate({required String displayName}) async {

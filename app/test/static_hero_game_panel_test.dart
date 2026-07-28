@@ -273,6 +273,48 @@ void main() {
     }
   });
 
+  testWidgets('online opponent cellar counts render as card backs', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(640, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _loadFonts(tester);
+    await _precacheHeroUnderlays(tester);
+
+    final model = _withViewer(
+      fieldPlanFourCardTrickModel(),
+      0,
+      plotsBySeat: const {
+        1: PlotState(
+          revealed: [],
+          hidden: [],
+          hiddenCardCount: 3,
+          stacks: [
+            PlotStackState(revealed: [], hidden: [], hiddenCardCount: 2),
+          ],
+        ),
+      },
+    );
+    await _pumpBoard(tester, model, settle: false);
+
+    final opponentPlot = find.byKey(const Key('static-hero-plot-zone-1'));
+    for (var index = 0; index < 5; index++) {
+      final cardBack = find.descendant(
+        of: opponentPlot,
+        matching: find.byKey(ValueKey('poster-fan-paint-seat-1-cellar-$index')),
+      );
+      expect(cardBack, findsOneWidget);
+      expect(
+        find.descendant(of: cardBack, matching: find.byType(ScaledCardBack)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: cardBack, matching: find.byType(MotionTrackedCard)),
+        findsNothing,
+      );
+    }
+  });
+
   testWidgets('field jobs fill the illustrated plots on desktop', (
     tester,
   ) async {
@@ -458,6 +500,7 @@ TableViewModel _withViewer(
   int viewerSeatID, {
   Map<int, int> medalsBySeat = const {},
   Map<int, String> namesBySeat = const {},
+  Map<int, PlotState> plotsBySeat = const {},
   SelectionState? selection,
 }) {
   return TableViewModel(
@@ -482,8 +525,9 @@ TableViewModel _withViewer(
             isBrigadeLeader: seat.isBrigadeLeader,
             hand: seat.hand,
             hiddenHandCount: seat.hiddenHandCount,
-            plot: seat.plot,
+            plot: plotsBySeat[seat.id] ?? seat.plot,
             medals: medalsBySeat[seat.id] ?? seat.medals,
+            bankedMedals: seat.bankedMedals,
             visibleScore: seat.visibleScore,
             profileStats: seat.profileStats,
             profileUserID: seat.profileUserID,
@@ -798,8 +842,14 @@ void _expectFieldGeometry(WidgetTester tester) {
   expect(wheat.height, greaterThan(panel.height * 0.30));
   expect(sunflower.height, greaterThan(panel.height * 0.40));
 
-  final title = tester.getRect(find.text('FIELDS'));
-  expect(title.bottom, lessThan(wheat.top));
+  for (final entry in jobs.entries) {
+    final normalized = staticHeroJobRects[entry.key]!;
+    final job = entry.value;
+    expect(job.left, closeTo(panel.left + panel.width * normalized.left, 0.01));
+    expect(job.top, closeTo(panel.top + panel.height * normalized.top, 0.01));
+    expect(job.width, closeTo(panel.width * normalized.width, 0.01));
+    expect(job.height, closeTo(panel.height * normalized.height, 0.01));
+  }
 
   final counters = {
     for (final suit in jobs.keys)
@@ -849,13 +899,8 @@ void _expectFieldGeometry(WidgetTester tester) {
 
     final isLeftColumn = suit == 'wheat' || suit == 'sunflower';
     final isTopRow = suit == 'wheat' || suit == 'beet';
-    if (isTopRow) {
-      expect(job.contains(counter.topLeft), isTrue);
-      expect(job.contains(counter.bottomRight), isTrue);
-    } else {
-      expect(job.contains(counter.topLeft), isTrue);
-      expect(job.contains(counter.bottomRight), isTrue);
-    }
+    expect(job.contains(counter.topLeft), isTrue);
+    expect(job.contains(counter.bottomRight), isTrue);
     expect(
       counter.center.dx,
       isLeftColumn ? greaterThan(job.center.dx) : lessThan(job.center.dx),
@@ -880,14 +925,14 @@ void _expectFieldGeometry(WidgetTester tester) {
       ),
     );
     expect(counterText.style!.fontSize, closeTo(10 * expectedScale, 0.01));
-    expect(counter.width, closeTo(90 * expectedScale, 0.01));
+    expect(counter.width, closeTo(64 * expectedScale, 0.01));
     expect(counter.height, closeTo(18 * expectedScale, 0.01));
     expect(
       find.descendant(
         of: find.byKey(Key('static-hero-job-counter-$suit')),
         matching: find.byType(FittedBox),
       ),
-      findsNothing,
+      findsOneWidget,
     );
   }
   final counterWidth = counters.values.first.width;

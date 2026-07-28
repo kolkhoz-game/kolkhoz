@@ -15,6 +15,7 @@ class GamePresentationQueue {
   int _nextID = 0;
 
   GamePresentationTransition? get current => _current;
+  GamePresentationTransition? get next => _pending.firstOrNull;
   bool get isBusy => _current != null || _pending.isNotEmpty;
   int get pendingCount => _pending.length;
 
@@ -23,6 +24,7 @@ class GamePresentationQueue {
     required TableViewModel after,
     EngineAction? action,
     EngineTransitionEvent? event,
+    bool startsUpdate = false,
     List<String> assignmentCardIDs = const [],
     Map<String, String> assignmentTargets = const {},
     Set<String> suppressedCardIDs = const {},
@@ -33,6 +35,7 @@ class GamePresentationQueue {
       after: after,
       action: action,
       event: event,
+      startsUpdate: startsUpdate,
       assignmentCardIDs: assignmentCardIDs,
       assignmentTargets: assignmentTargets,
       suppressedCardIDs: suppressedCardIDs,

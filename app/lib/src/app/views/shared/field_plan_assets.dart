@@ -2,10 +2,53 @@ import 'package:kolkhoz_app/src/app/views/shared/art_direction.dart';
 
 const fieldPlanBrigadePlotBackgroundPath =
     'assets/art/field_plan/game/backgrounds/brigade-plot-light.png';
+const fieldPlanStaticHeroBrigadeBackgroundPath =
+    'assets/art/field_plan/game/backgrounds/static-hero-brigade-underlay-v1.png';
 const fieldPlanFieldsBackgroundPath =
     'assets/art/field_plan/game/backgrounds/fields-light.png';
 const fieldPlanNorthBackgroundPath =
     'assets/art/field_plan/game/backgrounds/north-light.png';
+
+const fieldPlanGameNavigationRoot = 'assets/art/field_plan/game/ui/navigation';
+const fieldPlanNavigationBrigadePath =
+    '$fieldPlanGameNavigationRoot/brigade.png';
+const fieldPlanNavigationJobsPath = '$fieldPlanGameNavigationRoot/jobs.png';
+const fieldPlanNavigationNorthPath = '$fieldPlanGameNavigationRoot/north.png';
+const fieldPlanNavigationLogPath = '$fieldPlanGameNavigationRoot/game-log.png';
+const fieldPlanNavigationMenuPath = '$fieldPlanGameNavigationRoot/menu.png';
+const fieldPlanNavigationInactiveFramePath =
+    '$fieldPlanGameNavigationRoot/nav-frame-inactive.png';
+const fieldPlanNavigationActiveFramePath =
+    '$fieldPlanGameNavigationRoot/nav-frame-active.png';
+
+String fieldPlanYearIconPath(int year) =>
+    '$fieldPlanGameNavigationRoot/year-${year.clamp(1, 5)}.png';
+
+const fieldPlanGameIconRoot = 'assets/art/field_plan/game/ui/icons';
+const fieldPlanCellarIconPath = '$fieldPlanGameIconRoot/cellar.png';
+const fieldPlanPlotIconPath = '$fieldPlanGameIconRoot/plot.png';
+const fieldPlanMedalIconPath = '$fieldPlanGameIconRoot/medal.png';
+const fieldPlanWheatIconPath = '$fieldPlanGameIconRoot/wheat.png';
+const fieldPlanSunflowerIconPath = '$fieldPlanGameIconRoot/sunflower.png';
+const fieldPlanPotatoIconPath = '$fieldPlanGameIconRoot/potato.png';
+const fieldPlanBeetIconPath = '$fieldPlanGameIconRoot/beet.png';
+const fieldPlanWreckerIconPath =
+    'assets/art/field_plan/cards/suits/suit-all.png';
+const fieldPlanToolbarPlayIconPath = '$fieldPlanGameIconRoot/toolbar-play.png';
+const fieldPlanToolbarSwapIconPath = '$fieldPlanGameIconRoot/toolbar-swap.png';
+const fieldPlanToolbarConfirmIconPath =
+    '$fieldPlanGameIconRoot/toolbar-confirm.png';
+const fieldPlanToolbarUndoIconPath = '$fieldPlanGameIconRoot/toolbar-undo.png';
+const fieldPlanToolbarAssignIconPath =
+    '$fieldPlanGameIconRoot/toolbar-assign.png';
+
+String fieldPlanGameCropIconPath(String suit) => switch (suit) {
+  'wheat' => fieldPlanWheatIconPath,
+  'sunflower' => fieldPlanSunflowerIconPath,
+  'potato' => fieldPlanPotatoIconPath,
+  'beet' => fieldPlanBeetIconPath,
+  _ => 'assets/ui/Icons/icon-$suit.png',
+};
 
 const fieldPlanSignAssetPath =
     'assets/art/field_plan/shared/signs/field-sign.png';
@@ -259,3 +302,13 @@ const fieldPlanPlayerPortraits = <ArtAssetRef>[
   fieldPlanPlayerAgronomist,
   fieldPlanPlayerBeekeeper,
 ];
+
+String fieldPlanPlayerPortraitPath(String portraitAsset) {
+  return switch (portraitAsset) {
+    'worker1' || 'worker-forewoman' => fieldPlanPlayerForewoman.fieldPlanPath,
+    'worker2' || 'worker-mechanic' => fieldPlanPlayerMechanic.fieldPlanPath,
+    'worker3' || 'worker-agronomist' => fieldPlanPlayerAgronomist.fieldPlanPath,
+    'worker4' || 'worker-beekeeper' => fieldPlanPlayerBeekeeper.fieldPlanPath,
+    _ => fieldPlanPlayerBeekeeper.fieldPlanPath,
+  };
+}

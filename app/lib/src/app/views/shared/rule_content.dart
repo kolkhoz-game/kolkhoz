@@ -1,5 +1,6 @@
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 
 class RuleSummary {
   const RuleSummary({
@@ -19,7 +20,7 @@ class RuleSummary {
 
 const lobbyRuleSummaries = [
   RuleSummary(
-    iconPath: 'assets/ui/Icons/icon-plot.png',
+    iconPath: fieldPlanPlotIconPath,
     titleKey: KolkhozText.ruleSummary1Title,
     bodyKey: KolkhozText.ruleSummary1Body,
   ),
@@ -29,7 +30,7 @@ const lobbyRuleSummaries = [
     bodyKey: KolkhozText.ruleSummary2Body,
   ),
   RuleSummary(
-    iconPath: 'assets/ui/Icons/icon-jobs.png',
+    iconPath: fieldPlanNavigationJobsPath,
     titleKey: KolkhozText.ruleSummary3Title,
     bodyKey: KolkhozText.ruleSummary3Body,
   ),
@@ -39,7 +40,7 @@ const lobbyRuleSummaries = [
     bodyKey: KolkhozText.ruleSummary4Body,
   ),
   RuleSummary(
-    iconPath: 'assets/ui/Icons/icon-medal-star.png',
+    iconPath: fieldPlanMedalIconPath,
     titleKey: KolkhozText.ruleSummary5Title,
     bodyKey: KolkhozText.ruleSummary5Body,
   ),
@@ -47,12 +48,12 @@ const lobbyRuleSummaries = [
 
 const optionsRuleSummaries = [
   RuleSummary(
-    iconPath: 'assets/ui/Icons/icon-jobs.png',
+    iconPath: fieldPlanNavigationJobsPath,
     titleKey: KolkhozText.ruleSummary6Title,
     bodyKey: KolkhozText.ruleSummary6Body,
   ),
   RuleSummary(
-    iconPath: 'assets/ui/Icons/icon-plot.png',
+    iconPath: fieldPlanPlotIconPath,
     titleKey: KolkhozText.ruleSummary7Title,
     bodyKey: KolkhozText.ruleSummary7Body,
   ),
@@ -113,14 +114,14 @@ const tutorialStepContents = [
     bodyKey: KolkhozText.tutorialStep1Body,
     tipKey: KolkhozText.tutorialStep1Tip,
     calloutKey: KolkhozText.tutorialStep1Callout,
-    iconPath: 'assets/ui/Icons/icon-plot.png',
+    iconPath: fieldPlanPlotIconPath,
   ),
   TutorialStepContent(
     titleKey: KolkhozText.tutorialStep2Title,
     bodyKey: KolkhozText.tutorialStep2Body,
     tipKey: KolkhozText.tutorialStep2Tip,
     calloutKey: KolkhozText.tutorialStep2Callout,
-    iconPath: 'assets/ui/Icons/icon-jobs.png',
+    iconPath: fieldPlanNavigationJobsPath,
     focus: TutorialFocus.jobs,
   ),
   TutorialStepContent(
@@ -146,7 +147,7 @@ const tutorialStepContents = [
     bodyKey: KolkhozText.tutorialStep5Body,
     tipKey: KolkhozText.tutorialStep5Tip,
     calloutKey: KolkhozText.tutorialStep5Callout,
-    iconPath: 'assets/ui/Icons/icon-medal-star.png',
+    iconPath: fieldPlanMedalIconPath,
     focus: TutorialFocus.table,
     advance: TutorialAdvance.trickTaken,
   ),
@@ -155,7 +156,7 @@ const tutorialStepContents = [
     bodyKey: KolkhozText.tutorialStep6Body,
     tipKey: KolkhozText.tutorialStep6Tip,
     calloutKey: KolkhozText.tutorialStep6Callout,
-    iconPath: 'assets/ui/Icons/icon-jobs.png',
+    iconPath: fieldPlanNavigationJobsPath,
     focus: TutorialFocus.jobs,
     advance: TutorialAdvance.workAssigned,
   ),
@@ -173,7 +174,7 @@ const tutorialStepContents = [
     bodyKey: KolkhozText.tutorialStep8Body,
     tipKey: KolkhozText.tutorialStep8Tip,
     calloutKey: KolkhozText.tutorialStep8Callout,
-    iconPath: 'assets/ui/Icons/icon-cellar.png',
+    iconPath: fieldPlanCellarIconPath,
     focus: TutorialFocus.hand,
     advance: TutorialAdvance.yearEnd,
   ),
@@ -182,7 +183,7 @@ const tutorialStepContents = [
     bodyKey: KolkhozText.tutorialStep9Body,
     tipKey: KolkhozText.tutorialStep9Tip,
     calloutKey: KolkhozText.tutorialStep9Callout,
-    iconPath: 'assets/ui/Icons/icon-north.png',
+    iconPath: fieldPlanNavigationNorthPath,
     focus: TutorialFocus.table,
     advance: TutorialAdvance.swapPhase,
   ),
@@ -191,7 +192,7 @@ const tutorialStepContents = [
     bodyKey: KolkhozText.tutorialStep10Body,
     tipKey: KolkhozText.tutorialStep10Tip,
     calloutKey: KolkhozText.tutorialStep10Callout,
-    iconPath: 'assets/ui/Icons/icon-cellar.png',
+    iconPath: fieldPlanCellarIconPath,
     focus: TutorialFocus.hand,
   ),
   TutorialStepContent(
@@ -215,6 +216,6 @@ const tutorialStepContents = [
     bodyKey: KolkhozText.tutorialStep13Body,
     tipKey: KolkhozText.tutorialStep13Tip,
     calloutKey: KolkhozText.tutorialStep13Callout,
-    iconPath: 'assets/ui/Icons/icon-medal-star.png',
+    iconPath: fieldPlanMedalIconPath,
   ),
 ];

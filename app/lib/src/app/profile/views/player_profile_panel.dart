@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 
 class PlayerProfileStat {
@@ -419,9 +420,10 @@ class PlayerProfilePortraitImage extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: Image.asset(
-          'assets/ui/$asset.png',
+          fieldPlanPlayerPortraitPath(asset),
           fit: BoxFit.cover,
-          filterQuality: FilterQuality.none,
+          filterQuality: FilterQuality.high,
+          isAntiAlias: true,
           errorBuilder: (_, _, _) =>
               ColoredBox(color: tokens.colors.black.withValues(alpha: 0.42)),
         ),

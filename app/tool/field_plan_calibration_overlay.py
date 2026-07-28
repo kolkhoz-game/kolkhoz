@@ -19,7 +19,7 @@ BRIGADE_PLOT_BACKGROUND = (
     ROOT / "assets/art/field_plan/game/backgrounds/brigade-plot-light.png"
 )
 FIELDS_BACKGROUND = ROOT / "assets/art/field_plan/game/backgrounds/fields-light.png"
-CARD = ROOT / "assets/ui/Cards/card-template-light-no-overlay.png"
+CARD = ROOT / "assets/art/field_plan/cards/frames/card-frame-wheat.png"
 SIGN = ROOT / "assets/art/field_plan/shared/signs/field-sign.png"
 SOURCE_GRID = ROOT / "test/layout_goldens/field_plan_trick__source_grid.png"
 

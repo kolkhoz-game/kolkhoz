@@ -226,7 +226,11 @@ CardMotionPlan planCardFlights({
           nextModel: nextModel,
         ),
         revealBeforeFlight:
-            requisitioned && previousZone?.kind == MotionZoneKind.plotHidden,
+            requisitioned &&
+            previousZone?.kind == MotionZoneKind.plotHidden &&
+            !(previousModel.table.phase == phaseRequisition &&
+                previousZone?.seatID != null &&
+                motionSeatIsViewer(previousModel, previousZone!.seatID!)),
         requisitioned: requisitioned,
       ),
     );

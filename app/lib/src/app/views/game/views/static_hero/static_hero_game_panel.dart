@@ -16,6 +16,7 @@ import 'package:kolkhoz_app/src/app/views/game/views/fields/fields_view.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/plots/plots_view.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
 
 enum StaticHeroGamePanelKind { brigade, fields, north }
@@ -202,15 +203,10 @@ class StaticHeroGamePanel extends StatelessWidget {
                     ),
                   ),
                 ),
-                StaticHeroGamePanelKind.fields => Padding(
-                  padding: EdgeInsets.only(
-                    top: posterCompact ? _staticHeroCompactHeaderClearance : 0,
-                  ),
-                  child: _FieldsPosterContent(
-                    model: model,
-                    tokens: tokens,
-                    onAction: onAction,
-                  ),
+                StaticHeroGamePanelKind.fields => _FieldsPosterContent(
+                  model: model,
+                  tokens: tokens,
+                  onAction: onAction,
                 ),
                 StaticHeroGamePanelKind.north => _NorthPosterContent(
                   model: model,
@@ -790,20 +786,42 @@ class _BrigadePlotZone extends StatelessWidget {
             card: selectedPlotCard(card, model.selection.plotCardID),
           ),
     ];
-    final cellarEntries = <_PosterCardEntry>[
+    final visibleCellarCards = [
       for (final card in visiblePlotCards(
         seat.plot.hidden,
         hiddenExiledCardIDs,
       ))
+        card,
+      for (final stack in visiblePlotStacks(
+        seat.plot.stacks,
+        hiddenExiledCardIDs,
+      ))
+        ...stack.hidden,
+    ];
+    final cellarCardCount = _trickProfileCellarCount(seat);
+    final cellarEntries = <_PosterCardEntry>[
+      for (final card in visibleCellarCards)
         _PosterCardEntry(
           card: selectedPlotCard(card, model.selection.plotCardID),
           hidden: true,
           revealable: seat.isViewer,
+          forceReveal:
+              seat.isViewer &&
+              (model.table.phase == phasePlanning ||
+                  model.table.phase == phaseRequisition ||
+                  (model.table.phase == phaseSwap &&
+                      model.table.currentPlayerID == seat.id)),
           onTap: _plotTap(card, plotZoneHidden),
         ),
+      for (
+        var index = visibleCellarCards.length;
+        index < cellarCardCount;
+        index += 1
+      )
+        _PosterCardEntry.redacted(id: 'seat-${seat.id}-cellar-$index'),
     ];
     final entries = isLeftColumn
-        ? [...revealedEntries, ...cellarEntries]
+        ? [...revealedEntries.reversed, ...cellarEntries]
         : [...cellarEntries, ...revealedEntries];
     return Positioned.fromRect(
       rect: rect,
@@ -818,7 +836,9 @@ class _BrigadePlotZone extends StatelessWidget {
                 child: _PosterCardFan(
                   cards: entries,
                   tokens: tokens,
-                  maxPerRow: 6,
+                  trump: model.table.trump,
+                  maxPerRow: entries.length,
+                  growToAvailableWidth: true,
                   maxScale: double.infinity,
                   reversePaintOrder: isLeftColumn,
                   alignment: Alignment(
@@ -957,6 +977,7 @@ class _JobPosterZone extends StatelessWidget {
                           _PosterCardEntry(card: card),
                       ],
                       tokens: tokens,
+                      trump: model.table.trump,
                       maxPerRow: 6,
                       maxScale: double.infinity,
                     ),
@@ -974,13 +995,14 @@ class _JobPosterZone extends StatelessWidget {
                   rewardAbove: isTopRow,
                   gap: 6 * contentScale,
                   tokens: tokens,
+                  trump: model.table.trump,
                   counterWidth: counterWidth,
                   counterHeight: counterHeight,
                   rewardWidth: rewardWidth,
                   counter: _PosterPlacard(
                     key: Key('static-hero-job-counter-${job.suit}'),
                     text: counterText,
-                    iconAsset: 'assets/ui/Icons/icon-${job.suit}.png',
+                    iconAsset: fieldPlanGameCropIconPath(job.suit),
                     active: handler != null,
                     complete: hours >= job.requiredHours,
                     scale: counterScale,
@@ -1002,6 +1024,7 @@ class _FieldJobMarker extends StatelessWidget {
     required this.rewardAbove,
     required this.gap,
     required this.tokens,
+    required this.trump,
     required this.counterWidth,
     required this.counterHeight,
     required this.rewardWidth,
@@ -1013,6 +1036,7 @@ class _FieldJobMarker extends StatelessWidget {
   final bool rewardAbove;
   final double gap;
   final DesignTokens tokens;
+  final String? trump;
   final double counterWidth;
   final double counterHeight;
   final double rewardWidth;
@@ -1029,7 +1053,11 @@ class _FieldJobMarker extends StatelessWidget {
                 rewardWidth *
                 tokens.card.small.height /
                 tokens.card.small.width,
-            child: _SinglePosterCard(card: reward!, tokens: tokens),
+            child: _SinglePosterCard(
+              card: reward!,
+              tokens: tokens,
+              trump: trump,
+            ),
           );
     return SizedBox(
       key: Key('static-hero-job-marker-$suit'),
@@ -1189,6 +1217,8 @@ class _PosterCardFan extends StatelessWidget {
     required this.cards,
     required this.tokens,
     required this.maxPerRow,
+    this.trump,
+    this.growToAvailableWidth = false,
     this.maxScale = 1.55,
     this.reversePaintOrder = false,
     this.alignment = Alignment.center,
@@ -1197,6 +1227,8 @@ class _PosterCardFan extends StatelessWidget {
   final List<_PosterCardEntry> cards;
   final DesignTokens tokens;
   final int maxPerRow;
+  final String? trump;
+  final bool growToAvailableWidth;
   final double maxScale;
   final bool reversePaintOrder;
   final Alignment alignment;
@@ -1206,9 +1238,19 @@ class _PosterCardFan extends StatelessWidget {
     if (cards.isEmpty) return const SizedBox.expand();
     return LayoutBuilder(
       builder: (context, constraints) {
-        final perRow = math.min(maxPerRow, cards.length);
-        final rows = (cards.length / perRow).ceil();
         final base = tokens.card.small;
+        final availablePerRow = growToAvailableWidth
+            ? _posterFanCardsThatFitOneRow(
+                constraints: constraints,
+                base: base,
+                maxScale: maxScale,
+              )
+            : maxPerRow;
+        final perRow = math.min(
+          cards.length,
+          math.min(maxPerRow, availablePerRow),
+        );
+        final rows = (cards.length / perRow).ceil();
         final widthUnits = 1 + math.max(0, perRow - 1) * 0.58;
         final heightUnits = 1 + math.max(0, rows - 1) * 0.44;
         final scale = math.min(
@@ -1229,6 +1271,7 @@ class _PosterCardFan extends StatelessWidget {
             for (final (index, entry)
                 in reversePaintOrder ? indexedCards.reversed : indexedCards)
               Builder(
+                key: ValueKey('poster-fan-layer-${entry.id}'),
                 builder: (context) {
                   final row = index ~/ perRow;
                   final column = index % perRow;
@@ -1248,71 +1291,20 @@ class _PosterCardFan extends StatelessWidget {
                         row * strideY,
                     width: cardSize.width,
                     height: cardSize.height,
-                    child: SizedBox.expand(
-                      key: ValueKey('poster-fan-paint-${entry.card.id}'),
-                      child: SwapSelectedCardFrame(
-                        cardID: entry.card.id,
-                        selected: entry.card.selected,
-                        tokens: tokens,
-                        child: MotionTrackedCard(
-                          card: entry.card,
-                          compositeWhenVisible: false,
-                          child: PendingAssignmentCardPulse(
-                            cardID: entry.card.id,
-                            active: entry.card.pending,
+                    child: entry.card == null
+                        ? SizedBox.expand(
+                            key: ValueKey('poster-fan-paint-${entry.id}'),
+                            child: ScaledCardBack(
+                              tokens: tokens,
+                              size: cardSize,
+                            ),
+                          )
+                        : _PosterFanCard(
+                            entry: entry,
+                            cardSize: cardSize,
                             tokens: tokens,
-                            child: entry.hidden && entry.revealable
-                                ? InteractiveCardFlip(
-                                    key: Key(
-                                      'static-hero-card-${entry.card.id}',
-                                    ),
-                                    concealedLabel:
-                                        'Cellar card. Tap to reveal.',
-                                    revealedLabel:
-                                        '${entry.card.rank} of ${entry.card.suit}. '
-                                        'Tap to conceal.',
-                                    frontKey: ValueKey(
-                                      'cellar-face-${entry.card.id}',
-                                    ),
-                                    backKey: ValueKey(
-                                      'cellar-back-${entry.card.id}',
-                                    ),
-                                    onTap: entry.onTap,
-                                    front: GameCard(
-                                      card: entry.card,
-                                      tokens: tokens,
-                                      sizeOverride: cardSize,
-                                      motionTracked: false,
-                                    ),
-                                    back: ScaledHighlightableCardBack(
-                                      card: entry.card,
-                                      tokens: tokens,
-                                      size: cardSize,
-                                    ),
-                                  )
-                                : GestureDetector(
-                                    key: Key(
-                                      'static-hero-card-${entry.card.id}',
-                                    ),
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: entry.onTap,
-                                    child: entry.hidden
-                                        ? ScaledHighlightableCardBack(
-                                            card: entry.card,
-                                            tokens: tokens,
-                                            size: cardSize,
-                                          )
-                                        : GameCard(
-                                            card: entry.card,
-                                            tokens: tokens,
-                                            sizeOverride: cardSize,
-                                            motionTracked: false,
-                                          ),
-                                  ),
+                            trump: trump,
                           ),
-                        ),
-                      ),
-                    ),
                   );
                 },
               ),
@@ -1321,6 +1313,96 @@ class _PosterCardFan extends StatelessWidget {
       },
     );
   }
+}
+
+class _PosterFanCard extends StatelessWidget {
+  const _PosterFanCard({
+    required this.entry,
+    required this.cardSize,
+    required this.tokens,
+    required this.trump,
+  });
+
+  final _PosterCardEntry entry;
+  final TokenCardSize cardSize;
+  final DesignTokens tokens;
+  final String? trump;
+
+  @override
+  Widget build(BuildContext context) {
+    final card = entry.card!;
+    return SizedBox.expand(
+      key: ValueKey('poster-fan-paint-${entry.id}'),
+      child: SwapSelectedCardFrame(
+        cardID: card.id,
+        selected: card.selected,
+        tokens: tokens,
+        child: MotionTrackedCard(
+          card: card,
+          compositeWhenVisible: false,
+          child: PendingAssignmentCardPulse(
+            cardID: card.id,
+            active: card.pending,
+            tokens: tokens,
+            child: entry.hidden && entry.revealable
+                ? InteractiveCardFlip(
+                    key: Key('static-hero-card-${card.id}'),
+                    concealedLabel: 'Cellar card. Tap to reveal.',
+                    revealedLabel:
+                        '${card.rank} of ${card.suit}. Tap to conceal.',
+                    frontKey: ValueKey('cellar-face-${card.id}'),
+                    backKey: ValueKey('cellar-back-${card.id}'),
+                    forceShowFront: entry.forceReveal,
+                    onTap: entry.onTap,
+                    front: GameCard(
+                      card: card,
+                      tokens: tokens,
+                      trump: trump,
+                      sizeOverride: cardSize,
+                      motionTracked: false,
+                    ),
+                    back: ScaledHighlightableCardBack(
+                      card: card,
+                      tokens: tokens,
+                      size: cardSize,
+                    ),
+                  )
+                : GestureDetector(
+                    key: Key('static-hero-card-${card.id}'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: entry.onTap,
+                    child: entry.hidden
+                        ? ScaledHighlightableCardBack(
+                            card: card,
+                            tokens: tokens,
+                            size: cardSize,
+                          )
+                        : GameCard(
+                            card: card,
+                            tokens: tokens,
+                            trump: trump,
+                            sizeOverride: cardSize,
+                            motionTracked: false,
+                          ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+int _posterFanCardsThatFitOneRow({
+  required BoxConstraints constraints,
+  required TokenCardSize base,
+  required double maxScale,
+}) {
+  final scale = math.min(maxScale, constraints.maxHeight / base.height);
+  if (!scale.isFinite || scale <= 0) {
+    return 1;
+  }
+  final widthUnits = constraints.maxWidth / (base.width * scale);
+  return math.max(1, 1 + ((widthUnits - 1) / 0.58).floor());
 }
 
 class _SinglePosterCard extends StatelessWidget {
@@ -1477,13 +1559,13 @@ class _TrickPlayerProfile extends StatelessWidget {
                   children: [
                     _ProfileStat(
                       key: Key('player-profile-plot-${seat.id}'),
-                      asset: 'assets/ui/Icons/icon-plot.png',
+                      asset: fieldPlanPlotIconPath,
                       value: '${seat.visibleScore}',
                     ),
                     const SizedBox(width: 8),
                     _ProfileStat(
                       key: Key('player-profile-cellar-${seat.id}'),
-                      asset: 'assets/ui/Icons/icon-cellar.png',
+                      asset: fieldPlanCellarIconPath,
                       value: '$cellarCount',
                     ),
                     const Spacer(),
@@ -1549,13 +1631,14 @@ class _ProfileMedals extends StatelessWidget {
                     height: iconSize,
                     child: index < medals
                         ? Image.asset(
-                            'assets/ui/Icons/icon-medal-star.png',
-                            filterQuality: FilterQuality.none,
+                            fieldPlanMedalIconPath,
+                            filterQuality: FilterQuality.high,
+                            isAntiAlias: true,
                           )
                         : Opacity(
                             opacity: 0.18,
                             child: ChromeAssetIcon(
-                              asset: 'assets/ui/Icons/icon-medal-star.png',
+                              asset: fieldPlanMedalIconPath,
                               width: iconSize,
                               height: iconSize,
                               muted: true,
@@ -1588,7 +1671,8 @@ class _ProfileStat extends StatelessWidget {
           width: 23,
           height: 23,
           fit: BoxFit.contain,
-          filterQuality: FilterQuality.none,
+          filterQuality: FilterQuality.high,
+          isAntiAlias: true,
         ),
         const SizedBox(width: 2),
         Text(
@@ -1729,13 +1813,26 @@ class _PosterCardEntry {
     required this.card,
     this.hidden = false,
     this.revealable = false,
+    this.forceReveal = false,
     this.onTap,
-  });
+  }) : redactedID = null;
 
-  final TableCard card;
+  const _PosterCardEntry.redacted({required String id})
+    : card = null,
+      hidden = true,
+      revealable = false,
+      forceReveal = false,
+      onTap = null,
+      redactedID = id;
+
+  final TableCard? card;
   final bool hidden;
   final bool revealable;
+  final bool forceReveal;
   final VoidCallback? onTap;
+  final String? redactedID;
+
+  String get id => card?.id ?? redactedID!;
 }
 
 TokenCardSize _scaledCardSize(TokenCardSize source, double scale) =>

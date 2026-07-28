@@ -28,35 +28,6 @@ work.
 Not in this pass: finished connector scenery, live cards, controls, or production-board
 integration.
 
-## Figma to Flutter pipeline
-
-Figma page `02 - Depth Panels`, frame
-`WORLD CAMERA VIEW · Toggle Individual Depth Layers` (`22:3`), is the runtime export
-source. Direct visible children must use:
-
-```text
-PLATE_ID · Z 0.00 · Semantic Name
-```
-
-From `app/`, run:
-
-```bash
-FIGMA_ACCESS_TOKEN=... dart run tool/sync_world_depth_plates.dart
-```
-
-The token needs Figma's `file_content:read` scope. The command validates the required
-ten-layer base stack, preserves Figma child order, exports each frame as a registered
-transparent PNG, and atomically replaces
-`app/assets/art/field_plan/world_depth/manifest.json` plus its images. Additional
-semantically named connector plates are allowed; missing or renamed base plates fail the
-sync.
-
-`app/tool/run_field_plan_world_lab.sh` always syncs before launching. The first time, pass
-`FIGMA_ACCESS_TOKEN`; on macOS the launcher stores it in Keychain under
-`com.kolkhoz.figma.world-depth` and retrieves it automatically on later runs. An explicit
-environment token still takes precedence. The launcher fails when no token is available
-instead of silently building stale plates.
-
 ## Scene packages
 
 - `brigade/plate-map.json`

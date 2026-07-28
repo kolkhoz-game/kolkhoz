@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
@@ -189,7 +190,7 @@ class FieldPlanNorthYearRow extends StatelessWidget {
       child: Row(
         children: [
           Image.asset(
-            'assets/ui/Icons/icon-year-$year.png',
+            fieldPlanYearIconPath(year),
             width: 29,
             height: 29,
             filterQuality: FilterQuality.none,
@@ -305,7 +306,7 @@ class NorthYearColumn extends StatelessWidget {
             child: Row(
               children: [
                 Image.asset(
-                  'assets/ui/Icons/icon-year-$year.png',
+                  fieldPlanYearIconPath(year),
                   width: 32,
                   height: 32,
                   filterQuality: FilterQuality.none,

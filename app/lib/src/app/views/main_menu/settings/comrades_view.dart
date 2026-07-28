@@ -551,7 +551,7 @@ class _ComradeRequestRow extends StatelessWidget {
           if (incoming) ...[
             _ComradeIconButton(
               tokens: tokens,
-              iconAsset: 'assets/ui/Icons/icon-check.png',
+              iconAsset: fieldPlanToolbarConfirmIconPath,
               label: language.strings.kolkhozappAccept,
               onPressed: busy ? null : onAccept,
             ),

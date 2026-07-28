@@ -23,6 +23,8 @@ import 'package:kolkhoz_app/src/app/settings/game_sound.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_view.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_controller.dart';
 import 'package:kolkhoz_app/src/app/profile/models/profile_remote_models.dart';
+import 'package:kolkhoz_app/src/app/profile/models/player_profile.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/models/controller_projection.dart';
 import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_controller/menu_remote_models.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/game_remote_connection.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/remote_game_engine_factory.dart';
@@ -1361,6 +1363,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     final next = settings.copyWith(displayName: value);
     setState(() => settings = next);
     settingsStore.save(next);
+    syncPendingGameLobby();
     scheduleCloudProfileSync();
   }
 
@@ -1375,6 +1378,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     final next = settings.copyWith(portraitAsset: value);
     setState(() => settings = next);
     settingsStore.save(next);
+    syncPendingGameLobby();
     scheduleCloudProfileSync();
   }
 
@@ -1438,6 +1442,13 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     store.configureLobby(
       variants: activeVariants,
       controllers: activePlayerControllers,
+      localProfile: PlayerProfile(
+        seatID: viewerSeatIDForControllers(activePlayerControllers),
+        userID: profileController.userID,
+        displayName: normalizedDisplayName,
+        avatarURL: settings.portraitAsset,
+        stats: settings.profileStats,
+      ),
     );
   }
 
@@ -1577,6 +1588,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     setState(() => settings = next);
     settingsStore.save(next);
     profileController.updateDisplayName(next.displayName);
+    syncPendingGameLobby();
   }
 
   Future<void> syncActiveSession() async {

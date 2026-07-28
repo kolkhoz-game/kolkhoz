@@ -14,6 +14,7 @@ import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_controller/menu_re
 import 'package:kolkhoz_app/src/app/views/shared/app_text.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/remote_connection/json_shape.dart';
 import 'package:kolkhoz_app/src/app/profile/views/player_profile_panel.dart';
 import 'package:kolkhoz_app/src/app/views/shared/rule_content.dart';

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:kolkhoz_app/src/app/settings/animation_speed.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_engine.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/game_lobby.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_ui_state.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/c_engine_action_codec.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/c_engine_bridge.dart';
@@ -19,6 +20,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_mod
 class LocalGameEngineBindings {
   const LocalGameEngineBindings({
     required this.players,
+    required this.lobby,
     required this.animationSpeed,
     required this.uiState,
     required this.setUiState,
@@ -33,6 +35,7 @@ class LocalGameEngineBindings {
   });
 
   final List<GamePlayer> Function() players;
+  final GameLobby Function() lobby;
   final GameAnimationSpeed Function() animationSpeed;
   final GameUiState Function() uiState;
   final void Function(GameUiState) setUiState;
@@ -277,6 +280,7 @@ class LocalGameEngineFactory {
   }) => LocalGameEngine(
     engine: engine,
     players: bindings.players,
+    lobby: bindings.lobby,
     animationSpeed: bindings.animationSpeed,
     uiState: bindings.uiState,
     setUiState: bindings.setUiState,

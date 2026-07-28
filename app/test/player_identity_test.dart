@@ -4,36 +4,6 @@ import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/player_identity.dart';
 
 void main() {
-  test('legacy Supabase session migrates exactly once', () {
-    expect(
-      shouldMigrateLegacySession(
-        storedIdentityToken: null,
-        legacyAccessToken: 'legacy-token',
-        migrationCompleted: false,
-      ),
-      isTrue,
-    );
-    expect(
-      shouldMigrateLegacySession(
-        storedIdentityToken: 'khz-current',
-        legacyAccessToken: 'legacy-token',
-        migrationCompleted: true,
-      ),
-      isFalse,
-    );
-  });
-
-  test('legacy migration retries when its Kolkhoz token is missing', () {
-    expect(
-      shouldMigrateLegacySession(
-        storedIdentityToken: null,
-        legacyAccessToken: 'legacy-token',
-        migrationCompleted: true,
-      ),
-      isTrue,
-    );
-  });
-
   test('platform authentication retries are bounded', () {
     expect(shouldRetryPlatformAuthentication(1), isTrue);
     expect(shouldRetryPlatformAuthentication(2), isTrue);

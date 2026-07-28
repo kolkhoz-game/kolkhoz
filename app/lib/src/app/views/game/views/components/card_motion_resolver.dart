@@ -396,7 +396,8 @@ Rect? northCardMotionTargetRect({
   required MotionGeometry currentRects,
   required DesignTokens tokens,
 }) => _cardSizedRect(
-  currentRects[northRailCardMotionTargetKey] ??
+  currentRects[northConsoleCardMotionTargetKey] ??
+      currentRects[northRailCardMotionTargetKey] ??
       currentRects[northCardMotionTargetKey],
   tokens,
 );

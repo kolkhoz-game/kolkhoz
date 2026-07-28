@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 
 class ProgressionNotice extends StatelessWidget {
@@ -35,7 +36,7 @@ class ProgressionNotice extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
-              'assets/ui/Icons/icon-medal-star.png',
+              fieldPlanMedalIconPath,
               width: 28,
               height: 28,
               filterQuality: FilterQuality.none,

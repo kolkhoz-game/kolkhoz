@@ -1493,15 +1493,10 @@ class CardCenterFace extends StatelessWidget {
                 ? FilterQuality.high
                 : FilterQuality.none,
             isAntiAlias: fieldPlanFace,
-            errorBuilder: (_, _, _) => Image.asset(
-              genericFaceAssetPath(card),
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.none,
-              errorBuilder: (_, _, _) => SuitMark(
-                suit: card.suit,
-                tokens: tokens,
-                size: size.width * 0.34,
-              ),
+            errorBuilder: (_, _, _) => SuitMark(
+              suit: card.suit,
+              tokens: tokens,
+              size: size.width * 0.34,
             ),
           ),
         ),
@@ -1724,7 +1719,7 @@ class EmptyRewardMarker extends StatelessWidget {
             height: 34,
             child: Center(
               child: Image.asset(
-                'assets/ui/Icons/icon-check.png',
+                fieldPlanToolbarConfirmIconPath,
                 width: checkSize,
                 height: checkSize,
                 filterQuality: FilterQuality.none,
@@ -1947,7 +1942,7 @@ class PlayerPortrait extends StatelessWidget {
                   fit: BoxFit.cover,
                   filterQuality: FilterQuality.medium,
                   errorBuilder: (_, _, _) => Image.asset(
-                    'assets/ui/worker4.png',
+                    fieldPlanPlayerBeekeeper.fieldPlanPath,
                     fit: BoxFit.cover,
                     filterQuality: FilterQuality.none,
                     errorBuilder: (_, _, _) => ColoredBox(
@@ -1963,10 +1958,11 @@ class PlayerPortrait extends StatelessWidget {
               right: 2,
               top: 2,
               child: Image.asset(
-                'assets/ui/Icons/icon-medal-star.png',
+                fieldPlanMedalIconPath,
                 width: medalSize,
                 height: medalSize,
-                filterQuality: FilterQuality.none,
+                filterQuality: FilterQuality.high,
+                isAntiAlias: true,
               ),
             ),
         ],

@@ -16,6 +16,7 @@ import 'package:kolkhoz_app/src/app/views/game/views/plots/plots_view.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/assignment_projection.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_sign.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_world_scene.dart';
@@ -1045,10 +1046,11 @@ class FarmsteadCellarCount extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Image.asset(
-            'assets/ui/Icons/icon-cellar.png',
+            fieldPlanCellarIconPath,
             width: 30,
             height: 30,
-            filterQuality: FilterQuality.none,
+            filterQuality: FilterQuality.high,
+            isAntiAlias: true,
           ),
           const SizedBox(width: 4),
           PixelText(
@@ -2459,11 +2461,12 @@ class PlayerPlotScoreStat extends StatelessWidget {
             width: iconSize,
             height: iconSize,
             child: Image.asset(
-              'assets/ui/Icons/icon-plot.png',
+              fieldPlanPlotIconPath,
               width: iconSize,
               height: iconSize,
               fit: BoxFit.contain,
-              filterQuality: FilterQuality.none,
+              filterQuality: FilterQuality.high,
+              isAntiAlias: true,
             ),
           ),
           SizedBox(
@@ -2533,7 +2536,7 @@ class PlayerMedalStat extends StatelessWidget {
                         key: ValueKey('empty-medal-$index'),
                         opacity: playerPanelUnearnedMedalOpacity,
                         child: ChromeAssetIcon(
-                          asset: 'assets/ui/Icons/icon-medal-star.png',
+                          asset: fieldPlanMedalIconPath,
                           width: iconSize,
                           height: iconSize,
                           muted: true,
@@ -2549,11 +2552,12 @@ class PlayerMedalStat extends StatelessWidget {
 
   Widget playerMedalIcon(double size, int index) {
     return Image.asset(
-      'assets/ui/Icons/icon-medal-star.png',
+      fieldPlanMedalIconPath,
       key: ValueKey('earned-medal-$index'),
       width: size,
       height: size,
-      filterQuality: FilterQuality.none,
+      filterQuality: FilterQuality.high,
+      isAntiAlias: true,
     );
   }
 }
@@ -2643,11 +2647,12 @@ class PlayerCellarStat extends StatelessWidget {
             width: iconSize,
             height: iconSize,
             child: Image.asset(
-              'assets/ui/Icons/icon-cellar.png',
+              fieldPlanCellarIconPath,
               width: iconSize,
               height: iconSize,
               fit: BoxFit.contain,
-              filterQuality: FilterQuality.none,
+              filterQuality: FilterQuality.high,
+              isAntiAlias: true,
             ),
           ),
           SizedBox(

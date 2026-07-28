@@ -121,6 +121,7 @@ class InteractiveCardFlip extends StatefulWidget {
     this.frontKey,
     this.backKey,
     this.onTap,
+    this.forceShowFront = false,
     super.key,
   });
 
@@ -131,6 +132,7 @@ class InteractiveCardFlip extends StatefulWidget {
   final Key? frontKey;
   final Key? backKey;
   final VoidCallback? onTap;
+  final bool forceShowFront;
 
   @override
   State<InteractiveCardFlip> createState() => _InteractiveCardFlipState();
@@ -140,7 +142,16 @@ class _InteractiveCardFlipState extends State<InteractiveCardFlip> {
   bool hovered = false;
   bool pinned = false;
 
-  bool get showingFront => hovered || pinned;
+  bool get showingFront => widget.forceShowFront || hovered || pinned;
+
+  @override
+  void didUpdateWidget(InteractiveCardFlip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.forceShowFront && widget.forceShowFront) {
+      hovered = false;
+      pinned = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,12 +159,22 @@ class _InteractiveCardFlipState extends State<InteractiveCardFlip> {
       button: true,
       label: showingFront ? widget.revealedLabel : widget.concealedLabel,
       child: MouseRegion(
-        onEnter: (_) => setState(() => hovered = true),
-        onExit: (_) => setState(() => hovered = false),
+        onEnter: (_) {
+          if (!widget.forceShowFront) {
+            setState(() => hovered = true);
+          }
+        },
+        onExit: (_) {
+          if (!widget.forceShowFront) {
+            setState(() => hovered = false);
+          }
+        },
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
-            setState(() => pinned = !pinned);
+            if (!widget.forceShowFront) {
+              setState(() => pinned = !pinned);
+            }
             widget.onTap?.call();
           },
           child: CardFlip(

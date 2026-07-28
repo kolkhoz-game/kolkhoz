@@ -2,11 +2,10 @@ import 'dart:math' as math;
 import 'dart:ui' show clampDouble;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
-import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/shared/pixel_text.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/plot_display.dart';
@@ -46,277 +45,6 @@ class PlotPanel extends StatelessWidget {
   }
 }
 
-class GameOverPlotPanel extends StatelessWidget {
-  const GameOverPlotPanel({
-    required this.model,
-    required this.tokens,
-    required this.language,
-    this.onNewGame,
-    this.onReturnToLobby,
-    this.onCopyGameResult,
-    this.onSaveGameLog,
-    this.returnsToLobby = false,
-    super.key,
-  });
-
-  final TableViewModel model;
-  final DesignTokens tokens;
-  final KolkhozLanguage language;
-  final VoidCallback? onNewGame;
-  final VoidCallback? onReturnToLobby;
-  final VoidCallback? onCopyGameResult;
-  final VoidCallback? onSaveGameLog;
-  final bool returnsToLobby;
-
-  @override
-  Widget build(BuildContext context) {
-    final scores = model.table.gameResult?.scores ?? model.table.scoreboard;
-    final winnerID =
-        model.table.gameResult?.winnerSeatID ?? inferredWinnerID(scores);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final metrics = PlotPanelMetrics.fromSize(constraints.biggest, tokens);
-        return CommandPanelSurface(
-          tokens: tokens,
-          padding: EdgeInsets.all(metrics.padding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: PlotOverviewView(
-                  model: model,
-                  metrics: metrics,
-                  tokens: tokens,
-                  onPlotCardTap: null,
-                ),
-              ),
-              SizedBox(height: metrics.spacing),
-              if (model.seed != null) ...[
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Semantics(
-                    label: 'Game seed ${model.seed}',
-                    button: true,
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: InkWell(
-                        key: const Key('game-over-seed'),
-                        onTap: () => Clipboard.setData(
-                          ClipboardData(text: '${model.seed}'),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 3),
-                          child: Text(
-                            'SEED ${model.seed}  •  TAP TO COPY',
-                            style: kolkhozFontStyle.copyWith(
-                              color: tokens.colors.creamDim,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: metrics.spacing / 2),
-              ],
-              SizedBox(
-                height: gameOverPlotFooterHeight,
-                child: Row(
-                  spacing: metrics.spacing,
-                  children: [
-                    Expanded(
-                      child: GameOverFinalScoreStrip(
-                        seats: model.table.seats,
-                        scores: scores,
-                        winnerID: winnerID,
-                        tokens: tokens,
-                      ),
-                    ),
-                    Tooltip(
-                      message: language.strings.kolkhozappCopyResult,
-                      child: ChromeAssetButton.command(
-                        key: const Key('game-over-copy-result-button'),
-                        label: '',
-                        tokens: tokens,
-                        prominent: false,
-                        onPressed: onCopyGameResult,
-                        iconAsset: 'assets/ui/Icons/icon-copy.png',
-                        iconSize: 26,
-                        width: gameOverPlotFooterHeight,
-                        height: gameOverPlotFooterHeight,
-                        padding: EdgeInsets.zero,
-                        spacing: 0,
-                        expandLabel: false,
-                      ),
-                    ),
-                    Tooltip(
-                      message: language == KolkhozLanguage.en
-                          ? 'Save Log'
-                          : 'Сохранить журнал',
-                      child: ChromeAssetButton.command(
-                        key: const Key('game-over-save-log-button'),
-                        label: '',
-                        tokens: tokens,
-                        prominent: false,
-                        onPressed: onSaveGameLog,
-                        iconAsset: 'assets/ui/Icons/icon-save.png',
-                        iconSize: 26,
-                        width: gameOverPlotFooterHeight,
-                        height: gameOverPlotFooterHeight,
-                        padding: EdgeInsets.zero,
-                        spacing: 0,
-                        expandLabel: false,
-                      ),
-                    ),
-                    ChromeAssetButton.command(
-                      label: returnsToLobby
-                          ? language.strings.kolkhozappMainMenu2
-                          : language.strings.kolkhozappNewGame2,
-                      prominent: true,
-                      tokens: tokens,
-                      onPressed: returnsToLobby ? onReturnToLobby : onNewGame,
-                      width: gameOverPrimaryActionButtonWidth,
-                      height: gameOverPlotFooterHeight,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      textSize: PixelTextSize.caption,
-                      expandLabel: false,
-                      surfaceKey: Key(
-                        returnsToLobby
-                            ? 'game-over-main-menu-button'
-                            : 'game-over-new-game-button',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class GameOverFinalScoreStrip extends StatelessWidget {
-  const GameOverFinalScoreStrip({
-    required this.seats,
-    required this.scores,
-    required this.winnerID,
-    required this.tokens,
-    super.key,
-  });
-
-  final List<Seat> seats;
-  final List<Score> scores;
-  final int winnerID;
-  final DesignTokens tokens;
-
-  @override
-  Widget build(BuildContext context) {
-    final sortedSeats = seats.toList(growable: false)
-      ..sort((a, b) {
-        final scoreComparison = finalScoreForSeat(
-          scores,
-          a.id,
-        ).compareTo(finalScoreForSeat(scores, b.id));
-        if (scoreComparison != 0) {
-          return scoreComparison;
-        }
-        if (a.id == winnerID) {
-          return 1;
-        }
-        if (b.id == winnerID) {
-          return -1;
-        }
-        return a.id.compareTo(b.id);
-      });
-    return Row(
-      spacing: gameOverScoreStripSpacing,
-      children: [
-        for (final seat in sortedSeats)
-          Expanded(
-            child: GameOverFinalScorePill(
-              seat: seat,
-              score: finalScoreForSeat(scores, seat.id),
-              winner: seat.id == winnerID,
-              tokens: tokens,
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class GameOverFinalScorePill extends StatelessWidget {
-  const GameOverFinalScorePill({
-    required this.seat,
-    required this.score,
-    required this.winner,
-    required this.tokens,
-    super.key,
-  });
-
-  final Seat seat;
-  final int score;
-  final bool winner;
-  final DesignTokens tokens;
-
-  @override
-  Widget build(BuildContext context) {
-    final textColor = winner ? tokens.colors.onAccent : tokens.colors.cardInk;
-    return Stack(
-      key: Key('game-over-score-${seat.id}'),
-      fit: StackFit.expand,
-      children: [
-        ChromeButtonBackground(
-          asset: winner ? chromeButtonPrimaryAsset : chromeButtonSecondaryAsset,
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          child: Row(
-            spacing: 3,
-            children: [
-              if (winner)
-                Image.asset(
-                  'assets/ui/Icons/icon-medal-star.png',
-                  width: gameOverScoreMedalSize,
-                  height: gameOverScoreMedalSize,
-                  filterQuality: FilterQuality.none,
-                ),
-              Expanded(
-                child: PixelText(
-                  seat.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  size: PixelTextSize.caption2,
-                  variant: winner
-                      ? PixelTextVariant.heavy
-                      : PixelTextVariant.regular,
-                  color: textColor,
-                ),
-              ),
-              PixelText(
-                '$score',
-                size: PixelTextSize.caption,
-                variant: PixelTextVariant.heavy,
-                color: textColor,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-const gameOverPlotFooterHeight = 40.0;
-const gameOverPrimaryActionButtonWidth = 154.0;
-const gameOverScoreStripSpacing = 6.0;
-const gameOverScoreMedalSize = 18.0;
-
 class PlotOverviewView extends StatelessWidget {
   const PlotOverviewView({
     required this.model,
@@ -352,6 +80,8 @@ class PlotOverviewView extends StatelessWidget {
       hiddenExiledCardIDs,
     );
     final selectable = model.table.phase == phaseSwap;
+    final revealViewerCellar =
+        selectable && model.table.currentPlayerID == viewer.id;
     final revealOpponentCellars = model.table.phase == phaseGameOver;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -422,10 +152,11 @@ class PlotOverviewView extends StatelessWidget {
                     Expanded(
                       child: LocalPlotColumn(
                         title: 'Cellar',
-                        iconPath: 'assets/ui/Icons/icon-cellar.png',
+                        iconPath: fieldPlanCellarIconPath,
                         cards: viewerHiddenCards,
                         value: viewerHiddenCards.length,
                         hidden: true,
+                        revealHiddenCards: revealViewerCellar,
                         selectable: selectable,
                         selectedCardID: model.selection.plotCardID,
                         exiledCardIDs: exiledCardIDs,
@@ -438,7 +169,7 @@ class PlotOverviewView extends StatelessWidget {
                     Expanded(
                       child: LocalPlotColumn(
                         title: 'Plot',
-                        iconPath: 'assets/ui/Icons/icon-plot.png',
+                        iconPath: fieldPlanPlotIconPath,
                         cards: viewerRevealedCards,
                         stacks: viewerStacks,
                         value: plotSectionValue(
@@ -473,6 +204,7 @@ List<Widget> plotOverviewCardItems({
   required TokenCardSize cardSize,
   required String? selectedCardID,
   required bool selectable,
+  bool revealHiddenCards = false,
   required String zone,
   required Set<String> exiledCardIDs,
   required DesignTokens tokens,
@@ -496,6 +228,7 @@ List<Widget> plotOverviewCardItems({
                       '${card.rank} of ${card.suit}. Tap to conceal.',
                   frontKey: ValueKey('cellar-face-${card.id}'),
                   backKey: ValueKey('cellar-back-${card.id}'),
+                  forceShowFront: revealHiddenCards,
                   onTap: selectable
                       ? () => onPlotCardTap?.call(card.id, zone)
                       : null,
@@ -976,7 +709,7 @@ class OpponentPlotPanel extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OpponentPlotMiniSection(
-                      iconPath: 'assets/ui/Icons/icon-cellar.png',
+                      iconPath: fieldPlanCellarIconPath,
                       value: revealCellarCards
                           ? '${plotCardsValue([...visibleHiddenCards, ...stackedHiddenCards])}'
                           : '$cellarCardCount',
@@ -990,7 +723,7 @@ class OpponentPlotPanel extends StatelessWidget {
                   ),
                   Expanded(
                     child: OpponentPlotMiniSection(
-                      iconPath: 'assets/ui/Icons/icon-plot.png',
+                      iconPath: fieldPlanPlotIconPath,
                       value: '${visiblePlotScore(seat, hiddenExiledCardIDs)}',
                       cards: [...visibleRevealedCards, ...stackedRevealedCards],
                       hidden: false,
@@ -1122,7 +855,8 @@ class OpponentPlotMiniSection extends StatelessWidget {
                   iconPath,
                   width: metrics.headerIconSize,
                   height: metrics.headerIconSize,
-                  filterQuality: FilterQuality.none,
+                  filterQuality: FilterQuality.high,
+                  isAntiAlias: true,
                 ),
                 PixelText(
                   value,
@@ -1158,6 +892,7 @@ class LocalPlotColumn extends StatelessWidget {
     required this.value,
     required this.hidden,
     bool? hiddenCards,
+    this.revealHiddenCards = false,
     required this.selectable,
     required this.selectedCardID,
     required this.exiledCardIDs,
@@ -1174,6 +909,7 @@ class LocalPlotColumn extends StatelessWidget {
   final int value;
   final bool hidden;
   final bool hiddenCards;
+  final bool revealHiddenCards;
   final bool selectable;
   final String? selectedCardID;
   final Set<String> exiledCardIDs;
@@ -1206,7 +942,8 @@ class LocalPlotColumn extends StatelessWidget {
                 iconPath,
                 width: metrics.headerIconSize,
                 height: metrics.headerIconSize,
-                filterQuality: FilterQuality.none,
+                filterQuality: FilterQuality.high,
+                isAntiAlias: true,
               ),
               PixelText(
                 title.toUpperCase(),
@@ -1235,6 +972,7 @@ class LocalPlotColumn extends StatelessWidget {
                   cards: cards,
                   stacks: stacks,
                   hiddenCards: hiddenCards,
+                  revealHiddenCards: revealHiddenCards,
                   cardSize: cardSize,
                   selectedCardID: selectedCardID,
                   selectable: selectable,
