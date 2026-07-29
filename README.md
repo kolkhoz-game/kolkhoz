@@ -3,6 +3,9 @@
 Kolkhoz is a Soviet-themed trick-taking card game. The repo has four active owners:
 the portable C engine, the Flutter app, the online server, and the Python/Torch research harness.
 
+The public website, expanded rules, and how-to-play walkthrough live separately in
+[`kolkhoz-game/kolkhoz-site`](https://github.com/kolkhoz-game/kolkhoz-site).
+
 ## Current Status
 
 - `engine/KolkhozCEngine/` is the source of truth for rules, legal actions, phase flow,

@@ -15,5 +15,6 @@ Public URLs:
 - Support: https://kolkhoz.online/support
 - Privacy: https://kolkhoz.online/privacy
 
-Before using the privacy and support URLs in App Store Connect, publish the updated files in
-`docs/` and verify them from a private browser window.
+Before using the privacy and support URLs in App Store Connect, publish any updates through
+[`kolkhoz-game/kolkhoz-site`](https://github.com/kolkhoz-game/kolkhoz-site) and verify them
+from a private browser window.
