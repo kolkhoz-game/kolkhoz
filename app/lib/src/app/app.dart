@@ -42,6 +42,8 @@ export 'package:kolkhoz_app/src/app/views/main_menu/main_menu_view.dart';
 export 'package:kolkhoz_app/src/app/navigation/app_navigation_controller.dart'
     show KolkhozGameLaunchOrigin;
 
+const kolkhozWebDemo = bool.fromEnvironment('KOLKHOZ_WEB_DEMO');
+
 ThemeData kolkhozTheme(DesignTokens tokens) {
   final brightness = tokens.usesLightAppearance
       ? Brightness.light
@@ -368,7 +370,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     settings = settingsStore.load();
     onlineDeviceID =
         settings.installationID ??
-        '${DateTime.now().microsecondsSinceEpoch}-${math.Random.secure().nextInt(1 << 32)}';
+        '${DateTime.now().microsecondsSinceEpoch}-${math.Random.secure().nextInt(0x100000000)}';
     if (settings.installationID == null) {
       settings = settings.copyWith(installationID: onlineDeviceID);
       settingsStore.save(settings);
@@ -409,7 +411,9 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     );
     syncPendingGameLobby();
     commerce.addListener(handleCommerceChanged);
-    commerce.initialize();
+    if (!kolkhozWebDemo) {
+      commerce.initialize();
+    }
     pushNotifications = KolkhozPushNotifications(
       installationID: onlineDeviceID,
       registerInstallation:
@@ -425,18 +429,22 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
       onForegroundMessage: handleForegroundPush,
       onOpenMessage: handleOpenedPush,
     );
-    unawaited(pushNotifications.initialize());
+    if (!kolkhozWebDemo) {
+      unawaited(pushNotifications.initialize());
+    }
     if (lastStartedSetup == null) {
       playerControllers = List.of(store.controllers);
     }
-    unawaited(
-      profileController.start(
-        installationID: onlineDeviceID,
-        displayName: settings.displayName,
-      ),
-    );
-    remoteConnection.startHeartbeat();
-    mainMenuController.startInvitePolling();
+    if (!kolkhozWebDemo) {
+      unawaited(
+        profileController.start(
+          installationID: onlineDeviceID,
+          displayName: settings.displayName,
+        ),
+      );
+      remoteConnection.startHeartbeat();
+      mainMenuController.startInvitePolling();
+    }
   }
 
   @override

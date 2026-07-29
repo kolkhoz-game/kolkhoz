@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/c_engine_bridge.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/policy_model.dart';
 
@@ -33,9 +31,9 @@ class NativeGameEngine {
   final KolkhozGameVariants variants;
   final List<KolkhozPlayerController> controllers;
   final bool tutorial;
-  Pointer<KCEngine>? _native;
+  KCEngineHandle? _native;
 
-  Pointer<KCEngine> get _pointer {
+  KCEngineHandle get _pointer {
     final native = _native;
     if (native == null) {
       throw StateError('NativeGameEngine has been disposed');
@@ -86,7 +84,7 @@ class NativeGameEngine {
   /// Allows read-only adapters to inspect native state without making this
   /// engine owner depend on any particular presentation model.
   T readNative<T>(
-    T Function(KolkhozCEngineBridge bridge, Pointer<KCEngine> engine) read,
+    T Function(KolkhozCEngineBridge bridge, KCEngineHandle engine) read,
   ) => read(_bridge, _pointer);
 
   NativeGameEngine clone() => NativeGameEngine._(
