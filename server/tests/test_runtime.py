@@ -213,9 +213,7 @@ class RuntimeTests(unittest.TestCase):
                        updated_at real not null
                    )"""
             )
-            connection.execute(
-                "insert into games values ('legacy', 4, '{}', 0, 1, 1)"
-            )
+            connection.execute("insert into games values ('legacy', 4, '{}', 0, 1, 1)")
             connection.commit()
         finally:
             connection.close()

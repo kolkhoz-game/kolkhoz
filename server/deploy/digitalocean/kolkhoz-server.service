@@ -29,7 +29,7 @@ ProtectSystem=full
 ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true
-ReadWritePaths=/opt/kolkhoz-server/research/.build
+ReadWritePaths=/opt/kolkhoz-server/server/.build
 ReadOnlyPaths=-/etc/kolkhoz-server/firebase-fcm.json
 
 [Install]

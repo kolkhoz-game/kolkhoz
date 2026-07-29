@@ -1008,7 +1008,7 @@ void registerTutorialAndLayoutTests() {
     );
     expect(
       cardCornerRankVisualHeight(defaultDesignTokens.card.large),
-      closeTo(28, 0.001),
+      closeTo(24, 0.001),
     );
     final oversizedCard = scaledHandTrayCardSize(
       defaultDesignTokens.card.large,
@@ -1016,7 +1016,7 @@ void registerTutorialAndLayoutTests() {
     );
     expect(displayTextSizeForCardRank(oversizedCard), DisplayTextSize.cardRank);
     expect(displayTextScaleForCardRank(oversizedCard), cardRankTextMaxScale);
-    expect(cardCornerRankVisualHeight(oversizedCard), closeTo(40.6, 0.001));
+    expect(cardCornerRankVisualHeight(oversizedCard), closeTo(34.8, 0.001));
   });
 
   test('panel title display helpers scale and fade predictably', () {

@@ -4,7 +4,7 @@ import ctypes
 from http import HTTPStatus
 from typing import Iterable, Mapping, Sequence
 
-from research.kolkhoz_research.c_engine import (
+from engine.python.kolkhoz_c_engine import (
     KCAction,
     KCCard,
     KCCardList,

@@ -1,46 +1,140 @@
-Колхоз (Kolkhoz):
-1. Игровой Набор (Igrovoy Nabor - Game Setup):
-Remove the Ace, 2, 3, 4, and 5 cards of each suit from a standard 52-card deck. Set these aside in piles according to their работы (raboty - job). Then shuffle each pile individually and reveal the top card of each pile, marking the first year of the Пятилетка (Pyatiletka - Five-Year Plan).
-Shuffle the remaining 32 cards (6 - King of each suit) to form the Колода Рабочих (Koloda Rabochikh - Workers Deck).
-In the current default app rules, add one Вредитель (Saboteur) worker card to the Колода Рабочих. In engine state this is `wrecker-0`: a dedicated worker card that matches every crop suit.
-Choose a player to be the first Центральный Плановик (Tsentral'nyy Planovik - Central Planner) (dealer). This can be done randomly or by agreement. That player deals 5 cards face-down to each player.
-Each player has a designated area for their hidden cards of the Личный Участок (Lichnyy Uchastok - Personal Plot).
-2. Ход Игры (Khod Igry - Round Flow / Season):
-The game proceeds over a set number of rounds.
-a. Фаза Планирования (Faza Planirovaniya - Planning Phase):
-The Центральный Плановик reveals one Карты Плановых Заданий face-up for each of the four работы (raboty - jobs): Hearts - Пахота (Pak͡hota - Plowing), Diamonds - Жатва (Zhatva - Harvesting), Clubs - Мастерская (Masterskaya - Workshop), Spades - Зерно (Zerno - Grain). These values (Ace - 5) are the Victory Points awarded for successfully completing the job this season.
-The Центральный Плановик then declares the trump suit for the current year
-b. Фаза Взяток (Faza Vzyatok - Trick-Taking Phase) (Четыре Взятки - Chetyre Vzyatki - Four Tricks):
-Starting with the player to the left of the Центральный Плановик, players lead one card.
-Players follow suit if able; otherwise, they may play any card.
-The Вредитель (Saboteur) counts as every crop suit for following suit. If it is led, there is no ordinary lead suit.
-Trump beats the lead suit. If no trump is played, the highest-ranking card of the lead suit wins the взятка (vzyatka - trick). If trump is played, the highest trump wins.
-The winner becomes the Бригадир (Brigadir - Brigade Leader) of the взятка and collects the four played cards.
-The Бригадир then assigns each of the four cards from the взятка to jobs. In the app implementation, legal target jobs are the suits present in the completed взятка, and any card from that взятка may be assigned to any of those target jobs. If the assigned workers pass the 40 Work-Hours threshold for the job, the Бригадир immediately adds the Карты Плановых Заданий for that работа to their Личный Участок face-up.
-The Вредитель (Saboteur) matches every crop suit for assignment target legality and contributes 0 work hours when assigned. A job containing the Вредитель can still claim its reward if its other cards reach 40 hours, but it is treated as failed during requisition.
-The face cards of the trump suit have special effects:
-Jack “Пьяница (P'yanitsa)” - Contributes 0 work hours. If this job is requisitioned, the Jack is sent north instead of a player's card.
-Queen “Информатор (Informator)” - If this job fails, all players must reveal their Personal Plots, not just the Brigade Leaders.
-King “партийец (Partiynyy chinovnik)” - If this job is requisitioned, two cards are sent north instead of one.
-The Бригадир then leads the next взятка.
-Four взятки are played in total.
-c. Выбор Личного Участка (Vybor Lichnogo Uchastka - Personal Plot Selection):
-After the fourth взятка, each player keeps one card from their remaining hand for their Личный Участок, adding it face-down.
-d. Фаза Реквизиции (Faza Rekvizitsii - Requisition Phase):
-For each работа that did not reach the 40 work-hour threshold:
-Also process any работа that contains the Вредитель (Saboteur), even if it reached 40 work hours and paid its reward.
-If the Пьяница (P'yanitsa) is amongst the workers for that job, the Пьяница (P'yanitsa) is отправить на Север.
-Players are vulnerable if they won a взятка during the year, or if a variant such as Northern Style, Mice, or the Информатор (Informator) makes them vulnerable.
-Vulnerable players reveal matching hidden Личный Участок cards for the failed работа. Normally only the highest matching hidden card is revealed; with Mice or the Информатор, all matching hidden cards are revealed.
-Each vulnerable player with revealed cards matching the failed работа must отправить на Север (otpravit' na Sever - send to the north) their highest matching revealed card. If the партийец (Partiynyy chinovnik) was amongst the workers for the failed job, that player sends up to two matching revealed cards instead of one.
-A Вредитель (Saboteur) in a player's Личный Участок matches any failed работа for requisition, but the same Saboteur card is sent north at most once during that year's requisition.
-f. Конец Раунда (Konets Raundа - End of Round):
-All played worker cards are reshuffled.
-The role of Центральный Плановик passes to the player to the left.
-A new round begins with the Planning Phase.
-During the final year of the five year plan, there is a Перебои со снабжением (Pereboi so snabzheniyem). During this year only 3 tricks are played instead of 4, there is no trump, and assignment targets are still limited to the suits present in the completed взятка.
+KOLKHOZ — CANONICAL PHYSICAL RULES
 
-3. Конец Игры и Итоговый Подсчет Очков (Konets Igry i Itogovyy Podschet Ochkov - End of Game and Final Scoring):
-After the completion of the  Пятилетка, players calculate their final scores:
-Sum the face values of the cards remaining in their Личный Участок areas. This includes hidden workers taken and revealed rewards for finishing jobs.
-The player with the highest total score wins.
+Players: 3–4
+Length: about 30 minutes
+Rounds: 5 years
+Field quota: 40 hours with 4 players; 32 hours with 3 players
+
+OBJECTIVE
+
+After Year 5, score every card remaining in your face-up Plot and face-down
+Cellar. Printed rank is both work value and final score:
+
+Ace 1 · Jack 11 · Queen 12 · King 13 · Saboteur 0
+
+Highest score wins. If tied, most cards wins. If score and card count are both
+tied, share the victory. Medals do not score.
+
+COMPONENTS
+
+- 52 crop cards: Wheat, Sunflower, Potato, and Beet, Ace through King
+- 1 rank-0, all-crop Saboteur
+- 4 Medal cards
+- 1 double-sided Central Planner reference card
+
+SETUP
+
+1. For each crop, combine its Ace–4 with one random hidden card of that crop
+   ranked 5–King. Shuffle these five cards into a face-down reward pile.
+2. Shuffle all remaining crop cards with the Saboteur into the Workers Deck.
+3. Give every player a face-up Plot and a face-down Cellar. Only the Cellar’s
+   owner may inspect it.
+4. Reserve a public area called the North. Cards sent there remain face-up and
+   out of play.
+5. Place the four Medals in a shared supply.
+6. Choose a first dealer and give them the Central Planner card.
+
+Three players use the complete deck unchanged.
+
+ONE YEAR
+
+1. Deal.
+2. Reveal one reward for each crop.
+3. Determine trump and resolve optional swaps.
+4. Play tricks. After each trick, assign every card and check field quotas.
+5. Bank each player’s remaining hand card in their Cellar.
+6. Resolve requisition.
+7. Clean up and pass the Planner left.
+
+PLANNING
+
+Years 1–4: deal 5 cards to each player, reveal 1 reward per crop, and have the
+Planner choose trump.
+
+Years 2–5: each player may swap 1 hand card with 1 card in their own Plot or
+Cellar before the first trick. The replacement preserves the zone’s visibility:
+a hand card placed in the Plot stays face-up; a hand card placed in the Cellar
+stays face-down. A card taken from either zone joins the hand and may be played.
+
+TRICKS
+
+The player left of the Planner leads the first trick. Follow the led crop if
+able; otherwise play any card. Highest trump wins. If no trump is played, highest
+card of the led crop wins.
+
+The winner becomes Brigadier, takes 1 Medal, assigns the trick, and leads next.
+Play 4 tricks in Years 1–4 and 3 tricks in Year 5.
+
+ASSIGNMENT
+
+The Brigadier assigns every card from the trick. Any card may go to any field
+whose crop appeared anywhere in that trick. Cards from one trick may be split
+among multiple legal fields. A card does not have to go to its own crop.
+
+Previously completed fields remain legal assignment targets.
+
+COMPLETING FIELDS
+
+Add printed ranks assigned to each field. At 40 hours with 4 players or 32 hours
+with 3 players, the field completes. The Brigadier whose assignment crosses the
+quota immediately claims the visible reward face-up into their Plot.
+
+Each field pays at most 1 reward per year. It remains open for later assignment.
+
+THE SABOTEUR
+
+The Saboteur is rank 0 and counts as every crop.
+
+- It is always able to follow the led crop.
+- It is a trump in every suit: it beats nontrumps, but every ordinary trump
+  beats it.
+- If led, there is no ordinary lead crop and every player may play any card.
+- Its trick makes all 4 fields legal assignment targets.
+- It contributes 0 hours.
+- Any field containing it fails requisition, even if that field reached quota
+  and already paid its reward.
+
+BANKING
+
+After the last trick, place the 1 card remaining in each hand face-down in that
+player’s Cellar.
+
+REQUISITION
+
+1. A field fails if it is below quota or contains the Saboteur.
+2. Let N equal the number of failed fields.
+3. Every player holding 1 or more Medals is inspected.
+4. Resolve each inspected player separately. Pool every card in that player’s
+   Plot and Cellar whose crop matches any failed field. Claimed rewards are
+   eligible. The Saboteur matches every failed crop and is eligible at rank 0.
+5. Send the player’s N highest eligible cards North. If they have fewer than N,
+   send all eligible cards. Multiple confiscated cards may share one crop. The
+   owner chooses between equal-ranked cards tied at the cutoff.
+
+Hero of Labor: if a player won every trick that year, the Hero is exempt and
+every other player is inspected, including players with no Medals. Each other
+player still sends up to N highest eligible cards.
+
+CLEANUP — YEARS 1–4
+
+- Return all Medals to the supply.
+- Send all unclaimed visible rewards North.
+- Reshuffle all assigned and undealt Workers, including the Saboteur if still
+  available.
+- Do not reshuffle cards in Plots, Cellars, or the North.
+- Pass the Central Planner left.
+
+YEAR 5 — FAMINE
+
+1. Flip the Planner to the Year 5 side.
+2. Deal 4 cards to each player.
+3. Reveal 1 reward for each crop.
+4. Reveal the top remaining Worker and immediately send it North.
+5. That Worker’s crop is trump. If it is the Saboteur, there is no trump.
+6. Resolve the normal optional swap.
+7. Play 3 tricks, bank the final card, resolve requisition, and score.
+
+DIGITAL NOTE
+
+The current app has 4 seats and therefore always uses the 40-hour quota. Its
+base rules engine implements the same default rules and edge cases above.

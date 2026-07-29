@@ -3,9 +3,14 @@
 The C engine under `engine/KolkhozCEngine/` is the source of truth for rules, legal
 actions, phase flow, AI, scoring, policy features, and deterministic simulation. The
 Flutter app in `app/` is the primary app surface and binds to the engine
-through Dart FFI. The research harness in `research/` binds to the same engine through
-Python `ctypes`. The online runtime in `server/` uses the same C engine behind its
-durable session/event model. Keep the architecture organized around those four owners.
+through Dart FFI. The online runtime in `server/` uses the same C engine through the
+shared `engine/python/` binding behind its durable session/event model. Keep the
+architecture organized around the engine, app, server, and promoted-policy owners.
+
+Training and evaluation live in the external
+[`kolkhoz-research`](https://github.com/kolkhoz-game/kolkhoz-research) repository.
+Physical print production lives in
+[`kolkhoz-tabletop`](https://github.com/kolkhoz-game/kolkhoz-tabletop).
 
 The legacy web app and transitional native Apple app have been removed. Current and future
 clients should not derive architecture from those retired implementations.
@@ -27,17 +32,10 @@ kolkhoz/
 │   ├── native/
 │   └── test/
 ├── policies/                   # Canonical promoted runtime AI models
-├── research/
-│   ├── kolkhoz_research/
-│   ├── configs/
-│   ├── dashboard/
-│   └── runs/                  # ignored local experiments and candidate outputs
 ├── server/
 │   ├── kolkhoz_server/        # authoritative online runtime
 │   ├── deploy/                # production and staging operations
 │   └── tests/                 # contracts, concurrency, and failure gates
-├── training/
-│   └── rl/runs/               # ignored legacy promoted/baseline JSON models
 ├── agent-docs/
 └── README.md
 ```
@@ -96,21 +94,12 @@ Promoted runtime policy files live in top-level `policies/`. The app copies them
 its ignored asset-staging directory before Flutter builds; the server and research load
 the canonical files directly.
 
-### `research`
+### `engine/python`
 
-Python research harness for engine smoke tests, C MLP training, Torch/MPS training,
-paired benchmarks, model-pool tournaments, seed mining, dashboard views, and artifact
-cleanup.
-
-Important files:
-
-| File | Purpose |
-|------|---------|
-| `kolkhoz_research/c_engine.py` | Builds/loads the C engine shared library with `ctypes` |
-| `kolkhoz_research/cli.py` | Main research command surface |
-| `kolkhoz_research/benchmark.py` | Paired candidate-vs-baseline and tournament logic |
-| `kolkhoz_research/training.py` | C MLP training path |
-| `kolkhoz_research/torch_policy.py` | Torch/MPS training and benchmark path |
+Shared Python `ctypes` binding for the C engine. The online server imports it directly;
+the external research repository links this directory into its workspace. Keep the
+binding aligned with the public C header and free of server- or experiment-specific
+policy.
 
 ### `server`
 
@@ -129,14 +118,8 @@ gate.
 ### Generated And Historical Artifacts
 
 Generated tool output is intentionally outside the active architecture. Flutter build
-directories, Dart tool state, Xcode ephemeral files, Python caches, `research/.build/`,
-and the local `app/native/macos/libkolkhoz_c_engine.dylib` are
-regenerable.
-
-`research/runs/` and `training/rl/runs/` are ignored, but they are not arbitrary caches.
-Research history, configs, and scripts may reference specific model files there as
-baselines or opponents. Use the research artifact cleanup CLI before deleting run or
-model files.
+directories, Dart tool state, Xcode ephemeral files, Python caches, `server/.build/`,
+and the local `app/native/macos/libkolkhoz_c_engine.dylib` are regenerable.
 
 ## App Data Flow
 
@@ -252,13 +235,13 @@ the C engine immediately. Finished reads, reactions, and result screens use that
 snapshot. Durable events remain the restart source of truth; a replacement worker replays
 once, captures the same terminal JSON, and releases the reconstructed engine again.
 
-## Research Data Flow
+## External Research Data Flow
 
 ```text
-Python CLI
+kolkhoz-research Python CLI
     |
     v
-CEngine ctypes wrapper
+linked engine/python ctypes wrapper
     |
     v
 C engine simulations, legal actions, object tokens, action features
@@ -318,9 +301,8 @@ Runtime heuristic AI is deterministic for a given seed and implemented in the C 
 Research models train and evaluate against C-engine simulations. Do not add a parallel
 Dart or Python rules implementation.
 
-Historical JSON policies under `training/rl/runs/` exist only as model inputs for the
-current research harness. New training code, benchmark logic, dashboards, and promotion
-records belong under `research/`.
+Candidate models, benchmark logic, dashboards, and promotion records belong in
+`kolkhoz-research`. Only reviewed, deployable runtime policies belong in `policies/`.
 
 ## Verification
 
@@ -335,8 +317,4 @@ dart run tool/sync_policy_assets.dart
 flutter analyze
 flutter test
 flutter build macos --debug
-```
-
-```bash
-python3 -m research.kolkhoz_research.cli engine-smoke --games 8
 ```

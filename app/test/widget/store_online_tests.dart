@@ -4032,14 +4032,23 @@ void registerStoreAndOnlineTests() {
       actionSwap: 2,
       actionUndoSwap: 3,
     };
-    for (var guard = 0; guard < 250; guard += 1) {
+    for (var guard = 0; guard < 500; guard += 1) {
       final model = store.model!;
       if (model.table.phase == phaseRequisition) break;
-      final actions = [...model.legalActions]
-        ..sort(
-          (left, right) =>
-              (priority[left.kind] ?? 9).compareTo(priority[right.kind] ?? 9),
-        );
+      final assignedCardIDs = assignedAssignmentCardIDs(model);
+      final actions =
+          model.legalActions
+              .where(
+                (action) =>
+                    action.kind != actionAssign ||
+                    !assignedCardIDs.contains(action.engineAction.card?.id),
+              )
+              .toList()
+            ..sort(
+              (left, right) => (priority[left.kind] ?? 9).compareTo(
+                priority[right.kind] ?? 9,
+              ),
+            );
       expect(actions, isNotEmpty);
       store.applyLegalAction(actions.first);
       while (store.currentTransition != null) {

@@ -17,7 +17,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
 ProtectSystem=full
-ReadWritePaths=/opt/kolkhoz-server/research/.build
+ReadWritePaths=/opt/kolkhoz-server/server/.build
 
 [Install]
 WantedBy=multi-user.target

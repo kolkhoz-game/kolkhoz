@@ -16,7 +16,9 @@ solutions over clever abstractions.
 **Follow the current owners:**
 - **C engine** - Keep rules, legal actions, phase flow, AI, scoring, policy features, and deterministic simulation in `engine/KolkhozCEngine/`.
 - **Flutter** - Keep app state, layout, animation, controls, and assets in `app/`.
-- **Research** - Keep training, benchmarking, promotion gates, seed mining, and dashboards in `research/`.
+- **Server** - Keep the authoritative online runtime and deployment in `server/`.
+- **Research** - Use `https://github.com/kolkhoz-game/kolkhoz-research`.
+- **Tabletop** - Use `https://github.com/kolkhoz-game/kolkhoz-tabletop`.
 
 **Write minimal code:**
 - Fix what's broken, don't refactor what works
@@ -35,11 +37,6 @@ flutter test
 flutter build macos --debug
 ```
 
-For research changes:
-```bash
-python3 -m research.kolkhoz_research.cli engine-smoke --games 8
-```
-
 ## Frontend Work
 
 Use Flutter/web UI skills when changing app screens or layout. The Flutter app is the
@@ -53,7 +50,9 @@ visual and behavioral app source of truth.
 
 **Flutter assets** go in `app/assets/ui/`.
 
-**Research and model training** go in `research/`.
+**Research and model training** go in `kolkhoz-research`.
+
+**Physical print production** goes in `kolkhoz-tabletop`.
 
 **State changes** happen by applying portable engine actions through the Dart FFI bridge.
 Flutter widgets should render projected state and call store actions.

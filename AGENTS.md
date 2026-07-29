@@ -8,24 +8,9 @@ Read the agent documentation in `agent-docs/`:
 3. `GAME_STATE.md` - State shape and state mutations
 4. `PHASES.md` - Game phase flow and transitions
 
-### Isolated World-Depth Research
-
-For tasks scoped entirely to `research/world_depth/` that do not modify production
-Flutter, engine, server, or Figma assets, read only:
-
-1. `design/field-plan-world/DEPTH_CARD_PIPELINE.md`
-2. `research/world_depth/AGENTS.md`
-3. `research/world_depth/BRIEF.md`
-4. The JSON configuration named by that brief
-
-The four game documents above are not required for those isolated research tasks. If
-the work expands into production code or assets, stop and read the normal documentation
-before continuing.
-
 For any task that generates raster masters, segments depth, creates or edits depth
 cards, changes the Figma world file, or exports world plates, always read
-`design/field-plan-world/DEPTH_CARD_PIPELINE.md` even when the task is not otherwise
-isolated to `research/world_depth/`.
+`design/field-plan-world/DEPTH_CARD_PIPELINE.md`.
 
 ## Code Principles
 
@@ -36,7 +21,8 @@ solutions over clever abstractions.
 - **C engine** - Keep rules, legal actions, phase flow, AI, scoring, policy features, and deterministic simulation in `engine/KolkhozCEngine/`.
 - **Flutter** - Keep app state, layout, animation, controls, and assets in `app/`.
 - **Server** - Keep the authoritative online API, session execution, persistence, realtime transport, matchmaking, and deployment in `server/`.
-- **Research** - Keep training, benchmarking, promotion gates, seed mining, and dashboards in `research/`.
+- **Research** - Keep training, benchmarking, promotion gates, seed mining, and dashboards in [`kolkhoz-research`](https://github.com/kolkhoz-game/kolkhoz-research).
+- **Tabletop** - Keep physical print sources, proofs, leaflet art, and vendor exports in [`kolkhoz-tabletop`](https://github.com/kolkhoz-game/kolkhoz-tabletop).
 
 **Write minimal code:**
 - Fix what's broken, don't refactor what works
@@ -53,11 +39,6 @@ dart run tool/sync_policy_assets.dart
 flutter analyze
 flutter test
 flutter build macos --debug
-```
-
-For research changes:
-```bash
-python3 -m research.kolkhoz_research.cli engine-smoke --games 8
 ```
 
 ## Frontend Work
@@ -149,7 +130,9 @@ Pass a device id as the first argument only when targeting a different iPhone.
 
 **Online server behavior and operations** go in `server/`.
 
-**Research and model training** go in `research/`.
+**Research and model training** go in the `kolkhoz-research` repository.
+
+**Physical print production** goes in the `kolkhoz-tabletop` repository.
 
 **State changes** happen by applying portable engine actions through the Dart FFI bridge.
 Flutter widgets should render projected state and call store actions.

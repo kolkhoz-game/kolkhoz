@@ -20,7 +20,7 @@ class KolkhozCEngineFactory:
     """Adapter from shard ownership to the authoritative portable C engine."""
 
     def __init__(self) -> None:
-        from research.kolkhoz_research.c_engine import CEngine
+        from engine.python.kolkhoz_c_engine import CEngine
 
         self._engine = CEngine()
 

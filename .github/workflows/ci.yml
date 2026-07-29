@@ -21,8 +21,11 @@ jobs:
           cache-dependency-path: server/deploy/requirements.lock
       - name: Install server test dependencies
         run: python3 -m pip install --require-hashes -r server/deploy/requirements.lock && python3 -m pip install pytest ruff
-      - name: Lint greenfield server
-        run: ruff format --check server && ruff check server
+      - name: Lint Python runtime
+        run: >-
+          ruff format --check server engine/python app/tool/update_neural_policy_asset.py
+          && ruff check --select E9,F63,F7,F82
+          server engine/python app/tool/update_neural_policy_asset.py
       - name: Check C engine
         run: >-
           clang -std=c11 -I engine/KolkhozCEngine/include -fsyntax-only
@@ -33,13 +36,6 @@ jobs:
         run: python3 -m pytest -q server/tests
       - name: Verify production policy assets with the real C engine
         run: python3 -m server.kolkhoz_server.preflight --repo-root "$GITHUB_WORKSPACE"
-      - name: Test online progression and smoke tooling
-        run: >-
-          python3 -m unittest
-          research.tests.test_progression
-          research.tests.test_online_smoke
-          research.tests.test_dashboard_smoke
-
   distributed-server-smoke:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

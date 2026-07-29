@@ -31,7 +31,7 @@ assert "KOLKHOZ_ONLINE_DATABASE_URL" not in bootstrap
 assert bootstrap.count("_schema.sql") == 9
 assert "--apply" in bootstrap and "DRY RUN:" in bootstrap
 assert bootstrap.index('cd "$ROOT"') < bootstrap.index(
-    "from research.kolkhoz_research.c_engine"
+    "from engine.python.kolkhoz_c_engine"
 )
 assert "requirements.lock" in bootstrap and "--require-hashes" in bootstrap
 assert 'runuser -u "$RUN_USER"' in bootstrap
