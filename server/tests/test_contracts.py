@@ -4,7 +4,7 @@ import ctypes
 import unittest
 from http import HTTPStatus
 
-from research.kolkhoz_research.c_engine import (
+from engine.python.kolkhoz_c_engine import (
     CEngine,
     KCAction,
     KCCard,

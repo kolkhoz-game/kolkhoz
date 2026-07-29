@@ -2,9 +2,12 @@
 
 The authoritative gameplay implementation is the C engine in `engine/KolkhozCEngine/`.
 The primary standalone app surface is the Flutter client in `app/`.
-The research harness in `research/` talks to the same C engine through `ctypes`.
 The authoritative online runtime and deployment live in `server/`. Those are the four
-active repo owners: engine, app, server, and research.
+active owners in this repository: engine, app, server, and promoted policies.
+
+The linked [`kolkhoz-research`](https://github.com/kolkhoz-game/kolkhoz-research)
+repository consumes the shared Python binding in `engine/python/`. Physical production
+belongs to [`kolkhoz-tabletop`](https://github.com/kolkhoz-game/kolkhoz-tabletop).
 
 The old React/boardgame.io/Vite web app and the transitional native Apple app have been
 removed. Do not revive either one, and do not add compatibility layers for retired
@@ -42,10 +45,6 @@ cd app
 ./tool/deploy_ios_device_profile.sh
 ```
 
-```bash
-python3 -m research.kolkhoz_research.cli engine-smoke --games 8
-```
-
 For the PostgreSQL/Redis-backed online server, configure the environment described in
 `server/deploy/README.md`, then run:
 
@@ -72,22 +71,12 @@ app/
   native/macos/                  # Local C engine dylib for macOS Flutter tests/builds
   tool/build_c_engine_macos.sh
 policies/                        # Canonical promoted runtime AI models
-research/
-  kolkhoz_research/              # Python C-engine wrapper, training, benchmarks
-  configs/
-  dashboard/
-  runs/                          # ignored local runs and candidate outputs
 server/                          # Distributed online server and deployment tooling
-training/
-  rl/runs/                       # ignored legacy promoted/baseline JSON models
 agent-docs/
 ```
 
 Ignored generated output is not source. Rebuild Flutter/Xcode products, Dart tool state,
-Python caches, `research/.build/`, and the local macOS C-engine dylib when needed. Do
-not delete `research/runs/`, `training/rl/runs/`, or `research/history/current_experiment.json`
-as generic cleanup; use `python3 -m research.kolkhoz_research.cli cleanup-artifacts`
-so promoted baselines and active/recent research state stay protected.
+Python caches, `server/.build/`, and the local macOS C-engine dylib when needed.
 
 ## Game Flow
 
@@ -134,9 +123,8 @@ one and Drunkard removes its crop before the quota is counted.
 18. `app/lib/src/app/settings/game_motion.dart` - gameplay motion timing, easing, and reduced-motion policy.
 19. `app/lib/src/app/views/game/views/components/card_motion.dart` - thin card-motion playback runner.
 20. `app/lib/src/app/views/main_menu/` - create, join, and settings surfaces.
-21. `research/kolkhoz_research/c_engine.py` - Python C-engine wrapper.
+21. `engine/python/kolkhoz_c_engine.py` - shared Python C-engine wrapper.
 22. `server/kolkhoz_server/production.py` - production online composition.
-23. `research/kolkhoz_research/cli.py` - training and benchmark commands.
 
 ## Common Tasks
 
@@ -157,19 +145,13 @@ one and Drunkard removes its crop before the quota is counted.
 
 ### Changing Training Or Benchmarking
 
-1. Keep rules and legal actions in the C engine.
-2. Keep orchestration, records, dashboards, and model-backend selection in `research/`.
-3. Validate with `python3 -m research.kolkhoz_research.cli engine-smoke --games 8` plus a targeted benchmark/training smoke.
+Use the `kolkhoz-research` repository. Keep rules and legal actions in this repository's
+C engine, and return only promoted runtime artifacts to `policies/`.
 
 ### Cleaning Local Output
 
-1. It is fine to remove ignored build/cache output such as Flutter `build/`,
-   `.dart_tool/`, Python `__pycache__/`, `.ruff_cache/`, `node_modules/`, and
-   `research/.build/`.
-2. Treat model/run directories as research artifacts, not generic caches.
-3. Prefer the research cleanup command for run artifacts:
-   `python3 -m research.kolkhoz_research.cli cleanup-artifacts --include-files`
-   first, then rerun with `--delete` only if the selected files are expected.
+It is fine to remove ignored build/cache output such as Flutter `build/`, `.dart_tool/`,
+Python `__pycache__/`, `.ruff_cache/`, `node_modules/`, and `server/.build/`.
 
 ### Modifying Phase Transitions
 
@@ -180,5 +162,5 @@ one and Drunkard removes its crop before the quota is counted.
 ## Build Notes
 
 The C engine is source of truth. Flutter owns the app UI through Dart visual constants,
-assets, and direct C-engine projections. Research tooling should call the C engine
-directly; do not add a parallel rules implementation for training.
+assets, and direct C-engine projections. External research tooling should use the shared
+Python binding; do not add a parallel rules implementation.

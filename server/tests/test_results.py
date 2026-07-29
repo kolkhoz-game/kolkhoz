@@ -170,9 +170,7 @@ class ResultsRepositoryTests(unittest.TestCase):
         output = rate_multiplayer(
             [
                 RatingInput("user:winner", 1, 120, *before),
-                RatingInput(
-                    "ai:mediumAI", 2, 80, DEFAULT_MU, DEFAULT_SIGMA
-                ),
+                RatingInput("ai:mediumAI", 2, 80, DEFAULT_MU, DEFAULT_SIGMA),
             ]
         )["user:winner"]
         with (

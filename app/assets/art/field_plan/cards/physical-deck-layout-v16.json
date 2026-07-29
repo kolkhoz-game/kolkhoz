@@ -6,10 +6,10 @@
   },
   "fontMetrics": {
     "0": {
-      "left": 271.0050048828125,
-      "right": 270.3387451171875,
-      "ascent": 716,
-      "descent": 12
+      "left": 300.29296875,
+      "right": 300.29296875,
+      "ascent": 541.50390625,
+      "descent": 16.6015625
     },
     "1": {
       "left": 220.59375,
@@ -156,11 +156,81 @@
       "descent": 220
     }
   },
-  "currentCardId": "saboteur",
-  "currentSuitId": "sunflower",
+  "currentCardId": "wheat-queen",
+  "currentSuitId": "wheat",
   "currentInsetMode": "trump",
   "currentNomenklatura": false,
   "mirrorCorners": true,
+  "medalTitle": {
+    "x": 822.6977184147142,
+    "y": 1751.6143288811036,
+    "visualHeight": 152
+  },
+  "medalArt": {
+    "x": 822,
+    "y": 790,
+    "scale": 88
+  },
+  "medalSideArt": {
+    "left": {
+      "x": 340.9598248303043,
+      "y": 829.5264725202538
+    },
+    "right": {
+      "x": 1299.4505539741626,
+      "y": 813.6888197941756
+    }
+  },
+  "plannerArt": {
+    "label": "Header artwork",
+    "x": 820.614390190497,
+    "y": 300.8027764396759,
+    "scale": 175
+  },
+  "plannerLayout": {
+    "art": {
+      "label": "Header artwork",
+      "x": 820.614390190497,
+      "y": 300.8027764396759,
+      "scale": 175
+    },
+    "title": {
+      "label": "Cyrillic title",
+      "x": 828.1615414933217,
+      "y": 552.9778322750163,
+      "scale": 120
+    },
+    "hero": {
+      "label": "Year summary",
+      "x": 822,
+      "y": 925,
+      "scale": 100
+    },
+    "section1": {
+      "label": "Plan checklist",
+      "x": 822,
+      "y": 1235,
+      "scale": 100
+    },
+    "section2": {
+      "label": "Year-end checklist",
+      "x": 822,
+      "y": 1505,
+      "scale": 100
+    },
+    "section3": {
+      "label": "Cleanup checklist",
+      "x": 822,
+      "y": 1775,
+      "scale": 100
+    },
+    "footer": {
+      "label": "Footer reminder",
+      "x": 822,
+      "y": 2010,
+      "scale": 100
+    }
+  },
   "sharedCorners": {
     "topRank": {
       "x": 290.55134368689426,

@@ -46,7 +46,7 @@ def test_bootstrap_requires_explicit_apply_for_mutations() -> None:
     assert "for _ in $(seq 1 30)" in source
     assert 'git -c safe.directory="$ROOT" -C "$ROOT"' in source
     assert source.index('cd "$ROOT"') < source.index(
-        "from research.kolkhoz_research.c_engine"
+        "from engine.python.kolkhoz_c_engine"
     )
 
 

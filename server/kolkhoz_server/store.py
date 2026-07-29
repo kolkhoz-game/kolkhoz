@@ -234,7 +234,9 @@ class SQLiteEventStore:
                 ("engine_contract_version", "integer not null default 1"),
             ):
                 if name not in columns:
-                    connection.execute(f"alter table games add column {name} {definition}")
+                    connection.execute(
+                        f"alter table games add column {name} {definition}"
+                    )
         finally:
             connection.close()
 

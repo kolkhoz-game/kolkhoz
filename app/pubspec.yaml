@@ -93,6 +93,7 @@ flutter:
     - assets/art/field_plan/cards/frames/
     - assets/art/field_plan/cards/ranks/
     - assets/art/field_plan/cards/backs/
+    - assets/art/field_plan/cards/medals/
     - assets/art/field_plan/cards/planted/
     - assets/art/field_plan/cards/physical-deck-layout-v16.json
     - assets/audio/

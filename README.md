@@ -1,10 +1,17 @@
 # Kolkhoz
 
-Kolkhoz is a Soviet-themed trick-taking card game. The repo has four active owners:
-the portable C engine, the Flutter app, the online server, and the Python/Torch research harness.
+Kolkhoz is a Soviet-themed trick-taking card game. This repository owns the portable
+C engine, Flutter app, online server, canonical rules, and promoted runtime policies.
 
 The public website, expanded rules, and how-to-play walkthrough live separately in
 [`kolkhoz-game/kolkhoz-site`](https://github.com/kolkhoz-game/kolkhoz-site).
+Playable web deployment automation lives in
+[`kolkhoz-game/kolkhoz-play`](https://github.com/kolkhoz-game/kolkhoz-play).
+Research lives in
+[`kolkhoz-game/kolkhoz-research`](https://github.com/kolkhoz-game/kolkhoz-research),
+and physical print production lives in
+[`kolkhoz-game/kolkhoz-tabletop`](https://github.com/kolkhoz-game/kolkhoz-tabletop).
+See [REPOSITORIES.md](REPOSITORIES.md) for the complete ownership and dependency map.
 
 ## Current Status
 
@@ -17,18 +24,16 @@ app state, C-engine projection, animation, controls, and assets.
   fonts, and tutorial art.
 - `server/` owns the authoritative online API, durable sessions, realtime transport,
   matchmaking, social/results services, and deployment.
-- `research/` owns model training, benchmarking, promotion records, seed mining, and
-  dashboard tooling.
+- `engine/python/` is the shared Python binding used by the server and linked research
+  checkout.
 
 The legacy React app and the transitional native Apple app have been removed. Do not
 recreate retired adapters, platform-specific rule layers, package targets, or
 compatibility layers for retired clients.
 
 Generated output and local caches are not part of the source layout. It is safe to
-regenerate Flutter build products, Dart tool state, Python caches, `research/.build/`,
-and the local macOS C-engine dylib. Research run directories and legacy promoted model
-artifacts may still be benchmark inputs, so clean them through the research CLI instead
-of deleting them by hand.
+regenerate Flutter build products, Dart tool state, Python caches, `server/.build/`,
+and the local macOS C-engine dylib.
 
 ## Quick Start
 
@@ -47,12 +52,6 @@ dart run tool/sync_policy_assets.dart
 flutter analyze
 flutter test
 flutter build macos --debug
-```
-
-Check the research harness:
-
-```bash
-python3 -m research.kolkhoz_research.cli engine-smoke --games 8
 ```
 
 Run the combined Flutter source gate:
@@ -116,17 +115,10 @@ app/
   native/macos/libkolkhoz_c_engine.dylib
   tool/build_c_engine_macos.sh
 policies/                       # Canonical promoted runtime AI models
-research/
-  kolkhoz_research/
-  configs/
-  dashboard/
-  runs/                         # ignored local experiments and model outputs
 server/
   kolkhoz_server/               # authoritative online runtime
   deploy/                       # service and staging deployment
   tests/                        # server contracts and distributed failure gates
-training/
-  rl/runs/                      # ignored legacy promoted/baseline JSON models
 agent-docs/
 ```
 
@@ -142,22 +134,12 @@ Flutter gesture
     -> Flutter renders
 ```
 
-For research:
-
-```text
-Python CLI
-    -> ctypes C engine wrapper
-    -> C engine simulations/features
-    -> C MLP or Torch/MPS policy backend
-    -> benchmark/tournament/promotion records
-```
-
 ## Key Files
 
 - `engine/KolkhozCEngine/KolkhozCEngine.c` - rules, legal actions, AI, scoring, C policy features.
 - `engine/KolkhozCEngine/include/KolkhozCEngine.h` - public C API used by Flutter and research.
+- `engine/python/kolkhoz_c_engine.py` - shared Python `ctypes` binding.
 - `app/lib/src/c_engine_bridge.dart` - Dart FFI bridge.
 - `app/lib/src/game_controller.dart` - Flutter lobby, routing, and match controller.
 - `app/lib/src/table_view_projection.dart` - C snapshot to Flutter table model.
-- `research/kolkhoz_research/c_engine.py` - Python `ctypes` wrapper and local shared-library build.
-- `research/kolkhoz_research/cli.py` - training, benchmark, tournament, seed-mining CLI.
+- `server/kolkhoz_server/production.py` - authoritative online runtime composition.

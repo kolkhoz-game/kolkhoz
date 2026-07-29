@@ -328,12 +328,17 @@ void registerBoardTests() {
     );
     expect(cardControl.card.selected, isFalse);
     final focusable = tester.widget<FocusableActionDetector>(
-      find.byType(FocusableActionDetector),
+      find.descendant(
+        of: handCard,
+        matching: find.byType(FocusableActionDetector),
+      ),
     );
     expect(focusable.mouseCursor, SystemMouseCursors.click);
     expect(focusable.actions, contains(ActivateIntent));
 
-    await tester.tap(find.byType(GameCard));
+    await tester.tap(
+      find.descendant(of: handCard, matching: find.byType(GameCard)),
+    );
     expect(selectedCardID, 'wheat-11');
     expect(confirmedAction, isNull);
 

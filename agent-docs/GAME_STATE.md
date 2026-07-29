@@ -187,7 +187,7 @@ scores/winner.
 Inspect the C engine through:
 
 - `app/lib/src/c_engine_bridge.dart` accessors for Flutter behavior;
-- `research/kolkhoz_research/c_engine.py` for Python/research behavior;
+- `engine/python/kolkhoz_c_engine.py` for Python/server behavior;
 - temporary C-side logging only when necessary.
 
 Useful values to print or expose in a test:

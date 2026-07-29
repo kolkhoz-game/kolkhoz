@@ -3,10 +3,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from research.kolkhoz_research.model import PolicyArtifact
-
 from .ai import ModelCache
 from .engine import KolkhozCEngineFactory
+from .policy import PolicyArtifact
 
 
 def load_policy_models(repo_root: Path) -> ModelCache[object]:
