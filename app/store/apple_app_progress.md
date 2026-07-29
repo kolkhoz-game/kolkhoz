@@ -75,8 +75,8 @@ been uploaded. This is intentionally deferred until the unlock UI is final.
 
 ### Privacy and server integration
 
-- Privacy Policy URL: `https://kolkhoz.williamtheisen.com/privacy.html`
-- User Privacy Choices / support URL: `https://kolkhoz.williamtheisen.com/support.html`
+- Privacy Policy URL: `https://kolkhoz.online/privacy`
+- User Privacy Choices / support URL: `https://kolkhoz.online/support`
 - Six data types are declared as linked to the user: email address, other user content, user ID,
   device ID, purchase history, and product interaction.
 - Product Interaction is declared for App Functionality and Analytics so authoritative game
