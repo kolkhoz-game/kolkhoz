@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir --only-binary :all: --require-hashes \
     -r /tmp/requirements.lock
 
 COPY engine ./engine
-COPY research ./research
 COPY policies ./policies
 COPY server ./server
 
