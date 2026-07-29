@@ -65,6 +65,44 @@ python3 -m research.kolkhoz_research.cli engine-smoke --games 8
 Use Flutter/web UI skills when changing app screens or layout. The Flutter app is the
 visual and behavioral app source of truth.
 
+### Playable Web Demo
+
+The public tutorial and Easy-AI demo are deployed at
+`https://play.kolkhoz.online/`. They are a generated build of this Flutter app,
+not a separate implementation:
+
+- Keep the UI, tutorial, rules, artwork, and game behavior in this repository.
+- Keep game truth in the shared C engine. The web target compiles it to WebAssembly
+  through `engine/KolkhozCEngine/KolkhozCEngineWeb.c`.
+- Web sessions are deliberately offline and start fresh after reload. Do not add
+  account, login, lobby, persistence, or server dependencies to the public build.
+- The public demo keeps the normal app menu and exposes one fixed Easy-AI game plus
+  Foreman Misha's tutorial.
+
+Build the complete deployable artifact with:
+
+```bash
+./app/tool/build_web_demo.sh
+```
+
+The script regenerates the WebAssembly bridge, builds Flutter with
+`KOLKHOZ_WEB_DEMO=true`, removes neural-policy assets the fixed demo cannot request,
+and writes `app/build/web/`. Smoke-test both the tutorial and a real confirmed demo
+action after changing rules, projections, tutorial content, or artwork.
+
+Production deployment is owned by the public
+`kolkhoz-game/kolkhoz-play` repository. Its **Deploy Kolkhoz Play** workflow checks
+out a selected branch, tag, or commit from this repository, runs the build script, and
+publishes the result to GitHub Pages. For a normal rebuild, merge the source change
+here and dispatch that workflow with `kolkhoz_ref=master`. Do not copy Flutter source
+or hand-edit generated build output in the deployment repository.
+
+DNS is a Namecheap CNAME:
+
+```text
+play -> kolkhoz-game.github.io.
+```
+
 ### macOS UI Iteration
 
 For Flutter-only UI, layout, and animation work, start one long-lived
