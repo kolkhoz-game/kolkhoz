@@ -81,7 +81,7 @@ class LocalGameEngineFactory {
        _autosaveStore = autosaveStore ?? KolkhozAutosaveStore.defaultStore(),
        _tutorialAutosaveStore =
            tutorialAutosaveStore ??
-           KolkhozAutosaveStore(KolkhozAutosaveStore.defaultTutorialFile()),
+           KolkhozAutosaveStore.defaultTutorialStore(),
        _mediumPolicy = mediumPolicy,
        _mediumPolicyLoader = mediumPolicy == null
            ? mediumPolicyLoader ??

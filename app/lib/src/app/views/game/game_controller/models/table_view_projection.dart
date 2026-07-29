@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/c_engine_action_codec.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine/c_engine_bridge.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/controller_projection.dart';
@@ -22,7 +20,7 @@ class TableViewProjection {
   });
 
   final KolkhozCEngineBridge bridge;
-  final Pointer<KCEngine> engine;
+  final KCEngineHandle engine;
   final List<KolkhozPlayerController> controllers;
   final KolkhozGameVariants variants;
   final GameUiState uiState;
