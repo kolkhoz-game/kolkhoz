@@ -44,9 +44,9 @@ Highest final plot score wins. Plan carefully: the State remembers a failed harv
 
 ## URLs
 
-- Marketing URL: https://kolkhoz.williamtheisen.com/
-- Support URL: https://kolkhoz.williamtheisen.com/support.html
-- Privacy Policy URL: https://kolkhoz.williamtheisen.com/privacy.html
+- Marketing URL: https://kolkhoz.online/
+- Support URL: https://kolkhoz.online/support
+- Privacy Policy URL: https://kolkhoz.online/privacy
 
 ## Decisions still needed
 

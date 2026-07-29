@@ -11,9 +11,9 @@ to be completed after Apple Developer enrollment is approved.
 
 Public URLs:
 
-- Marketing: https://kolkhoz.williamtheisen.com/
-- Support: https://kolkhoz.williamtheisen.com/support.html
-- Privacy: https://kolkhoz.williamtheisen.com/privacy.html
+- Marketing: https://kolkhoz.online/
+- Support: https://kolkhoz.online/support
+- Privacy: https://kolkhoz.online/privacy
 
 Before using the privacy and support URLs in App Store Connect, publish the updated files in
 `docs/` and verify them from a private browser window.
