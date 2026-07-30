@@ -666,6 +666,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
               showingRules: showingRules,
               showingOnline: showingOnline,
               showingProfile: showingProfile,
+              profileFeaturesEnabled: !kolkhozWebDemo,
               initialSettingsTab: selectedSettingsTab,
               hostedInviteCode: store.onlineInviteCode,
               onlineSessionUpdate: store.onlineUpdate,
@@ -776,9 +777,11 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
                   navigationController.showProfile();
                 }
               },
-              onProfilePressed: () {
-                navigationController.showProfile();
-              },
+              onProfilePressed: kolkhozWebDemo
+                  ? null
+                  : () {
+                      navigationController.showProfile();
+                    },
               onSettingsPressed: () {
                 navigationController.showProfile(
                   section: AppSettingsSection.display,

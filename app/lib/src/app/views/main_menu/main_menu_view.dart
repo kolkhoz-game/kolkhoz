@@ -181,6 +181,7 @@ class StandaloneLobby extends StatelessWidget {
     required this.onAppearanceToggle,
     this.onCardBackChanged,
     this.showingProfile = false,
+    this.profileFeaturesEnabled = true,
     this.initialSettingsTab = KolkhozSettingsTab.profile,
     this.hostedInviteCode,
     this.onlineSessionUpdate,
@@ -244,6 +245,7 @@ class StandaloneLobby extends StatelessWidget {
   final bool showingRules;
   final bool showingOnline;
   final bool showingProfile;
+  final bool profileFeaturesEnabled;
   final KolkhozSettingsTab initialSettingsTab;
   final String? hostedInviteCode;
   final OnlineSessionUpdate? onlineSessionUpdate;
@@ -369,7 +371,8 @@ class StandaloneLobby extends StatelessWidget {
                     : 640.0;
                 final wide = usableWidth >= 560 && usableWidth > usableHeight;
                 final shortLandscape = wide && usableHeight < 520;
-                final showCornerProfile = wide && usableHeight >= 620;
+                final showCornerProfile =
+                    profileFeaturesEnabled && wide && usableHeight >= 620;
                 final outerPadding = shortLandscape
                     ? 8.0
                     : wide
@@ -431,6 +434,7 @@ class StandaloneLobby extends StatelessWidget {
                     onOfflinePressed: onOfflinePressed,
                     onOnlinePressed: onOnlinePressed,
                     onProfilePressed: onProfilePressed,
+                    profileFeaturesEnabled: profileFeaturesEnabled,
                     onSettingsPressed: onSettingsPressed,
                     onRulesPressed: onRulesPressed,
                     onLanguageToggle: onLanguageToggle,
@@ -459,6 +463,7 @@ class StandaloneLobby extends StatelessWidget {
                     showingRules: showingRules,
                     showingOnline: showingOnline,
                     showingProfile: showingProfile,
+                    profileFeaturesEnabled: profileFeaturesEnabled,
                     initialSettingsTab: initialSettingsTab,
                     hostedInviteCode: hostedInviteCode,
                     onlineSessionUpdate: onlineSessionUpdate,
@@ -657,6 +662,7 @@ class _FieldPlanMenuRail extends StatelessWidget {
     required this.onOfflinePressed,
     required this.onOnlinePressed,
     required this.onProfilePressed,
+    required this.profileFeaturesEnabled,
     required this.onSettingsPressed,
     required this.onRulesPressed,
     required this.onLanguageToggle,
@@ -682,6 +688,7 @@ class _FieldPlanMenuRail extends StatelessWidget {
   final VoidCallback onOfflinePressed;
   final VoidCallback onOnlinePressed;
   final VoidCallback? onProfilePressed;
+  final bool profileFeaturesEnabled;
   final VoidCallback? onSettingsPressed;
   final VoidCallback onRulesPressed;
   final VoidCallback onLanguageToggle;
@@ -749,6 +756,7 @@ class _FieldPlanMenuRail extends StatelessWidget {
               cloudAuthBusy: cloudAuthBusy,
               badgeCount: comradeRequestCount,
               onProfilePressed: onProfilePressed,
+              profileFeaturesEnabled: profileFeaturesEnabled,
               onSettingsPressed: onSettingsPressed ?? onProfilePressed,
               onLanguageToggle: onLanguageToggle,
               onAppearanceToggle: onAppearanceToggle,
@@ -901,6 +909,7 @@ class _FieldPlanUtilityStrip extends StatelessWidget {
     required this.cloudAuthBusy,
     required this.badgeCount,
     required this.onProfilePressed,
+    required this.profileFeaturesEnabled,
     required this.onSettingsPressed,
     required this.onLanguageToggle,
     required this.onAppearanceToggle,
@@ -917,6 +926,7 @@ class _FieldPlanUtilityStrip extends StatelessWidget {
   final bool cloudAuthBusy;
   final int badgeCount;
   final VoidCallback? onProfilePressed;
+  final bool profileFeaturesEnabled;
   final VoidCallback? onSettingsPressed;
   final VoidCallback onLanguageToggle;
   final VoidCallback onAppearanceToggle;
@@ -937,13 +947,14 @@ class _FieldPlanUtilityStrip extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _FieldPlanCompactUtilityButton(
-              label: KolkhozSettingsTab.profile.title(language),
-              icon: Icons.person,
-              badgeCount: badgeCount,
-              selected: profileSelected,
-              onPressed: onProfilePressed,
-            ),
+            if (profileFeaturesEnabled)
+              _FieldPlanCompactUtilityButton(
+                label: KolkhozSettingsTab.profile.title(language),
+                icon: Icons.person,
+                badgeCount: badgeCount,
+                selected: profileSelected,
+                onPressed: onProfilePressed,
+              ),
             _FieldPlanCompactUtilityButton(
               key: const Key('field-plan-menu-language'),
               label: language.strings.lobbyLanguage,
@@ -979,15 +990,16 @@ class _FieldPlanUtilityStrip extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: _FieldPlanUtilityButton(
-              label: KolkhozSettingsTab.profile.title(language),
-              icon: Icons.person,
-              selected: profileSelected,
-              badgeCount: badgeCount,
-              onPressed: onProfilePressed,
+          if (profileFeaturesEnabled)
+            Expanded(
+              child: _FieldPlanUtilityButton(
+                label: KolkhozSettingsTab.profile.title(language),
+                icon: Icons.person,
+                selected: profileSelected,
+                badgeCount: badgeCount,
+                onPressed: onProfilePressed,
+              ),
             ),
-          ),
           _FieldPlanUtilityIconButton(
             key: const Key('field-plan-menu-language'),
             label: language.strings.lobbyLanguage,
@@ -1472,6 +1484,7 @@ class _LobbyPanel extends StatelessWidget {
     required this.showingRules,
     required this.showingOnline,
     required this.showingProfile,
+    required this.profileFeaturesEnabled,
     required this.initialSettingsTab,
     required this.hostedInviteCode,
     required this.onlineSessionUpdate,
@@ -1551,6 +1564,7 @@ class _LobbyPanel extends StatelessWidget {
   final bool showingRules;
   final bool showingOnline;
   final bool showingProfile;
+  final bool profileFeaturesEnabled;
   final KolkhozSettingsTab initialSettingsTab;
   final String? hostedInviteCode;
   final OnlineSessionUpdate? onlineSessionUpdate;
@@ -1726,6 +1740,7 @@ class _LobbyPanel extends StatelessWidget {
               cloudAuthMessage: cloudAuthMessage,
               cloudAuthIsError: cloudAuthIsError,
               initialTab: initialSettingsTab,
+              profileFeaturesEnabled: profileFeaturesEnabled,
               onStart: onStart,
               onTutorialPressed: onTutorialPressed,
               onAnimationSpeedChanged: onAnimationSpeedChanged,
@@ -1845,6 +1860,7 @@ class SettingsPanel extends StatefulWidget {
     required this.cloudAuthMessage,
     required this.cloudAuthIsError,
     required this.initialTab,
+    this.profileFeaturesEnabled = true,
     required this.onStart,
     required this.onTutorialPressed,
     required this.onAnimationSpeedChanged,
@@ -1889,6 +1905,7 @@ class SettingsPanel extends StatefulWidget {
   final String? cloudAuthMessage;
   final bool cloudAuthIsError;
   final KolkhozSettingsTab initialTab;
+  final bool profileFeaturesEnabled;
   final VoidCallback onStart;
   final VoidCallback onTutorialPressed;
   final ValueChanged<GameAnimationSpeed>? onAnimationSpeedChanged;
@@ -1914,13 +1931,26 @@ class SettingsPanel extends StatefulWidget {
 }
 
 class _SettingsPanelState extends State<SettingsPanel> {
-  late KolkhozSettingsTab selectedTab = widget.initialTab;
+  static const demoTabs = {
+    KolkhozSettingsTab.assist,
+    KolkhozSettingsTab.display,
+    KolkhozSettingsTab.rules,
+  };
+
+  late KolkhozSettingsTab selectedTab = _effectiveTab(widget.initialTab);
+
+  KolkhozSettingsTab _effectiveTab(KolkhozSettingsTab tab) {
+    return widget.profileFeaturesEnabled || demoTabs.contains(tab)
+        ? tab
+        : KolkhozSettingsTab.display;
+  }
 
   @override
   void didUpdateWidget(covariant SettingsPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialTab != widget.initialTab) {
-      selectedTab = widget.initialTab;
+    if (oldWidget.initialTab != widget.initialTab ||
+        oldWidget.profileFeaturesEnabled != widget.profileFeaturesEnabled) {
+      selectedTab = _effectiveTab(widget.initialTab);
     }
   }
 
@@ -2046,17 +2076,18 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 spacing: spacing,
                 children: [
                   for (final tab in KolkhozSettingsTab.values)
-                    SizedBox(
-                      width: tabWidth,
-                      child: _SettingsTabButton(
-                        tokens: widget.tokens,
-                        label: tab.title(widget.language),
-                        iconAsset: tab.iconAsset,
-                        selected: selectedTab == tab,
-                        height: tabHeight,
-                        onPressed: () => setState(() => selectedTab = tab),
+                    if (widget.profileFeaturesEnabled || demoTabs.contains(tab))
+                      SizedBox(
+                        width: tabWidth,
+                        child: _SettingsTabButton(
+                          tokens: widget.tokens,
+                          label: tab.title(widget.language),
+                          iconAsset: tab.iconAsset,
+                          selected: selectedTab == tab,
+                          height: tabHeight,
+                          onPressed: () => setState(() => selectedTab = tab),
+                        ),
                       ),
-                    ),
                 ],
               ),
             );

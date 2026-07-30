@@ -241,6 +241,57 @@ void registerLobbyAndProfileTests() {
     expect(profilePresses, 1);
   });
 
+  testWidgets('web demo hides profile surfaces and account tabs', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StandaloneLobby(
+          tokens: lightDesignTokens,
+          language: KolkhozLanguage.en,
+          appearance: KolkhozAppearance.light,
+          onStart: () {},
+          selectedPreset: KolkhozGamePreset.kolkhoz,
+          customVariants: KolkhozGameVariants.kolkhoz,
+          playerControllers: KolkhozPlayerController.defaultControllers,
+          showingRules: false,
+          showingOnline: false,
+          showingProfile: true,
+          profileFeaturesEnabled: false,
+          initialSettingsTab: KolkhozSettingsTab.display,
+          onHostOnline: (_, _, _, _, _) async => 'session',
+          onJoinOnline: (_, _, _) async {},
+          onEnterOnlineGame: () {},
+          onPresetChanged: (_) {},
+          onCustomVariantsChanged: (_) {},
+          onPlayerControllersChanged: (_) {},
+          onRulesPressed: () {},
+          onOfflinePressed: () {},
+          onOnlinePressed: () {},
+          onTutorialPressed: () {},
+          onLanguageToggle: () {},
+          onAppearanceToggle: () {},
+          onSettingsPressed: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('field-plan-profile-plaque')), findsNothing);
+    expect(findAppText('PROFILE'), findsNothing);
+    expect(findAppText('LEADERBOARD'), findsNothing);
+    expect(findAppText('PROGRESS'), findsNothing);
+    expect(findAppText('COMRADES'), findsNothing);
+    expect(findAppText('OPERATIONS'), findsNothing);
+    expect(findAppText('DISPLAY'), findsWidgets);
+    expect(findAppText('RULES'), findsWidgets);
+  });
+
   testWidgets('custom lobby allows selecting the number of years', (
     tester,
   ) async {
