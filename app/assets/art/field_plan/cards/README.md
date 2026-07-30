@@ -38,6 +38,11 @@ leaders, invented folk costume, military styling, and monumental heroic poses.
 All source images were independently generated on flat magenta, processed with
 `remove_chroma_key.py`, downsampled, and validated for a full alpha range.
 
+`face-foreman-misha.png` is the canonical presentation-only guide portrait. Flutter
+assembles it into a wheat-framed `ForemanMishaCard` with mirrored `М` indices, so Misha
+can appear in tutorial panels, hints, and the player's hand area without becoming an
+engine card or affecting legal actions, scoring, saves, or online state.
+
 ## Back
 
 `backs/card-back-kolkhoz.png` is the fixed card back for field-plan builds. It was

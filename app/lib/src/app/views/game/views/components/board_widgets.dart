@@ -569,6 +569,160 @@ class GameCard extends StatelessWidget {
   }
 }
 
+/// Presentation-only guide card for Foreman Misha.
+///
+/// This deliberately does not use [TableCard]: Misha can travel with the
+/// tutorial UI without entering engine state, legal actions, scoring, or
+/// persistence.
+class ForemanMishaCard extends StatelessWidget {
+  const ForemanMishaCard({
+    required this.tokens,
+    this.width = 81,
+    this.height = 110,
+    super.key,
+  });
+
+  final DesignTokens tokens;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = !tokens.usesLightAppearance;
+    return Semantics(
+      label: 'Foreman Misha guide card',
+      image: true,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: tokens.colors.panel,
+          borderRadius: BorderRadius.circular(cardViewCornerRadius),
+          boxShadow: [
+            BoxShadow(
+              color: tokens.colors.black.withValues(alpha: 0.28),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(cardViewCornerRadius),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                fieldPlanCardFrameAssetPath(
+                  suit: 'wheat',
+                  trump: false,
+                  dark: dark,
+                ),
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+                isAntiAlias: true,
+              ),
+              Positioned(
+                left: width * 0.15,
+                top: height * 0.12,
+                width: width * 0.72,
+                height: height * 0.72,
+                child: Image.asset(
+                  fieldPlanForemanMishaFaceAssetPath,
+                  key: const ValueKey('foreman-misha-face-art'),
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomCenter,
+                  filterQuality: FilterQuality.high,
+                  isAntiAlias: true,
+                ),
+              ),
+              _ForemanMishaCorner(
+                tokens: tokens,
+                dark: dark,
+                width: width,
+                height: height,
+              ),
+              Positioned(
+                left: width * 0.19,
+                right: width * 0.19,
+                bottom: height * 0.075,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'БРИГАДИР',
+                    style: TextStyle(
+                      color: dark
+                          ? _physicalDeckDarkInk
+                          : _physicalDeckLightInk,
+                      fontFamily: 'Podkova',
+                      fontSize: height * 0.075,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ForemanMishaCorner extends StatelessWidget {
+  const _ForemanMishaCorner({
+    required this.tokens,
+    required this.dark,
+    required this.width,
+    required this.height,
+  });
+
+  final DesignTokens tokens;
+  final bool dark;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final ink = dark ? _physicalDeckDarkInk : _physicalDeckLightInk;
+    final mark = SizedBox(
+      width: width * 0.18,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'М',
+            style: TextStyle(
+              color: ink,
+              fontFamily: 'Podkova',
+              fontSize: height * 0.12,
+              fontWeight: FontWeight.w900,
+              height: 0.8,
+            ),
+          ),
+          Image.asset(
+            fieldPlanCardSuitAssetPaths['wheat']!,
+            width: width * 0.105,
+            height: width * 0.105,
+            filterQuality: FilterQuality.high,
+            isAntiAlias: true,
+          ),
+        ],
+      ),
+    );
+    return Stack(
+      children: [
+        Positioned(left: width * 0.07, top: height * 0.055, child: mark),
+        Positioned(
+          right: width * 0.07,
+          bottom: height * 0.055,
+          child: Transform.rotate(angle: math.pi, child: mark),
+        ),
+      ],
+    );
+  }
+}
+
 class _WinningTrickCardFrame extends StatelessWidget {
   const _WinningTrickCardFrame({
     required this.active,

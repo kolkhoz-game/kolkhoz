@@ -968,8 +968,11 @@ void registerBoardTests() {
       findAppText('Remember, you must follow suit if able.'),
       findsOneWidget,
     );
+    expect(find.byKey(const ValueKey('foreman-hint-card')), findsOneWidget);
     expect(
-      findAssetImage('assets/ui/Embellishments/art-tutorial-foreman.png'),
+      findAssetImage(
+        'assets/art/field_plan/cards/faces/face-foreman-misha.png',
+      ),
       findsOneWidget,
     );
   });

@@ -96,6 +96,8 @@ const fieldPlanCardBackAssetPath =
     'assets/art/field_plan/cards/backs/card-back-kolkhoz-light-v2.png';
 const fieldPlanCardBackDarkAssetPath =
     'assets/art/field_plan/cards/backs/card-back-kolkhoz-dark-v2.png';
+const fieldPlanForemanMishaFaceAssetPath =
+    'assets/art/field_plan/cards/faces/face-foreman-misha.png';
 
 String fieldPlanCardBackAssetPathFor({required bool dark}) =>
     dark ? fieldPlanCardBackDarkAssetPath : fieldPlanCardBackAssetPath;
@@ -207,6 +209,7 @@ const fieldPlanCardArtAssetPaths = <String>[
   'assets/art/field_plan/cards/faces/face-king-sunflower-nomenklatura.png',
   'assets/art/field_plan/cards/faces/face-king-potato-nomenklatura.png',
   'assets/art/field_plan/cards/faces/face-king-beet-nomenklatura.png',
+  fieldPlanForemanMishaFaceAssetPath,
   'assets/art/field_plan/cards/faces/face-saboteur.png',
   'assets/art/field_plan/cards/ranks/rank-saboteur-star.png',
 ];

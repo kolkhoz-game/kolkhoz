@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:simple_animations/simple_animations.dart';
 
+import 'package:kolkhoz_app/src/app/settings/game_motion.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_view.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
@@ -438,11 +439,22 @@ class _TutorialWalkthroughOverlayState
                   )
                 else if (collapsed)
                   Positioned(
-                    right: 12,
-                    bottom: math.min(300, constraints.maxHeight * 0.42),
+                    right: wide ? 24 : 14,
+                    bottom: wide
+                        ? math.max(
+                            14,
+                            constraints.maxHeight -
+                                (tutorialFocusRect(
+                                      TutorialFocus.hand,
+                                      constraints,
+                                      widget.tokens,
+                                    )?.bottom ??
+                                    constraints.maxHeight) +
+                                14,
+                          )
+                        : 14,
                     child: TutorialCollapsedBadge(
                       tokens: widget.tokens,
-                      iconPath: step.iconPath,
                       onExpand: () => setState(() => manualCollapse = false),
                     ),
                   )
@@ -514,12 +526,11 @@ class TutorialOrientationPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         spacing: 12,
         children: [
-          Image.asset(
-            'assets/ui/Embellishments/art-tutorial-foreman.png',
+          ForemanMishaCard(
+            key: const ValueKey('tutorial-orientation-foreman-card'),
+            tokens: tokens,
             width: 92,
             height: 110,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.none,
           ),
           Expanded(
             child: Column(
@@ -619,41 +630,75 @@ class TutorialOrientationPanel extends StatelessWidget {
 class TutorialCollapsedBadge extends StatelessWidget {
   const TutorialCollapsedBadge({
     required this.tokens,
-    required this.iconPath,
     required this.onExpand,
     super.key,
   });
 
   final DesignTokens tokens;
-  final String iconPath;
   final VoidCallback onExpand;
 
   @override
   Widget build(BuildContext context) {
+    final motion = GameMotion.of(context);
     return GestureDetector(
       key: const Key('tutorial-expand'),
       behavior: HitTestBehavior.opaque,
       onTap: onExpand,
-      child: PanelStyleSurface(
-        tokens: tokens,
-        padding: const EdgeInsets.all(6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              iconPath,
-              width: 34,
-              height: 34,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.none,
+      child: Tooltip(
+        message: 'Open Foreman Misha',
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: motion.enabled
+              ? const Duration(milliseconds: 520)
+              : Duration.zero,
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) => Transform.translate(
+            offset: Offset(0, -120 * (1 - value)),
+            child: Transform.rotate(
+              angle: -0.08 * (1 - value),
+              child: Opacity(opacity: value, child: child),
             ),
-            DisplayText(
-              '!',
-              size: DisplayTextSize.caption,
-              variant: DisplayTextWeight.bold,
-              color: tokens.colors.gold,
-            ),
-          ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ForemanMishaCard(
+                key: const ValueKey('tutorial-collapsed-foreman-card'),
+                tokens: tokens,
+                width: 58,
+                height: 79,
+              ),
+              Positioned(
+                top: -5,
+                right: -5,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: tokens.colors.redBright,
+                    border: Border.all(color: tokens.colors.cream, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: tokens.colors.black.withValues(alpha: 0.35),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '!',
+                    style: kolkhozFontStyle.copyWith(
+                      color: tokens.colors.cream,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -761,12 +806,11 @@ class TutorialDialoguePanel extends StatelessWidget {
           children: [
             Flexible(
               flex: 0,
-              child: Image.asset(
-                'assets/ui/Embellishments/art-tutorial-foreman.png',
+              child: ForemanMishaCard(
+                key: const ValueKey('tutorial-dialogue-foreman-card'),
+                tokens: tokens,
                 width: 92,
                 height: 110,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.none,
               ),
             ),
             Expanded(
@@ -865,12 +909,11 @@ class ForemanHintBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         spacing: 8,
         children: [
-          Image.asset(
-            'assets/ui/Embellishments/art-tutorial-foreman.png',
+          ForemanMishaCard(
+            key: const ValueKey('foreman-hint-card'),
+            tokens: tokens,
             width: 58,
             height: 70,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.none,
           ),
           Flexible(
             child: ConstrainedBox(
