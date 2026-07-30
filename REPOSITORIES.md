@@ -29,16 +29,18 @@ Core game behavior never flows back from the website, deployment shell, research
 orchestration, or print sources. Change rules in the C engine first, then update the
 consuming repositories deliberately.
 
-## Recommended sibling checkout
+## Recommended organization workspace
 
 ```text
 programs/
-  kolkhoz/
-  kolkhoz-site/
-  kolkhoz-play/
-  kolkhoz-research/
-  kolkhoz-tabletop/
+  kolkhoz-game/
+    kolkhoz/
+    kolkhoz-site/
+    kolkhoz-play/
+    kolkhoz-research/
+    kolkhoz-tabletop/
 ```
 
-The research and tabletop setup scripts default to this sibling layout and accept
-`KOLKHOZ_CORE_DIR` for other arrangements.
+Open `kolkhoz-game/` as the Codex project for cross-repository work. The research and
+tabletop setup scripts expect these sibling repositories and accept `KOLKHOZ_CORE_DIR`
+for other arrangements.
