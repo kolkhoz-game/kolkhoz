@@ -5238,4 +5238,48 @@ void registerBoardTests() {
     expect(selectedSpeed, GameAnimationSpeed.slow);
     expect(selectedCardBack, isNull);
   });
+
+  testWidgets('minimal options panel exposes only four display settings', (
+    tester,
+  ) async {
+    final calls = <String>[];
+    GameAnimationSpeed? selectedSpeed;
+    bool? soundEnabled;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 520,
+          height: 430,
+          child: OptionsPanel(
+            model: runtimeModel(),
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            appearance: KolkhozAppearance.dark,
+            minimalSettings: true,
+            soundEnabled: true,
+            animationSpeed: GameAnimationSpeed.normal,
+            onLanguageToggle: () => calls.add('language'),
+            onAppearanceToggle: () => calls.add('appearance'),
+            onSoundEnabledChanged: (value) => soundEnabled = value,
+            onAnimationSpeedChanged: (speed) => selectedSpeed = speed,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.bySemanticsLabel('Assist'), findsNothing);
+    expect(find.bySemanticsLabel('Rules'), findsNothing);
+    expect(find.bySemanticsLabel('NEW GAME'), findsNothing);
+    expect(find.bySemanticsLabel('MAIN MENU'), findsNothing);
+
+    await tester.tap(find.byTooltip('Switch to Russian'));
+    await tester.tap(find.byTooltip('Switch to light mode'));
+    await tester.tap(find.byTooltip('Mute sound cues'));
+    await tester.tap(find.bySemanticsLabel('SLOW'));
+
+    expect(calls, ['language', 'appearance']);
+    expect(soundEnabled, isFalse);
+    expect(selectedSpeed, GameAnimationSpeed.slow);
+  });
 }

@@ -382,6 +382,9 @@ class KolkhozBoard extends StatelessWidget {
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
+    this.minimalSettings = false,
+    this.soundEnabled = true,
+    this.onSoundEnabledChanged,
     this.transition,
     this.onTransitionComplete,
     this.onAnimationSpeedChanged,
@@ -433,6 +436,9 @@ class KolkhozBoard extends StatelessWidget {
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
+  final bool minimalSettings;
+  final bool soundEnabled;
+  final ValueChanged<bool>? onSoundEnabledChanged;
   final GamePresentationTransition? transition;
   final ValueChanged<int>? onTransitionComplete;
   final ValueChanged<GameAnimationSpeed>? onAnimationSpeedChanged;
@@ -554,6 +560,10 @@ class KolkhozBoard extends StatelessWidget {
                                         gameOverReturnsToLobby,
                                     onTutorial: onTutorial,
                                     animationSpeed: animationSpeed,
+                                    minimalSettings: minimalSettings,
+                                    soundEnabled: soundEnabled,
+                                    onSoundEnabledChanged:
+                                        onSoundEnabledChanged,
                                     onAnimationSpeedChanged:
                                         onAnimationSpeedChanged,
                                     confirmNewGame: confirmNewGame,
@@ -616,6 +626,10 @@ class KolkhozBoard extends StatelessWidget {
                                           gameOverReturnsToLobby,
                                       onTutorial: onTutorial,
                                       animationSpeed: animationSpeed,
+                                      minimalSettings: minimalSettings,
+                                      soundEnabled: soundEnabled,
+                                      onSoundEnabledChanged:
+                                          onSoundEnabledChanged,
                                       onAnimationSpeedChanged:
                                           onAnimationSpeedChanged,
                                       confirmNewGame: confirmNewGame,
@@ -757,6 +771,9 @@ class CompactBoardShell extends StatelessWidget {
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
+    this.minimalSettings = false,
+    this.soundEnabled = true,
+    this.onSoundEnabledChanged,
     this.onAnimationSpeedChanged,
     this.confirmNewGame = true,
     this.onConfirmNewGameChanged,
@@ -806,6 +823,9 @@ class CompactBoardShell extends StatelessWidget {
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
+  final bool minimalSettings;
+  final bool soundEnabled;
+  final ValueChanged<bool>? onSoundEnabledChanged;
   final ValueChanged<GameAnimationSpeed>? onAnimationSpeedChanged;
   final bool confirmNewGame;
   final ValueChanged<bool>? onConfirmNewGameChanged;
@@ -857,6 +877,9 @@ class CompactBoardShell extends StatelessWidget {
             gameOverReturnsToLobby: gameOverReturnsToLobby,
             onTutorial: onTutorial,
             animationSpeed: animationSpeed,
+            minimalSettings: minimalSettings,
+            soundEnabled: soundEnabled,
+            onSoundEnabledChanged: onSoundEnabledChanged,
             onAnimationSpeedChanged: onAnimationSpeedChanged,
             confirmNewGame: confirmNewGame,
             onConfirmNewGameChanged: onConfirmNewGameChanged,
@@ -1116,6 +1139,9 @@ class BoardPlayArea extends StatelessWidget {
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
+    this.minimalSettings = false,
+    this.soundEnabled = true,
+    this.onSoundEnabledChanged,
     this.onAnimationSpeedChanged,
     this.confirmNewGame = true,
     this.onConfirmNewGameChanged,
@@ -1170,6 +1196,9 @@ class BoardPlayArea extends StatelessWidget {
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
+  final bool minimalSettings;
+  final bool soundEnabled;
+  final ValueChanged<bool>? onSoundEnabledChanged;
   final ValueChanged<GameAnimationSpeed>? onAnimationSpeedChanged;
   final bool confirmNewGame;
   final ValueChanged<bool>? onConfirmNewGameChanged;
@@ -1317,6 +1346,9 @@ class BoardPlayArea extends StatelessWidget {
                               gameOverReturnsToLobby: gameOverReturnsToLobby,
                               onTutorial: onTutorial,
                               animationSpeed: animationSpeed,
+                              minimalSettings: minimalSettings,
+                              soundEnabled: soundEnabled,
+                              onSoundEnabledChanged: onSoundEnabledChanged,
                               onAnimationSpeedChanged: onAnimationSpeedChanged,
                               confirmNewGame: confirmNewGame,
                               onConfirmNewGameChanged: onConfirmNewGameChanged,
@@ -2553,6 +2585,9 @@ class ActivePanelView extends StatelessWidget {
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
+    this.minimalSettings = false,
+    this.soundEnabled = true,
+    this.onSoundEnabledChanged,
     this.onAnimationSpeedChanged,
     this.confirmNewGame = true,
     this.onConfirmNewGameChanged,
@@ -2597,6 +2632,9 @@ class ActivePanelView extends StatelessWidget {
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
+  final bool minimalSettings;
+  final bool soundEnabled;
+  final ValueChanged<bool>? onSoundEnabledChanged;
   final ValueChanged<GameAnimationSpeed>? onAnimationSpeedChanged;
   final bool confirmNewGame;
   final ValueChanged<bool>? onConfirmNewGameChanged;
@@ -2687,6 +2725,9 @@ class ActivePanelView extends StatelessWidget {
           onReturnToLobby: onReturnToLobby,
           onTutorial: onTutorial,
           animationSpeed: animationSpeed,
+          minimalSettings: minimalSettings,
+          soundEnabled: soundEnabled,
+          onSoundEnabledChanged: onSoundEnabledChanged,
           onAnimationSpeedChanged: onAnimationSpeedChanged,
           confirmNewGame: confirmNewGame,
           onConfirmNewGameChanged: onConfirmNewGameChanged,

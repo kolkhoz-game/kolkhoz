@@ -241,7 +241,7 @@ void registerLobbyAndProfileTests() {
     expect(profilePresses, 1);
   });
 
-  testWidgets('web demo hides profile surfaces and account tabs', (
+  testWidgets('web demo exposes only its four display settings', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1200, 800);
@@ -288,8 +288,14 @@ void registerLobbyAndProfileTests() {
     expect(findAppText('PROGRESS'), findsNothing);
     expect(findAppText('COMRADES'), findsNothing);
     expect(findAppText('OPERATIONS'), findsNothing);
-    expect(findAppText('DISPLAY'), findsWidgets);
-    expect(findAppText('RULES'), findsWidgets);
+    expect(findAppText('ASSIST'), findsNothing);
+    expect(findAppText('RULES'), findsNothing);
+    expect(findAppText('DISPLAY'), findsOneWidget);
+    expect(findAppText('ANIMATION SPEED'), findsOneWidget);
+    expect(findAppText('INSTANT'), findsOneWidget);
+    expect(findAppText('FAST'), findsOneWidget);
+    expect(findAppText('NORMAL'), findsOneWidget);
+    expect(findAppText('SLOW'), findsOneWidget);
   });
 
   testWidgets('custom lobby allows selecting the number of years', (

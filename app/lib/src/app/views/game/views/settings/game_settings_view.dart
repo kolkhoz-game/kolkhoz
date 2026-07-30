@@ -102,6 +102,9 @@ class OptionsPanel extends StatefulWidget {
     this.onReturnToLobby,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
+    this.minimalSettings = false,
+    this.soundEnabled = true,
+    this.onSoundEnabledChanged,
     this.onAnimationSpeedChanged,
     this.confirmNewGame = true,
     this.onConfirmNewGameChanged,
@@ -130,6 +133,9 @@ class OptionsPanel extends StatefulWidget {
   final VoidCallback? onReturnToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
+  final bool minimalSettings;
+  final bool soundEnabled;
+  final ValueChanged<bool>? onSoundEnabledChanged;
   final ValueChanged<GameAnimationSpeed>? onAnimationSpeedChanged;
   final bool confirmNewGame;
   final ValueChanged<bool>? onConfirmNewGameChanged;
@@ -154,6 +160,29 @@ class _OptionsPanelState extends State<OptionsPanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.minimalSettings) {
+      return Padding(
+        padding: optionsPanelLocalPadding,
+        child: PanelStyleSurface(
+          tokens: widget.tokens,
+          constraints: const BoxConstraints(minWidth: double.infinity),
+          padding: const EdgeInsets.all(12),
+          child: SingleChildScrollView(
+            child: OptionsDisplayControls(
+              tokens: widget.tokens,
+              language: widget.language,
+              appearance: widget.appearance,
+              animationSpeed: widget.animationSpeed,
+              soundEnabled: widget.soundEnabled,
+              onSoundEnabledChanged: widget.onSoundEnabledChanged,
+              onAnimationSpeedChanged: widget.onAnimationSpeedChanged,
+              onLanguageToggle: widget.onLanguageToggle,
+              onAppearanceToggle: widget.onAppearanceToggle,
+            ),
+          ),
+        ),
+      );
+    }
     return Padding(
       padding: optionsPanelLocalPadding,
       child: LayoutBuilder(

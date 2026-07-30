@@ -1931,18 +1931,10 @@ class SettingsPanel extends StatefulWidget {
 }
 
 class _SettingsPanelState extends State<SettingsPanel> {
-  static const demoTabs = {
-    KolkhozSettingsTab.assist,
-    KolkhozSettingsTab.display,
-    KolkhozSettingsTab.rules,
-  };
-
   late KolkhozSettingsTab selectedTab = _effectiveTab(widget.initialTab);
 
   KolkhozSettingsTab _effectiveTab(KolkhozSettingsTab tab) {
-    return widget.profileFeaturesEnabled || demoTabs.contains(tab)
-        ? tab
-        : KolkhozSettingsTab.display;
+    return widget.profileFeaturesEnabled ? tab : KolkhozSettingsTab.display;
   }
 
   @override
@@ -2058,6 +2050,21 @@ class _SettingsPanelState extends State<SettingsPanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.profileFeaturesEnabled) {
+      return SingleChildScrollView(
+        child: OptionsDisplayControls(
+          tokens: widget.tokens,
+          language: widget.language,
+          appearance: widget.appearance,
+          animationSpeed: widget.animationSpeed,
+          soundEnabled: widget.soundEnabled,
+          onSoundEnabledChanged: widget.onSoundEnabledChanged,
+          onAnimationSpeedChanged: widget.onAnimationSpeedChanged,
+          onLanguageToggle: widget.onLanguageToggle,
+          onAppearanceToggle: widget.onAppearanceToggle,
+        ),
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 10,
@@ -2076,18 +2083,17 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 spacing: spacing,
                 children: [
                   for (final tab in KolkhozSettingsTab.values)
-                    if (widget.profileFeaturesEnabled || demoTabs.contains(tab))
-                      SizedBox(
-                        width: tabWidth,
-                        child: _SettingsTabButton(
-                          tokens: widget.tokens,
-                          label: tab.title(widget.language),
-                          iconAsset: tab.iconAsset,
-                          selected: selectedTab == tab,
-                          height: tabHeight,
-                          onPressed: () => setState(() => selectedTab = tab),
-                        ),
+                    SizedBox(
+                      width: tabWidth,
+                      child: _SettingsTabButton(
+                        tokens: widget.tokens,
+                        label: tab.title(widget.language),
+                        iconAsset: tab.iconAsset,
+                        selected: selectedTab == tab,
+                        height: tabHeight,
+                        onPressed: () => setState(() => selectedTab = tab),
                       ),
+                    ),
                 ],
               ),
             );
