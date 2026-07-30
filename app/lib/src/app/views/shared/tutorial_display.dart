@@ -561,13 +561,19 @@ class TutorialOrientationPanel extends StatelessWidget {
                         ],
                       ),
                     ),
-                    GestureDetector(
-                      key: const Key('tutorial-close'),
-                      onTap: onClose,
-                      child: Icon(
-                        Icons.close,
-                        color: tokens.colors.creamDim,
-                        size: 22,
+                    Semantics(
+                      button: true,
+                      label: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      child: GestureDetector(
+                        key: const Key('tutorial-close'),
+                        onTap: onClose,
+                        child: Icon(
+                          Icons.close,
+                          color: tokens.colors.creamDim,
+                          size: 22,
+                        ),
                       ),
                     ),
                   ],
@@ -1011,26 +1017,30 @@ class TutorialHeader extends StatelessWidget {
               ),
             ),
           ),
-        GestureDetector(
-          key: const Key('tutorial-close'),
-          behavior: HitTestBehavior.opaque,
-          onTap: onClose,
-          child: Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: tokens.colors.black.withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: tokens.colors.steel.withValues(alpha: 0.56),
+        Semantics(
+          button: true,
+          label: MaterialLocalizations.of(context).closeButtonTooltip,
+          child: GestureDetector(
+            key: const Key('tutorial-close'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onClose,
+            child: Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: tokens.colors.black.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: tokens.colors.steel.withValues(alpha: 0.56),
+                ),
               ),
-            ),
-            child: DisplayText(
-              'X',
-              size: DisplayTextSize.caption,
-              variant: DisplayTextWeight.bold,
-              color: tokens.colors.creamDim,
+              child: DisplayText(
+                'X',
+                size: DisplayTextSize.caption,
+                variant: DisplayTextWeight.bold,
+                color: tokens.colors.creamDim,
+              ),
             ),
           ),
         ),
