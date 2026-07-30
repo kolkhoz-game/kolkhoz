@@ -900,6 +900,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String handConsoleWaitingForValue1ToDeclareTrump({required Object value1}) {
+    return 'Ждём объявления козыря: $value1';
+  }
+
+  @override
   String handConsoleWaitingForValue1ToPlay({required Object value1}) {
     return 'Ждём хода: $value1';
   }

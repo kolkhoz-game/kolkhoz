@@ -206,6 +206,7 @@ class CompatibilityApiTests(unittest.TestCase):
 
         self.assertIsNotNone(update)
         self.assertEqual(update["actionLogCount"], 1)
+        self.assertGreater(update["serverTime"], 0)
         self.assertEqual(update["turnDeadlineAt"], 100.0)
         self.assertEqual(update["gameLogActions"][-1]["playerID"], 0)
         reactions.assert_called_once_with(session_id)

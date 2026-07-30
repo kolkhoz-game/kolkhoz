@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/engine_values.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
@@ -99,7 +101,7 @@ List<TableViewModel> projectPresentationBatch({
     projected.add(
       _withoutFutureCellarMoves(
         _withoutFutureRewardClaims(
-          visible,
+          _withoutFutureRequisitionMoves(visible, futureEvents: futureEvents),
           before: before,
           futureEvents: futureEvents,
         ),
@@ -111,6 +113,83 @@ List<TableViewModel> projectPresentationBatch({
   }
   return projected;
 }
+
+TableViewModel withRequisitionAdjustedHiddenCounts(TableViewModel model) {
+  if (model.table.phase != phaseRequisition) {
+    return model;
+  }
+  final exiledCards =
+      model.table.exiledByYear[model.table.year] ?? const <TableCard>[];
+  if (exiledCards.isEmpty) {
+    return model;
+  }
+  return _withTable(
+    model,
+    table: _copyTable(
+      model.table,
+      seats: [
+        for (final seat in model.table.seats)
+          _seatWithAdjustedRequisitionCount(seat, exiledCards),
+      ],
+    ),
+  );
+}
+
+TableViewModel _withoutFutureRequisitionMoves(
+  TableViewModel model, {
+  required Iterable<EngineTransitionEvent> futureEvents,
+}) {
+  final futureMoves = [
+    for (final event in futureEvents)
+      if (_isRequisitionMove(event)) event,
+  ];
+  if (futureMoves.isEmpty) {
+    return model;
+  }
+  final futureCardIDs = {for (final event in futureMoves) _eventCardID(event)};
+  final exiledByYear = {
+    ...model.table.exiledByYear,
+    model.table.year: [
+      for (final card
+          in model.table.exiledByYear[model.table.year] ?? const <TableCard>[])
+        if (!futureCardIDs.contains(card.id)) card,
+    ],
+  };
+  final futureHiddenMovesBySeat = <int, int>{};
+  for (final event in futureMoves) {
+    if (event.fromZone == kcObjectZonePlotHidden && event.fromOwner >= 0) {
+      futureHiddenMovesBySeat.update(
+        event.fromOwner,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
+    }
+  }
+  return _withTable(
+    model,
+    table: _copyTable(
+      model.table,
+      seats: [
+        for (final seat in model.table.seats)
+          _seatWithRestoredHiddenCount(
+            seat,
+            futureHiddenMovesBySeat[seat.id] ?? 0,
+          ),
+      ],
+      requisitionEvents: [
+        for (final event in model.table.requisitionEvents)
+          if (event.card == null || !futureCardIDs.contains(event.card!.id))
+            event,
+      ],
+      exiledByYear: exiledByYear,
+    ),
+  );
+}
+
+bool _isRequisitionMove(EngineTransitionEvent event) =>
+    event.kind == kcTransitionCardMoved &&
+    event.toZone == kcObjectZoneExiled &&
+    event.card.isValid;
 
 bool _isRewardClaim(EngineTransitionEvent event) =>
     event.fromZone == kcObjectZoneRevealedJob &&
@@ -334,6 +413,7 @@ TableViewModel _withPlayedTrickCard(
     selected: false,
     highlighted: false,
     pending: card.pending,
+    provisional: card.provisional,
     assignmentRound: card.assignmentRound,
     nomenclature: card.nomenclature,
     ownerSeatID: card.ownerSeatID,
@@ -470,6 +550,70 @@ Seat _seatWithHand(
   statusText: seat.statusText,
 );
 
+Seat _seatWithAdjustedRequisitionCount(Seat seat, List<TableCard> exiledCards) {
+  final hiddenCardCount = seat.plot.hiddenCardCount;
+  if (hiddenCardCount == null) {
+    return seat;
+  }
+  final revealedCardIDs = {
+    for (final card in seat.plot.revealed) card.id,
+    for (final stack in seat.plot.stacks)
+      for (final card in stack.revealed) card.id,
+  };
+  final hiddenExiledCount = exiledCards
+      .where(
+        (card) =>
+            card.ownerSeatID == seat.id && !revealedCardIDs.contains(card.id),
+      )
+      .length;
+  if (hiddenExiledCount == 0) {
+    return seat;
+  }
+  return _seatWithPlot(
+    seat,
+    PlotState(
+      revealed: seat.plot.revealed,
+      hidden: seat.plot.hidden,
+      stacks: seat.plot.stacks,
+      hiddenCardCount: math.max(0, hiddenCardCount - hiddenExiledCount),
+    ),
+  );
+}
+
+Seat _seatWithRestoredHiddenCount(Seat seat, int count) {
+  if (count == 0 || seat.plot.hiddenCardCount == null) {
+    return seat;
+  }
+  return _seatWithPlot(
+    seat,
+    PlotState(
+      revealed: seat.plot.revealed,
+      hidden: seat.plot.hidden,
+      stacks: seat.plot.stacks,
+      hiddenCardCount: seat.plot.hiddenCardCount! + count,
+    ),
+  );
+}
+
+Seat _seatWithPlot(Seat seat, PlotState plot) => Seat(
+  id: seat.id,
+  name: seat.name,
+  controller: seat.controller,
+  portraitAsset: seat.portraitAsset,
+  isViewer: seat.isViewer,
+  isCurrentTurn: seat.isCurrentTurn,
+  isBrigadeLeader: seat.isBrigadeLeader,
+  hand: seat.hand,
+  hiddenHandCount: seat.hiddenHandCount,
+  plot: plot,
+  medals: seat.medals,
+  bankedMedals: seat.bankedMedals,
+  visibleScore: seat.visibleScore,
+  profileStats: seat.profileStats,
+  profileUserID: seat.profileUserID,
+  statusText: seat.statusText,
+);
+
 TableViewModel _withTable(
   TableViewModel model, {
   required TableState table,
@@ -491,6 +635,8 @@ TableState _copyTable(
   List<Seat>? seats,
   List<Job>? jobs,
   Trick? trick,
+  List<RequisitionEvent>? requisitionEvents,
+  Map<int, List<TableCard>>? exiledByYear,
 }) => TableState(
   year: table.year,
   phase: phase ?? table.phase,
@@ -503,8 +649,8 @@ TableState _copyTable(
   jobs: jobs ?? table.jobs,
   trick: trick ?? table.trick,
   lastTrick: table.lastTrick,
-  requisitionEvents: table.requisitionEvents,
-  exiledByYear: table.exiledByYear,
+  requisitionEvents: requisitionEvents ?? table.requisitionEvents,
+  exiledByYear: exiledByYear ?? table.exiledByYear,
   scoreboard: table.scoreboard,
   gameResult: table.gameResult,
   finalYearTrumpCard: table.finalYearTrumpCard,

@@ -162,6 +162,35 @@ void registerStoreAndOnlineTests() {
     expect(find.text('0'), findsOneWidget);
   });
 
+  testWidgets('deadline countdown ignores device wall-clock skew', (
+    tester,
+  ) async {
+    final localClock = tester.binding.clock.now;
+    final localNow = localClock().millisecondsSinceEpoch / 1000.0;
+    const serverNow = 1000.0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DeadlineCountdownBuilder(
+          deadlineEpochSeconds: serverNow + 30,
+          serverEpochSeconds: serverNow,
+          now: localClock,
+          builder: (context, seconds) => Text('$seconds'),
+        ),
+      ),
+    );
+
+    expect(
+      localNow,
+      isNot(closeTo(serverNow, 60)),
+      reason: 'the test device clock must be substantially skewed',
+    );
+    expect(find.text('30'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 1100));
+    expect(find.text('29'), findsOneWidget);
+  });
+
   test('bot assignments stay on Brigade while cards fly to job gauges', () {
     final base = runtimeModel();
     final assignedCard = testCard(
@@ -590,6 +619,158 @@ void registerStoreAndOnlineTests() {
     },
   );
 
+  test('requisition presentation removes and flies cards one at a time', () {
+    final base = runtimeModel();
+    final firstCard = testCard(
+      id: 'wheat-7',
+      suit: 'wheat',
+      value: 7,
+      ownerSeatID: 0,
+    );
+    final secondCard = testCard(
+      id: 'beet-8',
+      suit: 'beet',
+      value: 8,
+      ownerSeatID: 1,
+    );
+    final seats = [
+      seatWithPlot(
+        base.table.seats[0],
+        PlotState(revealed: [firstCard], hidden: const [], stacks: const []),
+      ),
+      seatWithPlot(
+        base.table.seats[1],
+        PlotState(revealed: [secondCard], hidden: const [], stacks: const []),
+      ),
+      ...base.table.seats.skip(2),
+    ];
+    final before = runtimeModelWith(
+      phase: phaseAssignment,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: seats,
+    );
+    final after = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: seats,
+      requisitionEvents: [
+        RequisitionEvent(
+          seatID: 0,
+          suit: firstCard.suit,
+          card: firstCard,
+          message: 'Requisitioned.',
+        ),
+        RequisitionEvent(
+          seatID: 1,
+          suit: secondCard.suit,
+          card: secondCard,
+          message: 'Requisitioned.',
+        ),
+      ],
+      exiledByYear: {
+        ...base.table.exiledByYear,
+        base.table.year: [firstCard, secondCard],
+      },
+    );
+    final events = [
+      const EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 0,
+        card: EngineCardValue(suit: 0, value: 7),
+        fromZone: kcObjectZonePlotRevealed,
+        toZone: kcObjectZoneExiled,
+        fromOwner: 0,
+        toOwner: -1,
+        targetSuit: 0,
+      ),
+      const EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 1,
+        card: EngineCardValue(suit: 3, value: 8),
+        fromZone: kcObjectZonePlotRevealed,
+        toZone: kcObjectZoneExiled,
+        fromOwner: 1,
+        toOwner: -1,
+        targetSuit: 3,
+      ),
+    ];
+
+    final states = projectPresentationBatch(
+      before: before,
+      after: after,
+      events: events,
+    );
+
+    expect(currentYearExiledCardIDs(states[0]), {firstCard.id});
+    expect(states[0].table.requisitionEvents, hasLength(1));
+    expect(
+      visiblePlotCards(
+        states[0].table.seats[0].plot.revealed,
+        hiddenExiledPlotCardIDs(states[0]),
+      ),
+      isEmpty,
+    );
+    expect(
+      visiblePlotCards(
+        states[0].table.seats[1].plot.revealed,
+        hiddenExiledPlotCardIDs(states[0]),
+      ).single.id,
+      secondCard.id,
+    );
+    expect(
+      cardMotionZones(states[0])[firstCard.id]?.kind,
+      MotionZoneKind.exiled,
+    );
+    expect(
+      cardMotionZones(states[0])[secondCard.id]?.kind,
+      MotionZoneKind.plotRevealed,
+    );
+    expect(currentYearExiledCardIDs(states[1]), {firstCard.id, secondCard.id});
+    expect(states[1].table.requisitionEvents, hasLength(2));
+    expect(
+      cardMotionZones(states[1])[secondCard.id]?.kind,
+      MotionZoneKind.exiled,
+    );
+  });
+
+  test('requisition immediately decrements a redacted online cellar', () {
+    final base = runtimeModel();
+    final exiledCard = testCard(
+      id: 'potato-9',
+      suit: 'potato',
+      value: 9,
+      ownerSeatID: 1,
+    );
+    final remoteSeat = seatWithPlot(
+      base.table.seats[1],
+      const PlotState(revealed: [], hidden: [], stacks: [], hiddenCardCount: 3),
+    );
+    final model = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: [base.table.seats[0], remoteSeat, ...base.table.seats.skip(2)],
+      requisitionEvents: [
+        RequisitionEvent(
+          seatID: 1,
+          suit: exiledCard.suit,
+          card: exiledCard,
+          message: 'Requisitioned.',
+        ),
+      ],
+      exiledByYear: {
+        ...base.table.exiledByYear,
+        base.table.year: [exiledCard],
+      },
+    );
+
+    final adjusted = withRequisitionAdjustedHiddenCounts(model);
+
+    expect(adjusted.table.seats[1].plot.effectiveHiddenCardCount, 2);
+  });
+
   test('presentation batch uses the leader recorded after each trick play', () {
     final before = runtimeModel();
     final plays = [
@@ -880,6 +1061,43 @@ void registerStoreAndOnlineTests() {
 
     expect(retainedUpdate.playerProfiles.single.displayName, 'Bingie');
     expect(model.table.seats[1].name, 'Bingie');
+  });
+
+  test('remote names survive alternating lobby and partial packets', () {
+    final namedJson = onlineUpdateJson();
+    namedJson['started'] = false;
+    namedJson['playerProfiles'] = [
+      {
+        'playerID': 1,
+        'userID': 'user-1',
+        'displayName': 'Bingie',
+        'avatarURL': 'worker2',
+      },
+    ];
+    var update = OnlineSessionUpdate.fromJson(namedJson);
+
+    for (var revision = 1; revision <= 4; revision += 1) {
+      final partialJson = onlineUpdateJson();
+      partialJson['started'] = revision.isEven;
+      partialJson['actionLogCount'] = revision;
+      partialJson.remove('playerProfiles');
+      update = OnlineSessionUpdate.fromJson(
+        partialJson,
+      ).retainingPlayerProfilesFrom(update);
+
+      final model = OnlineTableProjection(
+        update: update,
+        lobby: gameLobbyFromOnlineUpdate(update, viewerSeatID: 0),
+        playerID: 0,
+        legalActions: const [],
+      ).project();
+      expect(
+        model.table.seats[1].name,
+        'Bingie',
+        reason:
+            'revision $revision must not replace a known name with Remote 2',
+      );
+    }
   });
 
   testWidgets(
@@ -1229,6 +1447,147 @@ void registerStoreAndOnlineTests() {
       expect(store.isOnlineGame, isFalse);
     },
   );
+
+  test('online handoff suspends and restores an active local game', () async {
+    final directory = Directory.systemTemp.createTempSync(
+      'kolkhoz-online-local-resume-test-',
+    );
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final autosave = KolkhozAutosaveStore(
+      File('${directory.path}/autosave.json'),
+    );
+    final unloadedPolicy = Completer<KolkhozNativePolicyModel>().future;
+    final httpClient = FakeOnlineHttpClient();
+    final store = GameController(
+      localGameEngineFactory: LocalGameEngineFactory(
+        autosaveStore: autosave,
+        tutorialAutosaveStore: KolkhozAutosaveStore(
+          File('${directory.path}/tutorial.json'),
+        ),
+        mediumPolicyLoader: unloadedPolicy,
+        neuralPolicyLoader: unloadedPolicy,
+      ),
+      remoteGameEngineFactory: RemoteGameEngineFactory(
+        testGameRemoteConnection(
+          httpClient,
+          webSocketConnector: (_, _) async =>
+              throw const SocketException('realtime unavailable'),
+        ),
+      ),
+    )..animationSpeed = GameAnimationSpeed.instant;
+    addTearDown(store.dispose);
+    final localVariants = KolkhozGameVariants.kolkhoz.copyWith(maxYears: 2);
+    const localControllers = [
+      KolkhozPlayerController.human,
+      KolkhozPlayerController.human,
+      KolkhozPlayerController.human,
+      KolkhozPlayerController.human,
+    ];
+    store.configureLobby(
+      variants: localVariants,
+      controllers: localControllers,
+    );
+    store.startGame();
+    final localSeed = store.currentSeed;
+    expect(store.hasActiveLocalGame, isTrue);
+    expect(autosave.file.existsSync(), isTrue);
+
+    final onlineVariants = KolkhozGameVariants.kolkhoz.copyWith(
+      maxYears: 3,
+      passCards: true,
+    );
+    const onlineControllers = [
+      KolkhozPlayerController.human,
+      KolkhozPlayerController.human,
+      KolkhozPlayerController.heuristicAI,
+      KolkhozPlayerController.mediumAI,
+    ];
+    await store.startOnlineGame(
+      ranked: false,
+      browserJoinable: true,
+      variants: onlineVariants,
+      controllers: onlineControllers,
+    );
+
+    final createRequest = httpClient.requests.singleWhere(
+      (request) => request.route == 'POST /sessions',
+    );
+    final body = jsonDecode(createRequest.body) as Map<String, dynamic>;
+    expect(
+      (body['variants'] as Map<String, dynamic>)['maxYears'],
+      onlineVariants.maxYears,
+    );
+    expect(body['controllers'], ['human', 'human', 'heuristicAI', 'mediumAI']);
+    expect(store.isOnlineGame, isTrue);
+    expect(autosave.file.existsSync(), isTrue);
+
+    store.leaveOnlineGame();
+
+    expect(store.isOnlineGame, isFalse);
+    expect(store.hasActiveLocalGame, isTrue);
+    expect(store.currentSeed, localSeed);
+    expect(store.currentVariants.maxYears, localVariants.maxYears);
+    expect(store.controllers, localControllers);
+  });
+
+  test('new local game replaces the autosave with the selected setup', () {
+    final directory = Directory.systemTemp.createTempSync(
+      'kolkhoz-new-local-game-test-',
+    );
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final autosave = KolkhozAutosaveStore(
+      File('${directory.path}/autosave.json'),
+    );
+    final unloadedPolicy = Completer<KolkhozNativePolicyModel>().future;
+    final store = GameController(
+      localGameEngineFactory: LocalGameEngineFactory(
+        autosaveStore: autosave,
+        tutorialAutosaveStore: KolkhozAutosaveStore(
+          File('${directory.path}/tutorial.json'),
+        ),
+        mediumPolicyLoader: unloadedPolicy,
+        neuralPolicyLoader: unloadedPolicy,
+      ),
+    )..animationSpeed = GameAnimationSpeed.instant;
+    addTearDown(store.dispose);
+    store.startGame(
+      variants: KolkhozGameVariants.kolkhoz.copyWith(maxYears: 2),
+      controllers: const [
+        KolkhozPlayerController.human,
+        KolkhozPlayerController.human,
+        KolkhozPlayerController.human,
+        KolkhozPlayerController.human,
+      ],
+    );
+    final previousSeed = store.currentSeed;
+
+    final selectedVariants = KolkhozGameVariants.littleKolkhoz.copyWith(
+      maxYears: 3,
+      passCards: true,
+    );
+    const selectedControllers = [
+      KolkhozPlayerController.human,
+      KolkhozPlayerController.heuristicAI,
+      KolkhozPlayerController.heuristicAI,
+      KolkhozPlayerController.heuristicAI,
+    ];
+    store.startGame(
+      variants: selectedVariants,
+      controllers: selectedControllers,
+    );
+
+    expect(store.hasActiveLocalGame, isTrue);
+    expect(store.currentSeed, isNot(previousSeed));
+    expect(
+      variantsToJson(store.currentVariants),
+      variantsToJson(selectedVariants),
+    );
+    expect(store.controllers, selectedControllers);
+    final saved = autosave.load();
+    expect(saved, isNotNull);
+    expect(variantsToJson(saved!.variants), variantsToJson(selectedVariants));
+    expect(saved.controllers, selectedControllers);
+  });
 
   test('store auto-selects the only legal trick card', () {
     const play = EngineAction(
@@ -2208,6 +2567,12 @@ void registerStoreAndOnlineTests() {
       ]);
       expect(partial.table.jobs.first.assignedCards, hasLength(3));
       expect(
+        partial.table.jobs.first.assignedCards.every(
+          (card) => card.provisional,
+        ),
+        isTrue,
+      );
+      expect(
         partial.legalActions.any(
           (action) => action.kind == actionSubmitAssignments,
         ),
@@ -2260,6 +2625,18 @@ void registerStoreAndOnlineTests() {
     assign('wheat-9');
     expect(store.canUndo, isTrue);
     expect(httpClient.actionRequests, isEmpty);
+    final wheatGhost = store.model!.table.jobs
+        .singleWhere((job) => job.suit == 'wheat')
+        .assignedCards
+        .singleWhere((card) => card.id == 'wheat-9');
+    expect(wheatGhost.provisional, isTrue);
+    expect(
+      displayedJobHours(
+        store.model!.table.jobs.singleWhere((job) => job.suit == 'wheat'),
+      ),
+      9,
+    );
+
     store.undoLastAction();
     expect(
       assignmentControlCards(store.model!).map((card) => card.id),
@@ -2278,6 +2655,13 @@ void registerStoreAndOnlineTests() {
       (action) => action.kind == actionSubmitAssignments,
     );
     store.applyLegalAction(confirm);
+    expect(store.canUndo, isFalse);
+    expect(
+      store.model!.table.jobs
+          .expand((job) => job.assignedCards)
+          .where((card) => card.provisional),
+      isEmpty,
+    );
     for (
       var attempts = 0;
       attempts < 20 && httpClient.actionRequests.length < 5;
@@ -2692,23 +3076,18 @@ void registerStoreAndOnlineTests() {
           ),
       isTrue,
     );
-    expect(find.byType(TrumpSelectionButton), findsNWidgets(4));
     expect(
       tester
-          .widgetList<TrumpSelectionButton>(find.byType(TrumpSelectionButton))
+          .widgetList<RewardFlipCard>(find.byType(RewardFlipCard))
           .every(
-            (button) =>
-                button.size == planningRewardTrumpButtonSize &&
-                button.iconSize == planningRewardTrumpIconSize,
+            (card) =>
+                card.size.width ==
+                    tokens.card.small.width * planningRewardCardScale &&
+                card.size.height ==
+                    tokens.card.small.height * planningRewardCardScale &&
+                card.enabled,
           ),
       isTrue,
-    );
-    expect(
-      find.descendant(
-        of: find.byType(TrumpSelectionButton),
-        matching: find.byType(SuitMark),
-      ),
-      findsNWidgets(4),
     );
     expect(
       tester
@@ -2723,7 +3102,7 @@ void registerStoreAndOnlineTests() {
       matchesGoldenFile('planning_overlay/left-planning-panel.png'),
     );
 
-    await tester.tap(find.byType(TrumpSelectionButton).first);
+    await tester.tap(find.byType(RewardFlipCard).first);
     await tester.pump();
     expect(selectedAction, isNull);
 
@@ -2740,6 +3119,268 @@ void registerStoreAndOnlineTests() {
     expect(
       planningPhaseOverlayInsetForSize(const Size(900, 520)),
       closeTo(62.4, 0.001),
+    );
+  });
+
+  test('planning overlay chooses a safe anchor from available geometry', () {
+    final panelWidth = planningRewardPanelWidth(
+      baseCardWidth: defaultDesignTokens.card.small.width,
+      cardScale: planningRewardCardScale,
+      columnCount: 4,
+    );
+    expect(
+      planningPhaseOverlayPlacementForSize(
+        const Size(900, 520),
+        panelWidth: panelWidth,
+      ),
+      PlanningPhaseOverlayPlacement.leading,
+    );
+    expect(
+      planningPhaseOverlayPlacementForSize(
+        const Size(520, 900),
+        panelWidth: panelWidth,
+      ),
+      PlanningPhaseOverlayPlacement.top,
+    );
+  });
+
+  test('planning rewards shrink before falling back to two rows', () {
+    final baseCardWidth = defaultDesignTokens.card.small.width;
+    expect(
+      planningRewardColumnCountForWidth(
+        availableWidth: 220,
+        baseCardWidth: baseCardWidth,
+      ),
+      4,
+    );
+    expect(
+      planningRewardCardScaleForWidth(
+        availableWidth: 200,
+        baseCardWidth: baseCardWidth,
+        columnCount: 4,
+      ),
+      closeTo(159 / 168, 0.001),
+    );
+    expect(
+      planningRewardColumnCountForWidth(
+        availableWidth: 170,
+        baseCardWidth: baseCardWidth,
+      ),
+      2,
+    );
+    expect(
+      planningRewardCardScaleForWidth(
+        availableWidth: 170,
+        baseCardWidth: baseCardWidth,
+        columnCount: 2,
+      ),
+      planningRewardCardScale,
+    );
+  });
+
+  testWidgets('compact planning rewards keep all four choices in two rows', (
+    tester,
+  ) async {
+    final base = runtimeModel();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PlanningRewardsPanel(
+          model: runtimeModelWith(
+            phase: phasePlanning,
+            selection: SelectionState.empty,
+            jobs: [
+              for (final job in base.table.jobs)
+                Job(
+                  suit: job.suit,
+                  hours: job.hours,
+                  requiredHours: job.requiredHours,
+                  claimed: job.claimed,
+                  reward: testCard(
+                    id: '${job.suit}-reward',
+                    suit: job.suit,
+                    value: 5,
+                  ),
+                  assignedCards: job.assignedCards,
+                  validAssignmentTarget: job.validAssignmentTarget,
+                  highlighted: job.highlighted,
+                ),
+            ],
+            legalActions: [
+              for (final suit in displaySuitOrder)
+                testLegalAction(
+                  kind: actionSetTrump,
+                  label: suit,
+                  engineAction: EngineAction(
+                    kind: actionSetTrump,
+                    playerID: 0,
+                    suit: suit,
+                  ),
+                ),
+            ],
+          ),
+          tokens: defaultDesignTokens,
+          language: KolkhozLanguage.en,
+          rewardCardScale: planningRewardCardScale,
+          rewardColumnCount: 2,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('planning-reward-grid-2')),
+      findsOneWidget,
+    );
+    expect(find.byType(RewardFlipCard), findsNWidgets(4));
+    final rewardCards = [
+      for (final suit in displaySuitOrder)
+        find.byKey(ValueKey('reward-flip-$suit')),
+    ];
+    expect(rewardCards.every((card) => card.evaluate().length == 1), isTrue);
+    expect(
+      tester.getCenter(rewardCards[0]).dy,
+      closeTo(tester.getCenter(rewardCards[1]).dy, 0.001),
+    );
+    expect(
+      tester.getCenter(rewardCards[2]).dy,
+      closeTo(tester.getCenter(rewardCards[3]).dy, 0.001),
+    );
+    expect(
+      tester.getCenter(rewardCards[2]).dy,
+      greaterThan(tester.getCenter(rewardCards[0]).dy),
+    );
+  });
+
+  testWidgets(
+    'revealed reward cards preview trump on hover and select on tap',
+    (tester) async {
+      final base = runtimeModel();
+      final legalActions = [
+        for (final suit in displaySuitOrder)
+          testLegalAction(
+            kind: actionSetTrump,
+            label: suit,
+            engineAction: EngineAction(
+              kind: actionSetTrump,
+              playerID: 0,
+              suit: suit,
+            ),
+          ),
+      ];
+      final model = runtimeModelWith(
+        phase: phasePlanning,
+        selection: SelectionState.empty,
+        jobs: [
+          for (final job in base.table.jobs)
+            Job(
+              suit: job.suit,
+              hours: job.hours,
+              requiredHours: job.requiredHours,
+              claimed: job.claimed,
+              reward: testCard(
+                id: '${job.suit}-reward',
+                suit: job.suit,
+                value: 5,
+              ),
+              assignedCards: job.assignedCards,
+              validAssignmentTarget: job.validAssignmentTarget,
+              highlighted: job.highlighted,
+            ),
+        ],
+        legalActions: legalActions,
+      );
+      String? hoveredSuit;
+      LegalAction? selectedAction;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PlanningRewardsPanel(
+            model: model,
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            onSuitHovered: (suit) => hoveredSuit = suit,
+            onAction: (action) => selectedAction = action,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final wheatReward = find.byKey(const ValueKey('reward-flip-wheat'));
+      expect(
+        tester
+            .widgetList<Draggable<CardDragData>>(
+              find.byType(Draggable<CardDragData>),
+            )
+            .where((drag) => drag.data?.kind == CardDragKind.reward),
+        hasLength(4),
+      );
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer();
+      await mouse.moveTo(tester.getCenter(wheatReward));
+      await tester.pump();
+      expect(hoveredSuit, 'wheat');
+
+      await tester.tap(wheatReward);
+      expect(selectedAction?.engineAction.suit, 'wheat');
+
+      await mouse.moveTo(const Offset(-10, -10));
+      await tester.pump();
+      expect(hoveredSuit, isNull);
+    },
+  );
+
+  testWidgets('tall planning overlay anchors above the player plots', (
+    tester,
+  ) async {
+    const size = Size(520, 900);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const tokens = defaultDesignTokens;
+    final metrics = ResponsiveBoardMetrics.fromSize(size, tokens);
+    final model = runtimeModelWith(
+      phase: phasePlanning,
+      selection: SelectionState.empty,
+      jobs: runtimeModel().table.jobs,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: size.width,
+          height: size.height,
+          child: BoardPlayArea(
+            model: model,
+            tokens: tokens,
+            metrics: metrics,
+            language: KolkhozLanguage.en,
+            appearance: KolkhozAppearance.dark,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final content = find.byKey(const Key('planning-phase-content-bounds'));
+    final panel = find.byKey(const Key('planning-phase-panel-fit'));
+    final panelPosition = tester.widget<Positioned>(
+      find.byKey(const Key('planning-phase-panel-insets')),
+    );
+    final expectedInset = planningPhaseOverlayInsetForSize(
+      tester.getSize(content),
+    );
+    expect(panelPosition.left, expectedInset);
+    expect(panelPosition.right, expectedInset);
+    expect(panelPosition.top, expectedInset);
+    expect(panelPosition.bottom, isNull);
+    expect(
+      tester.getCenter(panel).dx,
+      closeTo(tester.getCenter(content).dx, 0.001),
+    );
+    expect(
+      tester
+          .widget<PlanningRewardsPanel>(find.byType(PlanningRewardsPanel))
+          .rewardColumnCount,
+      4,
     );
   });
 
@@ -2821,7 +3462,6 @@ void registerStoreAndOnlineTests() {
     );
 
     expect(find.byType(PlanningRewardsPanel), findsOneWidget);
-    expect(find.byType(PlanningTrumpPanel), findsNothing);
     expect(find.byKey(const ValueKey('reward-back')), findsNWidgets(4));
   });
 
@@ -3267,7 +3907,11 @@ void registerStoreAndOnlineTests() {
             widget is ScaledHighlightableCardBack &&
             widget.card.id == localHiddenCard.id,
       ),
-      findsNothing,
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(ValueKey('cellar-back-wedge-${localHiddenCard.id}')),
+      findsOneWidget,
     );
     expect(
       find.byWidgetPredicate(
@@ -3313,67 +3957,66 @@ void registerStoreAndOnlineTests() {
     expect(localColumns[1].value, 11);
   });
 
-  testWidgets('planning trump chooser animates AI selector focus', (
+  testWidgets('reward selector names the remote player declaring trump', (
     tester,
   ) async {
     final base = runtimeModel();
-    final legalActions = [
-      for (final suit in displaySuitOrder)
-        testLegalAction(
-          kind: actionSetTrump,
-          label: suit,
-          engineAction: EngineAction(
-            kind: actionSetTrump,
-            playerID: 1,
-            suit: suit,
-          ),
-        ),
-    ];
-    final aiModel = runtimeModelWith(
+    final model = runtimeModelWith(
       phase: phasePlanning,
       currentPlayerID: 1,
       selection: SelectionState.empty,
-      jobs: base.table.jobs,
-      legalActions: legalActions,
-    );
-    final humanModel = runtimeModelWith(
-      phase: phasePlanning,
-      currentPlayerID: 0,
-      selection: SelectionState.empty,
-      jobs: base.table.jobs,
-      legalActions: legalActions,
+      seats: [
+        base.table.seats[0],
+        testSeat(
+          id: 1,
+          name: 'Ivan Petrov',
+          controller: controllerRemoteHuman,
+          isCurrentTurn: true,
+        ),
+        base.table.seats[2],
+        base.table.seats[3],
+      ],
+      jobs: [
+        for (final job in base.table.jobs)
+          Job(
+            suit: job.suit,
+            hours: job.hours,
+            requiredHours: job.requiredHours,
+            claimed: job.claimed,
+            reward: testCard(
+              id: '${job.suit}-reward',
+              suit: job.suit,
+              value: 6,
+            ),
+            assignedCards: job.assignedCards,
+            validAssignmentTarget: job.validAssignmentTarget,
+            highlighted: job.highlighted,
+          ),
+      ],
+      legalActions: const [],
     );
 
-    expect(planningTrumpSelectorIsAI(aiModel), isTrue);
-    expect(planningTrumpSelectorIsAI(humanModel), isFalse);
+    expect(
+      handConsoleStatus(model, KolkhozLanguage.en, compact: false),
+      'Waiting for Ivan to declare Trump',
+    );
 
     await tester.pumpWidget(
       MaterialApp(
-        home: PlanningTrumpPanel(
-          model: aiModel,
+        home: PlanningRewardsPanel(
+          model: model,
           tokens: defaultDesignTokens,
           language: KolkhozLanguage.en,
-          focusedSuit: 'wheat',
         ),
       ),
     );
 
-    Iterable<TrumpSelectionButton> buttons() => tester
-        .widgetList<TrumpSelectionButton>(find.byType(TrumpSelectionButton));
-
-    expect(buttons().where((button) => button.aiFocused), hasLength(1));
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: PlanningTrumpPanel(
-          model: humanModel,
-          tokens: defaultDesignTokens,
-          language: KolkhozLanguage.en,
-          focusedSuit: null,
-        ),
-      ),
+    expect(
+      tester
+          .widget<DisplayText>(find.byKey(const Key('planning-reward-status')))
+          .text,
+      'Waiting for Ivan to declare Trump',
     );
-    expect(buttons().where((button) => button.aiFocused), isEmpty);
   });
 
   testWidgets('AI trump focus waits for every reward flip to complete', (
@@ -3438,6 +4081,7 @@ void registerStoreAndOnlineTests() {
                     focusedSuit,
                     selectedAction,
                     onActionSelected,
+                    onSuitHovered,
                     onRewardsRevealed,
                   ) => PlanningRewardsPanel(
                     model: model,
@@ -3445,6 +4089,7 @@ void registerStoreAndOnlineTests() {
                     language: KolkhozLanguage.en,
                     focusedSuit: focusedSuit,
                     onAction: onActionSelected,
+                    onSuitHovered: onSuitHovered,
                     onRewardsRevealed: onRewardsRevealed,
                   ),
             );
@@ -3456,18 +4101,18 @@ void registerStoreAndOnlineTests() {
     updateModel(() => model = revealed);
     await tester.pump();
 
-    Iterable<TrumpSelectionButton> buttons() => tester
-        .widgetList<TrumpSelectionButton>(find.byType(TrumpSelectionButton));
+    Iterable<RewardFlipCard> rewardCards() =>
+        tester.widgetList<RewardFlipCard>(find.byType(RewardFlipCard));
 
-    expect(buttons().where((button) => button.aiFocused), isEmpty);
+    expect(rewardCards().where((card) => card.selected), isEmpty);
     await tester.pump(const Duration(milliseconds: 459));
-    expect(buttons().where((button) => button.aiFocused), isEmpty);
+    expect(rewardCards().where((card) => card.selected), isEmpty);
 
     await tester.pump(const Duration(milliseconds: 2));
     await tester.pump();
     await tester.pump();
 
-    expect(buttons().where((button) => button.aiFocused), hasLength(1));
+    expect(rewardCards().where((card) => card.selected), hasLength(1));
   });
 
   test('c engine action codec encodes portable engine actions', () {

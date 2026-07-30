@@ -73,7 +73,7 @@ List<Job> buildProjectedJobs({
     for (var suit = 0; suit < displaySuitOrder.length; suit += 1)
       Job(
         suit: suitName(suit)!,
-        hours: hoursForSuit(suit),
+        hours: _nonnegativeJobHours(hoursForSuit(suit)),
         requiredHours: jobRequiredHours,
         claimed: claimedForSuit(suit),
         reward: rewardForSuit(suit),
@@ -83,6 +83,8 @@ List<Job> buildProjectedJobs({
       ),
   ];
 }
+
+int _nonnegativeJobHours(int hours) => hours < 0 ? 0 : hours;
 
 List<Score> buildScoreboard({
   required bool finalScores,

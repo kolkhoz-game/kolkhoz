@@ -899,6 +899,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String handConsoleWaitingForValue1ToDeclareTrump({required Object value1}) {
+    return 'Waiting for $value1 to declare Trump';
+  }
+
+  @override
   String handConsoleWaitingForValue1ToPlay({required Object value1}) {
     return 'Waiting for $value1 to play';
   }

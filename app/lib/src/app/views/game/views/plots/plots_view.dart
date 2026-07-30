@@ -80,8 +80,7 @@ class PlotOverviewView extends StatelessWidget {
       hiddenExiledCardIDs,
     );
     final selectable = model.table.phase == phaseSwap;
-    final revealViewerCellar =
-        selectable && model.table.currentPlayerID == viewer.id;
+    const revealViewerCellar = true;
     final revealOpponentCellars = model.table.phase == phaseGameOver;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -157,6 +156,9 @@ class PlotOverviewView extends StatelessWidget {
                         value: viewerHiddenCards.length,
                         hidden: true,
                         revealHiddenCards: revealViewerCellar,
+                        splitHiddenCardFront:
+                            model.table.phase != phaseRequisition &&
+                            model.table.phase != phaseGameOver,
                         selectable: selectable,
                         selectedCardID: model.selection.plotCardID,
                         exiledCardIDs: exiledCardIDs,
@@ -205,6 +207,7 @@ List<Widget> plotOverviewCardItems({
   required String? selectedCardID,
   required bool selectable,
   bool revealHiddenCards = false,
+  bool splitHiddenCardFront = false,
   required String zone,
   required Set<String> exiledCardIDs,
   required DesignTokens tokens,
@@ -212,50 +215,92 @@ List<Widget> plotOverviewCardItems({
 }) {
   return [
     for (final card in cards)
-      PlotCardExileFrame(
-        exiled: exiledCardIDs.contains(card.id),
-        tokens: tokens,
-        radius: tokens.radius.card,
-        child: SwapSelectedCardFrame(
-          cardID: card.id,
-          selected: card.id == selectedCardID,
-          tokens: tokens,
-          child: hiddenCards
-              ? InteractiveCardFlip(
-                  key: ValueKey('cellar-card-${card.id}'),
-                  concealedLabel: 'Cellar card. Tap to reveal.',
-                  revealedLabel:
-                      '${card.rank} of ${card.suit}. Tap to conceal.',
-                  frontKey: ValueKey('cellar-face-${card.id}'),
-                  backKey: ValueKey('cellar-back-${card.id}'),
-                  forceShowFront: revealHiddenCards,
-                  onTap: selectable
-                      ? () => onPlotCardTap?.call(card.id, zone)
-                      : null,
-                  front: GameCard(
-                    card: selectedPlotCard(card, selectedCardID),
-                    tokens: tokens,
-                    sizeOverride: cardSize,
-                    motionTracked: false,
-                  ),
-                  back: ScaledHighlightableCardBack(
-                    card: selectedPlotCard(card, selectedCardID),
-                    tokens: tokens,
-                    size: cardSize,
-                  ),
-                )
-              : GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: selectable
-                      ? () => onPlotCardTap?.call(card.id, zone)
-                      : null,
-                  child: GameCard(
-                    card: selectedPlotCard(card, selectedCardID),
-                    tokens: tokens,
-                    sizeOverride: cardSize,
-                  ),
-                ),
-        ),
+      Builder(
+        builder: (context) {
+          final cardControl = PlotCardExileFrame(
+            exiled: exiledCardIDs.contains(card.id),
+            tokens: tokens,
+            radius: tokens.radius.card,
+            child: SwapSelectedCardFrame(
+              cardID: card.id,
+              selected: card.id == selectedCardID,
+              tokens: tokens,
+              child: TactileCardSurface(
+                tokens: tokens,
+                size: cardSize,
+                pressEnabled: selectable,
+                child: hiddenCards
+                    ? InteractiveCardFlip(
+                        key: ValueKey('cellar-card-${card.id}'),
+                        concealedLabel: 'Cellar card. Tap to reveal.',
+                        revealedLabel:
+                            '${card.rank} of ${card.suit}. Tap to conceal.',
+                        frontKey: ValueKey('cellar-face-${card.id}'),
+                        backKey: ValueKey('cellar-back-${card.id}'),
+                        forceShowFront: revealHiddenCards,
+                        onTap: selectable
+                            ? () => onPlotCardTap?.call(card.id, zone)
+                            : null,
+                        front: splitHiddenCardFront
+                            ? CellarCardSplitPreview(
+                                cardID: card.id,
+                                size: cardSize,
+                                tokens: tokens,
+                                front: GameCard(
+                                  card: selectedPlotCard(card, selectedCardID),
+                                  tokens: tokens,
+                                  sizeOverride: cardSize,
+                                  motionTracked: false,
+                                ),
+                                back: ScaledHighlightableCardBack(
+                                  card: selectedPlotCard(card, selectedCardID),
+                                  tokens: tokens,
+                                  size: cardSize,
+                                ),
+                              )
+                            : GameCard(
+                                card: selectedPlotCard(card, selectedCardID),
+                                tokens: tokens,
+                                sizeOverride: cardSize,
+                                motionTracked: false,
+                              ),
+                        back: ScaledHighlightableCardBack(
+                          card: selectedPlotCard(card, selectedCardID),
+                          tokens: tokens,
+                          size: cardSize,
+                        ),
+                      )
+                    : GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: selectable
+                            ? () => onPlotCardTap?.call(card.id, zone)
+                            : null,
+                        child: GameCard(
+                          card: selectedPlotCard(card, selectedCardID),
+                          tokens: tokens,
+                          sizeOverride: cardSize,
+                        ),
+                      ),
+              ),
+            ),
+          );
+          if (!selectable || onPlotCardTap == null) {
+            return cardControl;
+          }
+          return CardDropTarget(
+            highlightColor: tokens.colors.green,
+            borderRadius: tokens.radius.card,
+            accepts: (data) =>
+                data.canDrop &&
+                data.kind == CardDragKind.hand &&
+                data.phase == phaseSwap,
+            onAccepted: (data) {
+              data.onAccepted();
+              onPlotCardTap(card.id, zone);
+            },
+            child: cardControl,
+          );
+        },
       ),
     for (final stack in stacks) ...[
       for (final card in stack.revealed.take(2))
@@ -434,6 +479,104 @@ class ScaledHighlightableCardBack extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Shows a cellar-origin swap target as mostly face-up with a card-back wedge.
+///
+/// The upper-left face area preserves the card's rank and suit information. The
+/// lower-right back wedge indicates that the replacement card will occupy a
+/// face-down cellar slot after the swap.
+class CellarCardSplitPreview extends StatelessWidget {
+  const CellarCardSplitPreview({
+    required this.cardID,
+    required this.size,
+    required this.tokens,
+    required this.front,
+    required this.back,
+    super.key,
+  });
+
+  final String cardID;
+  final TokenCardSize size;
+  final DesignTokens tokens;
+  final Widget front;
+  final Widget back;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Cellar card, shown with its face-down status',
+      child: SizedBox(
+        width: size.width,
+        height: size.height,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(cardViewCornerRadius),
+          child: Stack(
+            key: ValueKey('cellar-split-preview-$cardID'),
+            fit: StackFit.expand,
+            children: [
+              front,
+              ClipPath(
+                key: ValueKey('cellar-back-wedge-$cardID'),
+                clipper: const _CellarBackWedgeClipper(),
+                child: back,
+              ),
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: _CellarSplitSeamPainter(tokens: tokens),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CellarBackWedgeClipper extends CustomClipper<Path> {
+  const _CellarBackWedgeClipper();
+
+  @override
+  Path getClip(Size size) => Path()
+    ..moveTo(size.width, size.height * 0.35)
+    ..lineTo(size.width, size.height)
+    ..lineTo(size.width * 0.1, size.height)
+    ..close();
+
+  @override
+  bool shouldReclip(_CellarBackWedgeClipper oldClipper) => false;
+}
+
+class _CellarSplitSeamPainter extends CustomPainter {
+  const _CellarSplitSeamPainter({required this.tokens});
+
+  final DesignTokens tokens;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final start = Offset(size.width, size.height * 0.35);
+    final end = Offset(size.width * 0.1, size.height);
+    canvas
+      ..drawLine(
+        start,
+        end,
+        Paint()
+          ..color = tokens.colors.black.withValues(alpha: 0.72)
+          ..strokeWidth = 2.4,
+      )
+      ..drawLine(
+        start,
+        end,
+        Paint()
+          ..color = tokens.colors.gold.withValues(alpha: 0.82)
+          ..strokeWidth = 0.9,
+      );
+  }
+
+  @override
+  bool shouldRepaint(_CellarSplitSeamPainter oldDelegate) =>
+      oldDelegate.tokens != tokens;
 }
 
 TokenCardSize plotOverviewCardSize(
@@ -895,6 +1038,7 @@ class LocalPlotColumn extends StatelessWidget {
     required this.hidden,
     bool? hiddenCards,
     this.revealHiddenCards = false,
+    this.splitHiddenCardFront = false,
     required this.selectable,
     required this.selectedCardID,
     required this.exiledCardIDs,
@@ -912,6 +1056,7 @@ class LocalPlotColumn extends StatelessWidget {
   final bool hidden;
   final bool hiddenCards;
   final bool revealHiddenCards;
+  final bool splitHiddenCardFront;
   final bool selectable;
   final String? selectedCardID;
   final Set<String> exiledCardIDs;
@@ -975,6 +1120,7 @@ class LocalPlotColumn extends StatelessWidget {
                   stacks: stacks,
                   hiddenCards: hiddenCards,
                   revealHiddenCards: revealHiddenCards,
+                  splitHiddenCardFront: splitHiddenCardFront,
                   cardSize: cardSize,
                   selectedCardID: selectedCardID,
                   selectable: selectable,

@@ -722,7 +722,7 @@ def _direct_committed_updates(
             else None
         )
         latest = merge_session_engine_projection(
-            {**latest, "sessionID": session_id},
+            {**latest, "sessionID": session_id, "serverTime": time.time()},
             raw_state,
             viewer_id=viewer_id,
             revision=committed_revision,

@@ -227,6 +227,7 @@ class TableCard {
     required this.selected,
     required this.highlighted,
     required this.pending,
+    this.provisional = false,
     this.assignmentRound,
     this.nomenclature = false,
     this.ownerSeatID,
@@ -239,6 +240,7 @@ class TableCard {
   final bool selected;
   final bool highlighted;
   final bool pending;
+  final bool provisional;
   final int? assignmentRound;
   final bool nomenclature;
   final int? ownerSeatID;

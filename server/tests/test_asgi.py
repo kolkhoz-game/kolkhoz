@@ -617,6 +617,7 @@ def test_direct_projections_are_ordered_and_gaps_use_catch_up() -> None:
     updates, latest, revision = direct
     assert revision == 2
     assert latest["actionLogCount"] == 2
+    assert latest["serverTime"] > 0
     assert [item["revision"] for item in updates["updates"]] == [1, 2]
     assert _direct_committed_updates("s1", 2, 0, current, [message(2)]) is None
     assert _direct_committed_updates("s1", 2, 0, current, [message(1, phase=5)]) is None

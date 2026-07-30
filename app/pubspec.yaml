@@ -79,6 +79,7 @@ flutter:
     - assets/art/field_plan/shared/textures/
     - assets/art/field_plan/shared/pictograms/
     - assets/art/field_plan/shared/signs/
+    - assets/art/field_plan/shared/controls/
     - assets/art/field_plan/ledger/presets/
     - assets/art/field_plan/ledger/variants/
     - assets/art/field_plan/ledger/actions/

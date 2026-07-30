@@ -1395,6 +1395,7 @@ class OnlineApplication:
         )
         base_update = {
             "sessionID": record.session_id,
+            "serverTime": time.time(),
             "seed": record.seed,
             "inviteCode": record.invite_code,
             "started": record.status == "active",
@@ -1455,6 +1456,7 @@ class OnlineApplication:
         game_log.extend(privacy_safe_action_log([action], viewer_id, game_over=False))
         cached.update(
             {
+                "serverTime": time.time(),
                 "seed": record.seed,
                 "inviteCode": record.invite_code,
                 "started": record.status == "active",

@@ -28,6 +28,7 @@ abstract class OnlineSessionUpdate with _$OnlineSessionUpdate {
 
   const factory OnlineSessionUpdate({
     required String sessionID,
+    @Default(0) double serverTime,
     int? seed,
     @JsonKey(readValue: _inviteCodeFromJson) required String inviteCode,
     required int? viewerID,
@@ -67,7 +68,7 @@ abstract class OnlineSessionUpdate with _$OnlineSessionUpdate {
   OnlineSessionUpdate retainingPlayerProfilesFrom(
     OnlineSessionUpdate previous,
   ) {
-    if (!started || previous.sessionID != sessionID) {
+    if (previous.sessionID != sessionID) {
       return this;
     }
     final profilesByPlayer = {

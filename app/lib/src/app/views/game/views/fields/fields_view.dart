@@ -311,7 +311,7 @@ class JobsPanel extends StatelessWidget {
                                 model,
                                 jobs[index],
                               );
-                              return JobTile(
+                              final tile = JobTile(
                                 job: jobs[index],
                                 assignmentPhase: assignmentPhase,
                                 trump: model.table.trump,
@@ -321,6 +321,33 @@ class JobsPanel extends StatelessWidget {
                                     assignmentAction == null || onAction == null
                                     ? null
                                     : () => onAction!(assignmentAction),
+                              );
+                              if (!assignmentPhase || onAction == null) {
+                                return tile;
+                              }
+                              return CardDropTarget(
+                                highlightColor: tokens.colors.green,
+                                borderRadius: tokens.radius.md,
+                                accepts: (data) =>
+                                    data.kind == CardDragKind.assignment &&
+                                    data.phase == phaseAssignment &&
+                                    assignmentActionForCardAndJob(
+                                          model,
+                                          data.cardID,
+                                          jobs[index],
+                                        ) !=
+                                        null,
+                                onAccepted: (data) {
+                                  final action = assignmentActionForCardAndJob(
+                                    model,
+                                    data.cardID,
+                                    jobs[index],
+                                  );
+                                  if (action != null) {
+                                    onAction!(action);
+                                  }
+                                },
+                                child: tile,
                               );
                             },
                           ),
@@ -638,12 +665,12 @@ class JobBucketCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = card.pending
+    final color = card.provisional
         ? tokens.colors.green.withValues(alpha: 0.85)
         : tokens.colors.gold.withValues(alpha: 0.8);
     return PendingAssignmentCardPulse(
       cardID: card.id,
-      active: card.pending,
+      active: card.provisional,
       tokens: tokens,
       child: Stack(
         children: [
@@ -658,7 +685,10 @@ class JobBucketCard extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: color, width: card.pending ? 2 : 1),
+                  border: Border.all(
+                    color: color,
+                    width: card.provisional ? 2 : 1,
+                  ),
                 ),
               ),
             ),

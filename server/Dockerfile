@@ -17,7 +17,7 @@ COPY engine ./engine
 COPY policies ./policies
 COPY server ./server
 
-RUN python -c 'from engine.python.kolkhoz_c_engine import CEngine; CEngine()'
+RUN python -c 'from engine.python.kolkhoz_c_engine import CEngine, build_shared_library; CEngine(build_shared_library(force=True))'
 
 RUN groupadd --system kolkhoz \
     && useradd --system --gid kolkhoz --home-dir /app kolkhoz \

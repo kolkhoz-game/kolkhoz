@@ -431,6 +431,7 @@ class StandaloneLobby extends StatelessWidget {
                         comradesSummary.incomingRequests.length,
                     displayName: displayName,
                     portraitAsset: portraitAsset,
+                    onResumeLocalGame: onResumeLocalGame,
                     onOfflinePressed: onOfflinePressed,
                     onOnlinePressed: onOnlinePressed,
                     onProfilePressed: onProfilePressed,
@@ -487,7 +488,6 @@ class StandaloneLobby extends StatelessWidget {
                     hasTutorialProgress: hasTutorialProgress,
                     onRestartTutorialPressed: onRestartTutorialPressed,
                     onStart: onStart,
-                    onResumeLocalGame: onResumeLocalGame,
                     onHostOnline: onHostOnline,
                     onHostOnlineSeries: onHostOnlineSeries,
                     onInviteOnlineComrades: onInviteOnlineComrades,
@@ -659,6 +659,7 @@ class _FieldPlanMenuRail extends StatelessWidget {
     required this.comradeRequestCount,
     required this.displayName,
     required this.portraitAsset,
+    required this.onResumeLocalGame,
     required this.onOfflinePressed,
     required this.onOnlinePressed,
     required this.onProfilePressed,
@@ -685,6 +686,7 @@ class _FieldPlanMenuRail extends StatelessWidget {
   final int comradeRequestCount;
   final String displayName;
   final String portraitAsset;
+  final VoidCallback? onResumeLocalGame;
   final VoidCallback onOfflinePressed;
   final VoidCallback onOnlinePressed;
   final VoidCallback? onProfilePressed;
@@ -698,7 +700,14 @@ class _FieldPlanMenuRail extends StatelessWidget {
   Widget build(BuildContext context) {
     final localSelected =
         !showingHome && !showingRules && !showingOnline && !showingProfile;
-    final mainButtonHeight = compact ? 48.0 : 68.0;
+    final hasResume = onResumeLocalGame != null;
+    final mainButtonHeight = compact
+        ? hasResume
+              ? 42.0
+              : 48.0
+        : hasResume
+        ? 60.0
+        : 68.0;
     final gap = compact ? 6.0 : 10.0;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -710,6 +719,17 @@ class _FieldPlanMenuRail extends StatelessWidget {
           children: [
             SizedBox(height: titleHeight, child: const _FieldPlanTitleBanner()),
             SizedBox(height: gap),
+            if (onResumeLocalGame case final onResume?) ...[
+              _FieldPlanMenuButton(
+                key: const Key('field-plan-menu-resume'),
+                label: language.strings.lobbyResumeGame,
+                pictogram: fieldPlanToolbarConfirmIconPath,
+                selected: false,
+                height: mainButtonHeight,
+                onPressed: onResume,
+              ),
+              SizedBox(height: gap),
+            ],
             _FieldPlanMenuButton(
               key: const Key('field-plan-menu-local'),
               label: language.t(
@@ -1508,7 +1528,6 @@ class _LobbyPanel extends StatelessWidget {
     this.hasTutorialProgress = false,
     this.onRestartTutorialPressed,
     required this.onStart,
-    required this.onResumeLocalGame,
     required this.onHostOnline,
     required this.onHostOnlineSeries,
     required this.onInviteOnlineComrades,
@@ -1588,7 +1607,6 @@ class _LobbyPanel extends StatelessWidget {
   final bool hasTutorialProgress;
   final VoidCallback? onRestartTutorialPressed;
   final VoidCallback onStart;
-  final VoidCallback? onResumeLocalGame;
   final Future<String> Function(
     Uri baseURL,
     List<KolkhozPlayerController> controllers,
@@ -1679,7 +1697,6 @@ class _LobbyPanel extends StatelessWidget {
       comradesSummary: comradesSummary,
       compactRail: compactRail,
       onStart: onStart,
-      onResumeLocalGame: onResumeLocalGame,
       onHostOnline: onHostOnline,
       onHostOnlineSeries: onHostOnlineSeries,
       onInviteOnlineComrades: onInviteOnlineComrades,

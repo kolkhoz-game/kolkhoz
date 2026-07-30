@@ -709,14 +709,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
               onEnterOnlineGame: enterOnlineGame,
               onSyncActiveSession: syncActiveSession,
               onCancelOnlineGame: returnToLobby,
-              onStart: () {
-                syncPendingGameLobby();
-                store.startGame();
-                setState(() => onlineSessionCreatedByLocalPlayer = false);
-                navigationController.showGame(
-                  launchOrigin: KolkhozGameLaunchOrigin.created,
-                );
-              },
+              onStart: () => unawaited(startLocalGameFromSetup()),
               onResumeLocalGame: store.hasActiveLocalGame
                   ? () => navigationController.showGame(
                       launchOrigin: KolkhozGameLaunchOrigin.created,
@@ -856,6 +849,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
                   onReaction: store.sendReaction,
                   activeReaction: store.activeReaction,
                   turnDeadlineAt: store.onlineUpdate?.turnDeadlineAt,
+                  serverTime: store.onlineUpdate?.serverTime,
                   gameOverReturnsToLobby:
                       store.onlineUpdate?.tournament != null ||
                       !(store.isOnlineGame &&
@@ -1200,6 +1194,29 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
       controllers: store.controllers,
     );
     onlineSessionCreatedByLocalPlayer = false;
+  }
+
+  Future<void> startLocalGameFromSetup() async {
+    clearForemanHint();
+    if (store.hasActiveLocalGame && settings.confirmNewGame) {
+      final confirmed = await confirmGameControl(
+        title: settings.language.strings.kolkhozappNewGame,
+        message:
+            settings.language.strings.kolkhozappThisWillReplaceTheCurrentGame,
+        confirmLabel: settings.language.strings.kolkhozappNewGame2,
+      );
+      if (!confirmed || !mounted) {
+        return;
+      }
+    }
+    store.startGame(
+      variants: activeVariants,
+      controllers: activePlayerControllers,
+    );
+    setState(() => onlineSessionCreatedByLocalPlayer = false);
+    navigationController.showGame(
+      launchOrigin: KolkhozGameLaunchOrigin.created,
+    );
   }
 
   Future<void> requestReturnToLobby() async {
@@ -1848,11 +1865,12 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
         settings.language.strings.kolkhozappSignInBeforeJoiningOnlinePlay,
       );
     }
-    store.configureLobby(variants: activeVariants, controllers: controllers);
     final sessionID = await store.startOnlineGame(
       ranked: ranked,
       browserJoinable: browserJoinable,
       bestOf: bestOf,
+      variants: activeVariants,
+      controllers: controllers,
     );
     setState(() => onlineSessionCreatedByLocalPlayer = true);
     if (enterImmediately) {

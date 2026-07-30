@@ -683,7 +683,7 @@ class FieldsJobPile extends StatelessWidget {
     final assignmentAction = assignmentActionForJob(model, job);
     final actionHandler = onAction;
     final canAssign = assignmentAction != null && actionHandler != null;
-    return Semantics(
+    final pile = Semantics(
       button: canAssign,
       label: language.suitName(job.suit),
       child: GestureDetector(
@@ -716,6 +716,24 @@ class FieldsJobPile extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (model.table.phase != phaseAssignment || actionHandler == null) {
+      return pile;
+    }
+    return CardDropTarget(
+      highlightColor: tokens.colors.green,
+      borderRadius: 8,
+      accepts: (data) =>
+          data.kind == CardDragKind.assignment &&
+          data.phase == phaseAssignment &&
+          assignmentActionForCardAndJob(model, data.cardID, job) != null,
+      onAccepted: (data) {
+        final action = assignmentActionForCardAndJob(model, data.cardID, job);
+        if (action != null) {
+          actionHandler(action);
+        }
+      },
+      child: pile,
     );
   }
 }
@@ -1248,9 +1266,22 @@ class FarmsteadTrickCard extends StatelessWidget {
         language: language,
       );
     }
-    return MotionTrackedRegion(
+    final trackedCard = MotionTrackedRegion(
       motionKey: trickCardMotionTargetKey(seat.id),
       child: child,
+    );
+    if (!active || !seat.isViewer) {
+      return trackedCard;
+    }
+    return CardDropTarget(
+      highlightColor: tokens.colors.green,
+      accepts: (data) =>
+          data.canDrop &&
+          data.kind == CardDragKind.hand &&
+          data.phase == phaseTrick,
+      labelBuilder: (data) => data.actionLabel ?? 'PLAY CARD',
+      onAccepted: (data) => data.onAccepted(),
+      child: trackedCard,
     );
   }
 }

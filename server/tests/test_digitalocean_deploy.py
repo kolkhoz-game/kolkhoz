@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1] / "deploy" / "digitalocean"
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_server_package_invariants() -> None:
@@ -48,6 +49,15 @@ def test_bootstrap_requires_explicit_apply_for_mutations() -> None:
     assert source.index('cd "$ROOT"') < source.index(
         "from engine.python.kolkhoz_c_engine"
     )
+    assert "build_shared_library(force=True)" in source
+
+
+def test_container_build_excludes_and_rebuilds_the_engine_cache() -> None:
+    dockerfile = (REPO_ROOT / "server" / "Dockerfile").read_text()
+    dockerignore = (REPO_ROOT / ".dockerignore").read_text().splitlines()
+
+    assert "server/.build/" in dockerignore
+    assert "build_shared_library(force=True)" in dockerfile
 
 
 def test_supabase_retirement_is_production_only_and_idempotent() -> None:

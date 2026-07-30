@@ -291,10 +291,12 @@ class GameController extends ChangeNotifier {
       if (playerID == null) {
         return;
       }
-      _engine?.sendHumanActions([
+      final submittedAssignments = [
         ..._assignmentDraft.values,
         EngineAction(kind: actionSubmitAssignments, playerID: playerID),
-      ]);
+      ];
+      _clearAssignmentDraft();
+      _engine?.sendHumanActions(submittedAssignments);
       _sync();
       return;
     }
@@ -325,8 +327,7 @@ class GameController extends ChangeNotifier {
   }
 
   bool get isOnlineGame => _engine?.mode == GameEngineMode.remote;
-  bool get isTutorial =>
-      _isTutorial && _engine?.mode == GameEngineMode.local;
+  bool get isTutorial => _isTutorial && _engine?.mode == GameEngineMode.local;
   bool get hasSavedTutorial => _localGameEngineFactory.hasTutorialAutosave;
   bool get hasActiveLocalGame =>
       _engine?.mode == GameEngineMode.local &&
@@ -412,18 +413,28 @@ class GameController extends ChangeNotifier {
     required bool ranked,
     required bool browserJoinable,
     int bestOf = 1,
+    KolkhozGameVariants? variants,
+    List<KolkhozPlayerController>? controllers,
   }) async {
-    if (lifecycle != GameControllerLifecycle.lobby || _hasSession) {
+    final localGameInProgress =
+        lifecycle == GameControllerLifecycle.playing && _localEngine != null;
+    if (_remoteEngine != null ||
+        (!localGameInProgress &&
+            (lifecycle != GameControllerLifecycle.lobby || _hasSession))) {
       throw StateError('Only a local draft lobby can start an online game');
     }
-    final draft = lobby;
-    lifecycle = GameControllerLifecycle.starting;
-    notifyListeners();
+    final previousLifecycle = lifecycle;
+    if (!localGameInProgress) {
+      lifecycle = GameControllerLifecycle.starting;
+      notifyListeners();
+    }
     try {
       final client = _requiredRemoteGameEngineFactory.connection;
       final response = await client.createSession(
-        variants: draft.variants,
-        controllers: [for (final player in draft.players) player.controller],
+        variants: variants ?? lobby.variants,
+        controllers:
+            controllers ??
+            [for (final player in lobby.players) player.controller],
         ranked: ranked,
         browserJoinable: browserJoinable,
         bestOf: bestOf,
@@ -437,7 +448,13 @@ class GameController extends ChangeNotifier {
       );
       return response.sessionID;
     } catch (exception) {
-      if (!_hasSession) {
+      if (localGameInProgress) {
+        if (_localEngine == null && !_restoreAutosave()) {
+          lifecycle = GameControllerLifecycle.lobby;
+        } else {
+          lifecycle = previousLifecycle;
+        }
+      } else if (!_hasSession) {
         lifecycle = GameControllerLifecycle.lobby;
       }
       error = '$exception';
@@ -588,8 +605,12 @@ class GameController extends ChangeNotifier {
   }
 
   void leaveOnlineGame() {
-    _remoteEngine?.leave();
+    final online = _remoteEngine;
+    online?.leave();
     returnToLobby();
+    if (online != null) {
+      _restoreAutosave();
+    }
   }
 
   void revealLocalPlayer() {
@@ -716,6 +737,7 @@ class GameController extends ChangeNotifier {
     if (nextModel == null) {
       return null;
     }
+    nextModel = withRequisitionAdjustedHiddenCounts(nextModel);
     if (nextModel.table.phase != phaseAssignment) {
       _clearAssignmentDraft();
     }
@@ -730,7 +752,10 @@ class GameController extends ChangeNotifier {
     );
     if (!identical(nextUiState, uiState)) {
       uiState = nextUiState;
-      nextModel = _withAssignmentDraft(engine.project(), engine);
+      nextModel = _withAssignmentDraft(
+        withRequisitionAdjustedHiddenCounts(engine.project()),
+        engine,
+      );
     }
     _lastSyncedPhase = phase;
     return nextModel;
@@ -814,7 +839,6 @@ class GameController extends ChangeNotifier {
   }) async {
     _clearSession();
     finishedGameLobby = null;
-    _localGameEngineFactory.clearAutosave();
     _engine = _requiredRemoteGameEngineFactory.create(
       sessionID: sessionID,
       inviteCode: inviteCode,

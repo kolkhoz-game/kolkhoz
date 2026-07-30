@@ -396,6 +396,14 @@
       }
     }
   },
+  "handConsoleWaitingForValue1ToDeclareTrump": "Waiting for {value1} to declare Trump",
+  "@handConsoleWaitingForValue1ToDeclareTrump": {
+    "placeholders": {
+      "value1": {
+        "type": "Object"
+      }
+    }
+  },
   "handConsoleWaitingForValue1ToPlay": "Waiting for {value1} to play",
   "@handConsoleWaitingForValue1ToPlay": {
     "placeholders": {

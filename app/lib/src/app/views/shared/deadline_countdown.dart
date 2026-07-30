@@ -6,12 +6,14 @@ class DeadlineCountdownBuilder extends StatefulWidget {
   const DeadlineCountdownBuilder({
     required this.deadlineEpochSeconds,
     required this.builder,
+    this.serverEpochSeconds,
     this.maxSeconds = 999,
     this.now = DateTime.now,
     super.key,
   });
 
   final double? deadlineEpochSeconds;
+  final double? serverEpochSeconds;
   final int maxSeconds;
   final DateTime Function() now;
   final Widget Function(BuildContext context, int? seconds) builder;
@@ -23,6 +25,8 @@ class DeadlineCountdownBuilder extends StatefulWidget {
 
 class _DeadlineCountdownBuilderState extends State<DeadlineCountdownBuilder> {
   Timer? _timer;
+  DateTime? _localAnchor;
+  double? _serverAnchor;
 
   @override
   void initState() {
@@ -33,7 +37,8 @@ class _DeadlineCountdownBuilderState extends State<DeadlineCountdownBuilder> {
   @override
   void didUpdateWidget(DeadlineCountdownBuilder oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.deadlineEpochSeconds != widget.deadlineEpochSeconds) {
+    if (oldWidget.deadlineEpochSeconds != widget.deadlineEpochSeconds ||
+        oldWidget.serverEpochSeconds != widget.serverEpochSeconds) {
       _reset();
     }
   }
@@ -41,7 +46,20 @@ class _DeadlineCountdownBuilderState extends State<DeadlineCountdownBuilder> {
   void _reset() {
     _timer?.cancel();
     _timer = null;
+    _localAnchor = widget.now();
+    _serverAnchor = widget.serverEpochSeconds;
     _scheduleNextTick();
+  }
+
+  int get _nowMilliseconds {
+    final serverAnchor = _serverAnchor;
+    final localAnchor = _localAnchor;
+    final localNow = widget.now();
+    if (serverAnchor == null || serverAnchor <= 0 || localAnchor == null) {
+      return localNow.millisecondsSinceEpoch;
+    }
+    return (serverAnchor * Duration.millisecondsPerSecond).round() +
+        localNow.difference(localAnchor).inMilliseconds;
   }
 
   int? get _seconds {
@@ -50,8 +68,7 @@ class _DeadlineCountdownBuilderState extends State<DeadlineCountdownBuilder> {
       return null;
     }
     final remaining =
-        (deadline * Duration.millisecondsPerSecond).round() -
-        widget.now().millisecondsSinceEpoch;
+        (deadline * Duration.millisecondsPerSecond).round() - _nowMilliseconds;
     return (remaining / Duration.millisecondsPerSecond).ceil().clamp(
       0,
       widget.maxSeconds,
@@ -64,8 +81,7 @@ class _DeadlineCountdownBuilderState extends State<DeadlineCountdownBuilder> {
       return;
     }
     final remaining =
-        (deadline * Duration.millisecondsPerSecond).round() -
-        widget.now().millisecondsSinceEpoch;
+        (deadline * Duration.millisecondsPerSecond).round() - _nowMilliseconds;
     if (remaining <= 0) {
       return;
     }

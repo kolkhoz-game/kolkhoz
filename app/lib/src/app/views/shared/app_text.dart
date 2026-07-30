@@ -9,6 +9,7 @@ enum KolkhozText {
   handConsoleContinue,
   handConsoleReviewRequisition,
   handConsoleWaitingForValue1,
+  handConsoleWaitingForValue1ToDeclareTrump,
   handConsoleWaitingForValue1ToAssign,
   handConsoleWaitingForValue1ToPlay,
   handConsoleWaitingForValue1ToSwap,
@@ -96,6 +97,10 @@ String lookupKolkhozText(
       strings.handConsoleReviewRequisition,
     KolkhozText.handConsoleWaitingForValue1 =>
       strings.handConsoleWaitingForValue1(value1: args['value1']!),
+    KolkhozText.handConsoleWaitingForValue1ToDeclareTrump =>
+      strings.handConsoleWaitingForValue1ToDeclareTrump(
+        value1: args['value1']!,
+      ),
     KolkhozText.handConsoleWaitingForValue1ToAssign =>
       strings.handConsoleWaitingForValue1ToAssign(value1: args['value1']!),
     KolkhozText.handConsoleWaitingForValue1ToPlay =>

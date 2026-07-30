@@ -35,6 +35,372 @@ const panelTitleOrnamentFadeStartWidth = 320.0;
 const panelTitleOrnamentFadeDistance = 180.0;
 const panelTitleOrnamentMaxOpacity = 0.52;
 const panelTitleUrgentOrnamentMaxOpacity = 0.42;
+const tactileCardHoverScale = 1.045;
+const tactileCardPressedScale = 0.965;
+const tactileCardHoverLiftFraction = 0.035;
+const tactileCardMaximumTilt = 0.028;
+const tactileCardSheenWidthFraction = 0.46;
+const tactileCardSheenDuration = Duration(milliseconds: 475);
+const cardDragFeedbackScale = 1.06;
+const cardDragSnapBackDuration = Duration(milliseconds: 180);
+const cardFidgetResistance = 0.22;
+const cardFidgetMaximumDistance = 18.0;
+const cardFidgetSnapBackDuration = Duration(milliseconds: 85);
+
+enum CardDragKind { hand, reward, assignment, plot, trick, provisionalTrick }
+
+class CardDragData {
+  const CardDragData({
+    required this.cardID,
+    required this.kind,
+    required this.phase,
+    required this.onAccepted,
+    this.canDrop = true,
+    this.actionLabel,
+  });
+
+  final String cardID;
+  final CardDragKind kind;
+  final String phase;
+  final VoidCallback onAccepted;
+  final bool canDrop;
+  final String? actionLabel;
+}
+
+final ValueNotifier<CardDragData?> activeCardDrag =
+    ValueNotifier<CardDragData?>(null);
+
+/// Gives actionable cards a vertical pick-up gesture while preserving
+/// horizontal hand scrolling. Rejected drops animate back to their source.
+class DraggableCardSurface extends StatefulWidget {
+  const DraggableCardSurface({
+    required this.data,
+    required this.feedback,
+    required this.child,
+    this.enabled = true,
+    super.key,
+  });
+
+  final CardDragData data;
+  final Widget feedback;
+  final Widget child;
+  final bool enabled;
+
+  @override
+  State<DraggableCardSurface> createState() => _DraggableCardSurfaceState();
+}
+
+class _DraggableCardSurfaceState extends State<DraggableCardSurface> {
+  final GlobalKey sourceKey = GlobalKey();
+  CardDragData? draggingData;
+
+  @override
+  void dispose() {
+    final disposedDrag = draggingData;
+    if (identical(activeCardDrag.value, disposedDrag)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (identical(activeCardDrag.value, disposedDrag)) {
+          activeCardDrag.value = null;
+        }
+      });
+    }
+    super.dispose();
+  }
+
+  void _showSnapBack(DraggableDetails details) {
+    final sourceBox =
+        sourceKey.currentContext?.findRenderObject() as RenderBox?;
+    final overlay = Overlay.maybeOf(context);
+    final overlayBox = overlay?.context.findRenderObject() as RenderBox?;
+    if (sourceBox == null || overlay == null || overlayBox == null) {
+      return;
+    }
+    final destination = overlayBox.globalToLocal(
+      sourceBox.localToGlobal(Offset.zero),
+    );
+    final origin = overlayBox.globalToLocal(details.offset);
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) => _CardSnapBackOverlay(
+        origin: origin,
+        destination: destination,
+        duration: GameMotion.of(context).duration(cardDragSnapBackDuration),
+        onCompleted: entry.remove,
+        child: widget.feedback,
+      ),
+    );
+    overlay.insert(entry);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.data.canDrop) {
+      return TetheredCardSurface(child: widget.child);
+    }
+    return KeyedSubtree(
+      key: sourceKey,
+      child: MouseRegion(
+        cursor: widget.enabled
+            ? SystemMouseCursors.grab
+            : SystemMouseCursors.basic,
+        child: Draggable<CardDragData>(
+          data: widget.data,
+          affinity: Axis.vertical,
+          maxSimultaneousDrags: widget.enabled ? 1 : 0,
+          dragAnchorStrategy: childDragAnchorStrategy,
+          feedback: Material(
+            type: MaterialType.transparency,
+            child: Transform.scale(
+              scale: cardDragFeedbackScale,
+              child: widget.feedback,
+            ),
+          ),
+          childWhenDragging: Opacity(opacity: 0, child: widget.child),
+          onDragStarted: () {
+            draggingData = widget.data;
+            activeCardDrag.value = draggingData;
+          },
+          onDragEnd: (details) {
+            if (identical(activeCardDrag.value, draggingData)) {
+              activeCardDrag.value = null;
+            }
+            draggingData = null;
+            if (!details.wasAccepted) {
+              _showSnapBack(details);
+            }
+          },
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class TetheredCardSurface extends StatefulWidget {
+  const TetheredCardSurface({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  State<TetheredCardSurface> createState() => _TetheredCardSurfaceState();
+}
+
+class _TetheredCardSurfaceState extends State<TetheredCardSurface> {
+  Offset offset = Offset.zero;
+  bool dragging = false;
+
+  void _move(DragUpdateDetails details) {
+    final next = offset + details.delta * cardFidgetResistance;
+    final distance = next.distance;
+    setState(() {
+      offset = distance <= cardFidgetMaximumDistance
+          ? next
+          : Offset.fromDirection(next.direction, cardFidgetMaximumDistance);
+    });
+  }
+
+  void _release() {
+    setState(() {
+      dragging = false;
+      offset = Offset.zero;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanStart: (_) => setState(() => dragging = true),
+        onPanUpdate: _move,
+        onPanEnd: (_) => _release(),
+        onPanCancel: _release,
+        child: TweenAnimationBuilder<Offset>(
+          key: const Key('tethered-card-surface'),
+          tween: Tween(end: offset),
+          duration: dragging ? Duration.zero : cardFidgetSnapBackDuration,
+          curve: Curves.easeOutBack,
+          builder: (context, value, child) =>
+              Transform.translate(offset: value, child: child),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class _CardSnapBackOverlay extends StatefulWidget {
+  const _CardSnapBackOverlay({
+    required this.origin,
+    required this.destination,
+    required this.duration,
+    required this.onCompleted,
+    required this.child,
+  });
+
+  final Offset origin;
+  final Offset destination;
+  final Duration duration;
+  final VoidCallback onCompleted;
+  final Widget child;
+
+  @override
+  State<_CardSnapBackOverlay> createState() => _CardSnapBackOverlayState();
+}
+
+class _CardSnapBackOverlayState extends State<_CardSnapBackOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(vsync: this, duration: widget.duration);
+    if (widget.duration == Duration.zero) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.onCompleted();
+        }
+      });
+    } else {
+      controller
+        ..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            widget.onCompleted();
+          }
+        })
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        final progress = Curves.easeOutCubic.transform(controller.value);
+        final position = Offset.lerp(
+          widget.origin,
+          widget.destination,
+          progress,
+        )!;
+        return Positioned(
+          left: position.dx,
+          top: position.dy,
+          child: IgnorePointer(
+            child: Transform.scale(
+              scale: lerpDouble(cardDragFeedbackScale, 1, progress)!,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class CardDropTarget extends StatelessWidget {
+  const CardDropTarget({
+    required this.accepts,
+    required this.onAccepted,
+    required this.child,
+    required this.highlightColor,
+    this.labelBuilder,
+    this.borderRadius = cardViewCornerRadius,
+    super.key,
+  });
+
+  final bool Function(CardDragData data) accepts;
+  final ValueChanged<CardDragData> onAccepted;
+  final Widget child;
+  final Color highlightColor;
+  final String Function(CardDragData data)? labelBuilder;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<CardDragData?>(
+      valueListenable: activeCardDrag,
+      builder: (context, activeDrag, _) => DragTarget<CardDragData>(
+        onWillAcceptWithDetails: (details) => accepts(details.data),
+        onAcceptWithDetails: (details) => onAccepted(details.data),
+        builder: (context, candidates, rejected) {
+          final hovered = candidates.any(
+            (data) => data != null && accepts(data),
+          );
+          final eligible = activeDrag != null && accepts(activeDrag);
+          final label = eligible ? labelBuilder?.call(activeDrag) : null;
+          return Stack(
+            fit: StackFit.passthrough,
+            children: [
+              child,
+              if (eligible)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      key: const Key('card-drop-zone-highlight'),
+                      decoration: BoxDecoration(
+                        color: highlightColor.withValues(
+                          alpha: hovered ? 0.14 : 0.06,
+                        ),
+                        borderRadius: BorderRadius.circular(borderRadius),
+                        border: Border.all(
+                          color: highlightColor.withValues(
+                            alpha: hovered ? 1 : 0.72,
+                          ),
+                          width: hovered ? 3 : 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: highlightColor.withValues(
+                              alpha: hovered ? 0.42 : 0.2,
+                            ),
+                            blurRadius: hovered ? 12 : 8,
+                            spreadRadius: hovered ? 2 : 0,
+                          ),
+                        ],
+                      ),
+                      child: label == null
+                          ? null
+                          : Center(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.72),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 5,
+                                  ),
+                                  child: DisplayText(
+                                    label,
+                                    size: DisplayTextSize.xSmall,
+                                    variant: DisplayTextWeight.bold,
+                                    color: highlightColor,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
 
 double panelTitleScale(double width) {
   return clampDouble(
@@ -42,6 +408,211 @@ double panelTitleScale(double width) {
     panelTitleScaleMin,
     panelTitleScaleMax,
   );
+}
+
+/// Gives a stationary card a small amount of physical pointer and press
+/// feedback without changing its layout or motion-tracking geometry.
+class TactileCardSurface extends StatefulWidget {
+  const TactileCardSurface({
+    required this.child,
+    required this.tokens,
+    required this.size,
+    this.enabled = true,
+    this.pressEnabled = true,
+    this.focused = false,
+    this.onHoverChanged,
+    super.key,
+  });
+
+  final Widget child;
+  final DesignTokens tokens;
+  final TokenCardSize size;
+  final bool enabled;
+  final bool pressEnabled;
+  final bool focused;
+  final ValueChanged<bool>? onHoverChanged;
+
+  @override
+  State<TactileCardSurface> createState() => _TactileCardSurfaceState();
+}
+
+class _TactileCardSurfaceState extends State<TactileCardSurface> {
+  bool hovered = false;
+  bool pressed = false;
+  int sheenSerial = 0;
+  Offset pointer = Offset.zero;
+
+  bool get emphasized => widget.enabled && (hovered || widget.focused);
+
+  void _setHovered(bool value) {
+    if (!mounted || !widget.enabled || hovered == value) {
+      return;
+    }
+    setState(() {
+      hovered = value;
+      if (value) {
+        sheenSerial += 1;
+      }
+      if (!value) {
+        pointer = Offset.zero;
+        pressed = false;
+      }
+    });
+    widget.onHoverChanged?.call(value);
+  }
+
+  void _setPressed(bool value) {
+    if (!mounted ||
+        !widget.enabled ||
+        !widget.pressEnabled ||
+        pressed == value) {
+      return;
+    }
+    setState(() => pressed = value);
+  }
+
+  @override
+  void didUpdateWidget(TactileCardSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled && !widget.enabled && (hovered || pressed)) {
+      hovered = false;
+      pressed = false;
+      pointer = Offset.zero;
+      widget.onHoverChanged?.call(false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = GameMotion.of(context);
+    final tiltX = emphasized ? -pointer.dy * tactileCardMaximumTilt : 0.0;
+    final tiltY = emphasized ? pointer.dx * tactileCardMaximumTilt : 0.0;
+    final scale = pressed
+        ? tactileCardPressedScale
+        : emphasized
+        ? tactileCardHoverScale
+        : 1.0;
+    return MouseRegion(
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
+      onHover: (event) {
+        if (!mounted || !widget.enabled) {
+          return;
+        }
+        final next = Offset(
+          ((event.localPosition.dx / widget.size.width) * 2 - 1).clamp(-1, 1),
+          ((event.localPosition.dy / widget.size.height) * 2 - 1).clamp(-1, 1),
+        );
+        if ((next - pointer).distanceSquared > 0.0004) {
+          setState(() => pointer = next);
+        }
+      },
+      child: Listener(
+        onPointerDown: (_) => _setPressed(true),
+        onPointerUp: (_) => _setPressed(false),
+        onPointerCancel: (_) => _setPressed(false),
+        child: AnimatedSlide(
+          offset: emphasized
+              ? const Offset(0, -tactileCardHoverLiftFraction)
+              : Offset.zero,
+          duration: motion.cardTactileResponse,
+          curve: GameMotion.cardTactileCurve,
+          child: AnimatedScale(
+            key: const Key('tactile-card-scale'),
+            scale: scale,
+            duration: motion.cardTactileResponse,
+            curve: pressed
+                ? GameMotion.cardReflowCurve
+                : GameMotion.cardTactileCurve,
+            child: AnimatedContainer(
+              duration: motion.cardTactileResponse,
+              curve: GameMotion.cardReflowCurve,
+              transformAlignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.0012)
+                ..rotateX(tiltX)
+                ..rotateY(tiltY),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(cardViewCornerRadius),
+                boxShadow: emphasized
+                    ? [
+                        BoxShadow(
+                          color: widget.tokens.colors.black.withValues(
+                            alpha: 0.48,
+                          ),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 7),
+                        ),
+                        BoxShadow(
+                          color: widget.tokens.colors.cream.withValues(
+                            alpha: 0.16,
+                          ),
+                          blurRadius: 7,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  widget.child,
+                  if (hovered && motion.enabled)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            cardViewCornerRadius,
+                          ),
+                          child: TweenAnimationBuilder<double>(
+                            key: ValueKey('card-hover-sheen-$sheenSerial'),
+                            tween: Tween(begin: -1.35, end: 1.35),
+                            duration: tactileCardSheenDuration,
+                            curve: Curves.easeInOutCubic,
+                            builder: (context, progress, child) =>
+                                Transform.translate(
+                                  offset: Offset(
+                                    progress * widget.size.width,
+                                    0,
+                                  ),
+                                  child: child,
+                                ),
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: Transform.rotate(
+                                angle: -0.22,
+                                child: FractionallySizedBox(
+                                  widthFactor: tactileCardSheenWidthFraction,
+                                  heightFactor: 1.35,
+                                  child: DecoratedBox(
+                                    key: const Key('card-hover-sheen'),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.white.withValues(alpha: 0),
+                                          Colors.white.withValues(alpha: 0.24),
+                                          Colors.white.withValues(alpha: 0.5),
+                                          Colors.white.withValues(alpha: 0.22),
+                                          Colors.white.withValues(alpha: 0),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 double panelTitleIconBox(double width) =>
@@ -813,7 +1384,11 @@ class PendingAssignmentCardPulse extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        child,
+        Opacity(
+          key: ValueKey('provisional-assignment-card-ghost-$cardID'),
+          opacity: 0.48,
+          child: child,
+        ),
         Positioned.fill(
           child: IgnorePointer(
             child: DecoratedBox(

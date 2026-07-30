@@ -1,12 +1,13 @@
+import 'dart:ui' show clampDouble;
+
 import 'package:flutter/material.dart';
-import 'package:kolkhoz_app/src/app/settings/game_motion.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/brigade/brigade_layout.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.dart';
+import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/plots/plots_view.dart';
-import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 
@@ -17,7 +18,10 @@ class PlanningPhasePanel extends StatelessWidget {
     required this.language,
     this.focusedSuit,
     this.onAction,
+    this.onSuitHovered,
     this.onRewardsRevealed,
+    this.rewardCardScale = planningRewardCardScale,
+    this.rewardColumnCount = 4,
     super.key,
   });
 
@@ -26,7 +30,10 @@ class PlanningPhasePanel extends StatelessWidget {
   final KolkhozLanguage language;
   final String? focusedSuit;
   final ValueChanged<LegalAction>? onAction;
+  final ValueChanged<String?>? onSuitHovered;
   final VoidCallback? onRewardsRevealed;
+  final double rewardCardScale;
+  final int rewardColumnCount;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +59,10 @@ class PlanningPhasePanel extends StatelessWidget {
       language: language,
       focusedSuit: focusedSuit,
       onAction: onAction,
+      onSuitHovered: onSuitHovered,
       onRewardsRevealed: onRewardsRevealed,
+      rewardCardScale: rewardCardScale,
+      rewardColumnCount: rewardColumnCount,
     );
   }
 }
@@ -64,7 +74,10 @@ class PlanningRewardsPanel extends StatefulWidget {
     required this.language,
     this.focusedSuit,
     this.onAction,
+    this.onSuitHovered,
     this.onRewardsRevealed,
+    this.rewardCardScale = planningRewardCardScale,
+    this.rewardColumnCount = 4,
     super.key,
   });
 
@@ -73,7 +86,10 @@ class PlanningRewardsPanel extends StatefulWidget {
   final KolkhozLanguage language;
   final String? focusedSuit;
   final ValueChanged<LegalAction>? onAction;
+  final ValueChanged<String?>? onSuitHovered;
   final VoidCallback? onRewardsRevealed;
+  final double rewardCardScale;
+  final int rewardColumnCount;
 
   @override
   State<PlanningRewardsPanel> createState() => _PlanningRewardsPanelState();
@@ -121,7 +137,7 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
   Widget build(BuildContext context) {
     final cardSize = scaledPlanningRewardCardSize(
       widget.tokens.card.small,
-      planningRewardCardScale,
+      widget.rewardCardScale,
     );
     final rewards = {
       for (final job in widget.model.table.jobs) job.suit: job.reward,
@@ -133,8 +149,54 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
       widget.model.legalActions,
       language: widget.language,
     );
-    final aiSelecting =
-        planningTrumpSelectorIsAI(widget.model) && widget.focusedSuit != null;
+    final selectorIsAI = planningTrumpSelectorIsAI(widget.model);
+    final canSelectTrump = rewardsReady && !selectorIsAI;
+    Widget rewardColumn(String suit) => SizedBox(
+      width: cardSize.width,
+      child: MotionTrackedRegion(
+        motionKey: rewardPileMotionSourceKey(suit),
+        child: Builder(
+          builder: (context) {
+            final option = optionForSuit(options, suit);
+            final enabled =
+                canSelectTrump &&
+                option?.action != null &&
+                widget.onAction != null;
+            return RewardFlipCard(
+              key: ValueKey('reward-flip-$suit'),
+              reward: rewards[suit],
+              tokens: widget.tokens,
+              size: cardSize,
+              label: option?.label ?? widget.language.suitName(suit),
+              selected: suit == widget.focusedSuit,
+              enabled: enabled,
+              onPressed: enabled
+                  ? () => widget.onAction!(option!.action!)
+                  : null,
+              onHoverChanged: enabled
+                  ? (hovered) =>
+                        widget.onSuitHovered?.call(hovered ? suit : null)
+                  : null,
+              onCompleted: rewards[suit] == null
+                  ? null
+                  : () => _handleRewardCompleted(suit, rewards[suit]!),
+            );
+          },
+        ),
+      ),
+    );
+    final columnCount = widget.rewardColumnCount.clamp(
+      1,
+      displaySuitOrder.length,
+    );
+    final rewardRows = [
+      for (var start = 0; start < displaySuitOrder.length; start += columnCount)
+        displaySuitOrder
+            .skip(start)
+            .take(columnCount)
+            .map(rewardColumn)
+            .toList(),
+    ];
     return PanelStyleSurface(
       key: const Key('planning-rewards-panel'),
       tokens: widget.tokens,
@@ -152,84 +214,23 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
             variant: DisplayTextWeight.bold,
             color: widget.tokens.colors.gold,
           ),
-          Row(
+          Column(
+            key: ValueKey('planning-reward-grid-$columnCount'),
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: planningRewardColumnSpacing,
+            spacing: planningRewardRowSpacing,
             children: [
-              for (final suit in displaySuitOrder)
-                SizedBox(
-                  width: cardSize.width,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: 5,
-                    children: [
-                      MotionTrackedRegion(
-                        motionKey: rewardPileMotionSourceKey(suit),
-                        child: RewardFlipCard(
-                          key: ValueKey('reward-flip-$suit'),
-                          reward: rewards[suit],
-                          tokens: widget.tokens,
-                          size: cardSize,
-                          onCompleted: rewards[suit] == null
-                              ? null
-                              : () => _handleRewardCompleted(
-                                  suit,
-                                  rewards[suit]!,
-                                ),
-                        ),
-                      ),
-                      SizedBox(
-                        height: planningRewardTrumpButtonSize,
-                        child: AnimatedSwitcher(
-                          duration: GameMotion.of(context).handInteraction,
-                          child: rewardsReady
-                              ? Builder(
-                                  key: ValueKey('planning-trump-$suit'),
-                                  builder: (context) {
-                                    final option = optionForSuit(options, suit);
-                                    return AccessibleTrumpSelection(
-                                      suit: suit,
-                                      label:
-                                          option?.label ??
-                                          widget.language.suitName(suit),
-                                      selected:
-                                          !aiSelecting &&
-                                          suit == widget.focusedSuit,
-                                      aiFocused:
-                                          aiSelecting &&
-                                          suit == widget.focusedSuit,
-                                      tokens: widget.tokens,
-                                      size: planningRewardTrumpButtonSize,
-                                      iconSize: planningRewardTrumpIconSize,
-                                      onPressed:
-                                          option?.action != null &&
-                                              widget.onAction != null
-                                          ? () => widget.onAction!(
-                                              option!.action!,
-                                            )
-                                          : null,
-                                    );
-                                  },
-                                )
-                              : Center(
-                                  key: ValueKey('planning-reward-suit-$suit'),
-                                  child: SuitMark(
-                                    suit: suit,
-                                    tokens: widget.tokens,
-                                    size: 22,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
+              for (final row in rewardRows)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: planningRewardColumnSpacing,
+                  children: row,
                 ),
             ],
           ),
           DisplayText(
             rewardsReady
-                ? widget.language.strings.boardviewChooseTrump
+                ? planningTrumpStatus(widget.model, widget.language)
                 : (widget.language == KolkhozLanguage.en
                       ? 'REVEALING REWARDS…'
                       : 'ОТКРЫВАЕМ НАГРАДЫ…'),
@@ -253,9 +254,49 @@ TrumpActionOption? optionForSuit(
 ) => options.where((option) => option.suit == suit).firstOrNull;
 
 const planningRewardColumnSpacing = 7.0;
-const planningRewardCardScale = 1.2;
-const planningRewardTrumpButtonSize = 34.0;
-const planningRewardTrumpIconSize = 22.0;
+const planningRewardRowSpacing = 7.0;
+const planningRewardCardScale = 1.05;
+const planningRewardMinimumSingleRowCardScale = 0.82;
+const planningRewardMinimumCardScale = 0.72;
+const planningRewardPanelHorizontalPadding = 20.0;
+
+double planningRewardPanelWidth({
+  required double baseCardWidth,
+  required double cardScale,
+  required int columnCount,
+}) =>
+    planningRewardPanelHorizontalPadding +
+    baseCardWidth * cardScale * columnCount +
+    planningRewardColumnSpacing * (columnCount - 1);
+
+int planningRewardColumnCountForWidth({
+  required double availableWidth,
+  required double baseCardWidth,
+}) =>
+    availableWidth >=
+        planningRewardPanelWidth(
+          baseCardWidth: baseCardWidth,
+          cardScale: planningRewardMinimumSingleRowCardScale,
+          columnCount: 4,
+        )
+    ? 4
+    : 2;
+
+double planningRewardCardScaleForWidth({
+  required double availableWidth,
+  required double baseCardWidth,
+  required int columnCount,
+}) {
+  final availableForCards =
+      availableWidth -
+      planningRewardPanelHorizontalPadding -
+      planningRewardColumnSpacing * (columnCount - 1);
+  return clampDouble(
+    availableForCards / (baseCardWidth * columnCount),
+    planningRewardMinimumCardScale,
+    planningRewardCardScale,
+  );
+}
 
 TokenCardSize scaledPlanningRewardCardSize(TokenCardSize base, double scale) {
   return TokenCardSize(
@@ -279,6 +320,11 @@ class RewardFlipCard extends StatelessWidget {
     required this.reward,
     required this.tokens,
     required this.size,
+    this.label,
+    this.selected = false,
+    this.enabled = false,
+    this.onPressed,
+    this.onHoverChanged,
     this.onCompleted,
     super.key,
   });
@@ -286,20 +332,86 @@ class RewardFlipCard extends StatelessWidget {
   final TableCard? reward;
   final DesignTokens tokens;
   final TokenCardSize size;
+  final String? label;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback? onPressed;
+  final ValueChanged<bool>? onHoverChanged;
   final VoidCallback? onCompleted;
 
   @override
   Widget build(BuildContext context) {
     final reward = this.reward;
-    return CardFlip(
+    final card = CardFlip(
       showFront: reward != null,
       frontKey: reward == null ? null : ValueKey('reward-face-${reward.id}'),
       backKey: const ValueKey('reward-back'),
       onCompleted: onCompleted,
       front: reward == null
           ? const SizedBox.shrink()
-          : GameCard(card: reward, tokens: tokens, sizeOverride: size),
+          : TactileCardSurface(
+              tokens: tokens,
+              size: size,
+              enabled: enabled || selected,
+              focused: selected,
+              onHoverChanged: onHoverChanged,
+              child: GameCard(
+                card: reward,
+                tokens: tokens,
+                trump: selected ? reward.suit : null,
+                sizeOverride: size,
+              ),
+            ),
       back: ScaledCardBack(tokens: tokens, size: size),
+    );
+    final interactiveCard = Semantics(
+      button: true,
+      enabled: enabled,
+      selected: selected,
+      label: label,
+      onTap: enabled ? onPressed : null,
+      child: ExcludeSemantics(
+        child: FocusableActionDetector(
+          enabled: enabled,
+          mouseCursor: enabled
+              ? SystemMouseCursors.click
+              : SystemMouseCursors.basic,
+          actions: {
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                if (enabled) {
+                  onPressed?.call();
+                }
+                return null;
+              },
+            ),
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: enabled ? onPressed : null,
+            child: card,
+          ),
+        ),
+      ),
+    );
+    return DraggableCardSurface(
+      enabled: reward != null,
+      data: CardDragData(
+        cardID: reward?.id ?? 'unrevealed-reward',
+        kind: CardDragKind.reward,
+        phase: phasePlanning,
+        canDrop: false,
+        onAccepted: () {},
+      ),
+      feedback: reward == null
+          ? ScaledCardBack(tokens: tokens, size: size)
+          : GameCard(
+              card: reward,
+              tokens: tokens,
+              trump: selected ? reward.suit : null,
+              sizeOverride: size,
+            ),
+      child: interactiveCard,
     );
   }
 }
@@ -357,92 +469,6 @@ class FinalTrumpRevealPanel extends StatelessWidget {
   }
 }
 
-class PlanningTrumpPanel extends StatelessWidget {
-  const PlanningTrumpPanel({
-    required this.model,
-    required this.tokens,
-    required this.language,
-    this.focusedSuit,
-    this.onAction,
-    super.key,
-  });
-
-  final TableViewModel model;
-  final DesignTokens tokens;
-  final KolkhozLanguage language;
-  final String? focusedSuit;
-  final ValueChanged<LegalAction>? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final isFamine = model.table.isFamine;
-    final aiSelecting = planningTrumpSelectorIsAI(model) && focusedSuit != null;
-    final actionHandler = onAction;
-    final trumpOptions = planningTrumpOptions(
-      model.legalActions,
-      language: language,
-    );
-    final title = isFamine
-        ? language.strings.boardviewFamineYear
-        : language.strings.boardviewChooseTrump;
-    return PanelStyleSurface(
-      tokens: tokens,
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: planningTrumpPanelSpacing,
-        children: [
-          SizedBox(
-            width: planningTrumpPanelWidth,
-            child: DisplayText(
-              title,
-              textAlign: TextAlign.center,
-              size: DisplayTextSize.caption,
-              variant: DisplayTextWeight.bold,
-              color: isFamine ? tokens.colors.redBright : tokens.colors.gold,
-              maxLines: 2,
-              overflow: TextOverflow.clip,
-              softWrap: true,
-            ),
-          ),
-          if (isFamine)
-            Image.asset(
-              'assets/ui/Icons/icon-famine.png',
-              width: planningTrumpFamineIconSize,
-              height: planningTrumpFamineIconSize,
-              filterQuality: FilterQuality.none,
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-            )
-          else
-            SizedBox(
-              width: planningTrumpPanelWidth,
-              child: Wrap(
-                spacing: planningTrumpGridSpacing,
-                runSpacing: planningTrumpGridSpacing,
-                alignment: WrapAlignment.center,
-                children: [
-                  for (final option in trumpOptions)
-                    AccessibleTrumpSelection(
-                      suit: option.suit,
-                      label: option.label,
-                      selected: !aiSelecting && option.suit == focusedSuit,
-                      aiFocused: aiSelecting && option.suit == focusedSuit,
-                      tokens: tokens,
-                      size: planningTrumpButtonSize,
-                      iconSize: planningTrumpIconSize,
-                      onPressed: option.action != null && actionHandler != null
-                          ? () => actionHandler(option.action!)
-                          : null,
-                    ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 bool planningTrumpSelectorIsAI(TableViewModel model) {
   if (model.table.phase != phasePlanning || model.table.isFamine) {
     return false;
@@ -455,163 +481,4 @@ bool planningTrumpSelectorIsAI(TableViewModel model) {
     }
   }
   return false;
-}
-
-class AccessibleTrumpSelection extends StatelessWidget {
-  const AccessibleTrumpSelection({
-    required this.suit,
-    required this.label,
-    required this.selected,
-    required this.aiFocused,
-    required this.tokens,
-    required this.size,
-    required this.iconSize,
-    this.onPressed,
-    super.key,
-  });
-
-  final String suit;
-  final String label;
-  final bool selected;
-  final bool aiFocused;
-  final DesignTokens tokens;
-  final double size;
-  final double iconSize;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    return Semantics(
-      container: true,
-      button: true,
-      enabled: enabled,
-      selected: selected,
-      label: label,
-      onTap: onPressed,
-      child: ExcludeSemantics(
-        child: FocusableActionDetector(
-          enabled: enabled,
-          mouseCursor: enabled
-              ? SystemMouseCursors.click
-              : SystemMouseCursors.basic,
-          actions: {
-            ActivateIntent: CallbackAction<ActivateIntent>(
-              onInvoke: (_) {
-                onPressed?.call();
-                return null;
-              },
-            ),
-          },
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onPressed,
-            child: TrumpSelectionButton(
-              suit: suit,
-              label: label,
-              selected: selected,
-              aiFocused: aiFocused,
-              tokens: tokens,
-              size: size,
-              iconSize: iconSize,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-const planningTrumpPanelWidth = 112.0;
-const planningTrumpButtonSize = 46.0;
-const planningTrumpIconSize = 29.0;
-const planningTrumpGridSpacing = 6.0;
-const planningTrumpPanelSpacing = 7.0;
-const planningTrumpFamineIconSize = 46.0;
-
-class TrumpSelectionButton extends StatelessWidget {
-  const TrumpSelectionButton({
-    required this.suit,
-    required this.label,
-    required this.selected,
-    required this.tokens,
-    this.aiFocused = false,
-    this.size = 54,
-    this.iconSize = 34,
-    super.key,
-  });
-
-  final String suit;
-  final String label;
-  final bool selected;
-  final DesignTokens tokens;
-  final bool aiFocused;
-  final double size;
-  final double iconSize;
-
-  @override
-  Widget build(BuildContext context) {
-    final motion = GameMotion.of(context);
-    final scale = size / 54;
-    return Tooltip(
-      message: label,
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: selected
-                    ? tokens.colors.red.withValues(alpha: 0.38)
-                    : tokens.colors.gold.withValues(alpha: 0.16),
-                blurRadius: (selected ? 8 : 4) * scale,
-                offset: Offset(0, 3 * scale),
-              ),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned.fill(
-                child: ChromeButtonBackground(
-                  asset: selected
-                      ? chromeButtonPrimaryCurrentAsset
-                      : chromeButtonSecondaryCurrentAsset,
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.only(top: selected ? 2 * scale : 0),
-                child: SuitMark(suit: suit, tokens: tokens, size: iconSize),
-              ),
-              if (aiFocused)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: AnimatedContainer(
-                      duration: motion.trumpSelectorFrame,
-                      curve: GameMotion.medalInCurve,
-                      margin: EdgeInsets.all(2 * scale),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(7 * scale),
-                        border: Border.all(
-                          color: tokens.colors.green,
-                          width: 3 * scale,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: tokens.colors.green.withValues(alpha: 0.62),
-                            blurRadius: 10 * scale,
-                            spreadRadius: 1.5 * scale,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

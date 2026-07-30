@@ -90,3 +90,16 @@ String seatDisplayName(Seat seat, {KolkhozLanguage? language}) {
   final firstName = seat.name.split(' ').first;
   return firstName.length > 6 ? '${firstName.substring(0, 6)}.' : firstName;
 }
+
+String planningTrumpStatus(TableViewModel model, KolkhozLanguage language) {
+  final chooser = seatByID(model, model.table.currentPlayerID);
+  if (chooser == null) {
+    return language.strings.boardviewChooseTrump;
+  }
+  if (chooser.isViewer || isLocalHumanSeat(chooser)) {
+    return language.strings.boardviewChooseTrump;
+  }
+  return language.t(KolkhozText.handConsoleWaitingForValue1ToDeclareTrump, {
+    'value1': seatDisplayName(chooser, language: language),
+  });
+}

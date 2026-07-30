@@ -20,6 +20,7 @@ _OnlineSessionUpdate _$OnlineSessionUpdateFromJson(
   Map<String, dynamic> json,
 ) => _OnlineSessionUpdate(
   sessionID: json['sessionID'] as String,
+  serverTime: (json['serverTime'] as num?)?.toDouble() ?? 0,
   seed: (json['seed'] as num?)?.toInt(),
   inviteCode: _inviteCodeFromJson(json, 'inviteCode') as String,
   viewerID: (json['viewerID'] as num?)?.toInt(),

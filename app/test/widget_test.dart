@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:ffi' hide Size;
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kolkhoz_app/src/app/settings/animation_speed.dart';
@@ -15,6 +15,7 @@ import 'package:kolkhoz_app/src/app/remote_connection/remote_connection.dart';
 import 'package:kolkhoz_app/src/app/remote_connection/remote_error.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/profile_remote_connection.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/profile_controller.dart';
+import 'package:kolkhoz_app/src/app/profile/models/profile_remote_models.dart';
 import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_controller/menu_remote_connection.dart';
 import 'package:kolkhoz_app/src/app/views/main_menu/main_menu_controller/main_menu_controller.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/assignment_projection.dart';
@@ -64,6 +65,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/local_game_engine
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/static_hero/static_hero_game_panel.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/table_projection_helpers.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/models/table_model_assembler.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/terminal_game_record.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/terminal_game_replay.dart';
 import 'package:kolkhoz_app/src/app/views/shared/tutorial_display.dart';
@@ -534,6 +536,7 @@ TableCard testCard({
   required int value,
   String? rank,
   bool pending = false,
+  bool provisional = false,
   int? assignmentRound,
   bool nomenclature = false,
   int? ownerSeatID,
@@ -546,6 +549,7 @@ TableCard testCard({
     selected: false,
     highlighted: false,
     pending: pending,
+    provisional: provisional,
     assignmentRound: assignmentRound,
     nomenclature: nomenclature,
     ownerSeatID: ownerSeatID,

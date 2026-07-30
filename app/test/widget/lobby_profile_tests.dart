@@ -1,5 +1,61 @@
 part of '../widget_test.dart';
 
+Future<void> setLobbySeatChoice(
+  WidgetTester tester, {
+  required String playerLabel,
+  required String currentChoice,
+  required String nextChoice,
+}) async {
+  // Let a preceding mechanical return finish its brief rest on the blank well
+  // before attempting to open another seat.
+  await tester.pump(const Duration(milliseconds: 140));
+  await tester.pumpAndSettle();
+  final seat = find.bySemanticsLabel('$playerLabel $currentChoice');
+  await tester.ensureVisible(seat);
+  await tester.tap(seat);
+  await tester.pumpAndSettle();
+  // A mechanical return deliberately rests on the blank well briefly before
+  // another seat can ratchet into place.
+  await tester.pump(const Duration(milliseconds: 140));
+  await tester.pumpAndSettle();
+
+  const choiceOrder = {
+    'OPEN': 0,
+    'Easy': 1,
+    'Medium': 2,
+    'Hard': 3,
+    'Hotseat': 4,
+    'Comrade': 5,
+    'Online': 6,
+  };
+  final direction = choiceOrder[nextChoice]! < choiceOrder[currentChoice]!
+      ? 1.0
+      : -1.0;
+  final wheel = find.byKey(
+    ValueKey('seat-selector-wheel-${playerLabel.substring(1)}'),
+  );
+  final selectedSeat = find.bySemanticsLabel('$playerLabel $nextChoice');
+  for (
+    var attempt = 0;
+    selectedSeat.evaluate().isEmpty && attempt < 6;
+    attempt += 1
+  ) {
+    final pageView = tester.widget<PageView>(wheel);
+    final pageController = pageView.controller!;
+    final notchExtent =
+        pageController.position.viewportDimension *
+        pageController.viewportFraction;
+    final gesture = await tester.startGesture(tester.getCenter(wheel));
+    await gesture.moveBy(Offset(direction * notchExtent * 0.72, 0));
+    // Holding briefly before release avoids turning this deliberate one-notch
+    // test gesture into a fling across several wells.
+    await tester.pump(const Duration(milliseconds: 240));
+    await gesture.up();
+    await tester.pumpAndSettle();
+  }
+  expect(selectedSeat, findsOneWidget);
+}
+
 void registerLobbyAndProfileTests() {
   test('leaderboard settings tab title is localized', () {
     expect(
@@ -12,13 +68,13 @@ void registerLobbyAndProfileTests() {
     );
   });
 
-  testWidgets('active local match can be resumed from setup', (tester) async {
+  testWidgets('active local match appears above the main menu', (tester) async {
     var resumed = false;
     await tester.pumpWidget(
       MaterialApp(
         home: SizedBox(
-          width: 1200,
-          height: 800,
+          width: 667,
+          height: 375,
           child: StandaloneLobby(
             tokens: defaultDesignTokens,
             language: KolkhozLanguage.en,
@@ -49,6 +105,13 @@ void registerLobbyAndProfileTests() {
     await tester.pumpAndSettle();
 
     expect(findAppText('RESUME MATCH'), findsOneWidget);
+    final resumeButton = find.byKey(const Key('field-plan-menu-resume'));
+    final createButton = find.byKey(const Key('field-plan-menu-local'));
+    expect(resumeButton, findsOneWidget);
+    expect(
+      tester.getTopLeft(resumeButton).dy,
+      lessThan(tester.getTopLeft(createButton).dy),
+    );
     await tester.tap(findAppText('RESUME MATCH'));
     expect(resumed, isTrue);
   });
@@ -776,14 +839,24 @@ void registerLobbyAndProfileTests() {
           .dy;
       expect((backCenter - startCenter).abs(), lessThan(8));
 
-      await tester.tap(find.bySemanticsLabel('P2 Hard'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.bySemanticsLabel('P3 Hard'));
-      await tester.tap(find.bySemanticsLabel('P3 Hard'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.bySemanticsLabel('P4 Hard'));
-      await tester.tap(find.bySemanticsLabel('P4 Hard'));
-      await tester.pumpAndSettle();
+      await setLobbySeatChoice(
+        tester,
+        playerLabel: 'P2',
+        currentChoice: 'OPEN',
+        nextChoice: 'Hard',
+      );
+      await setLobbySeatChoice(
+        tester,
+        playerLabel: 'P3',
+        currentChoice: 'OPEN',
+        nextChoice: 'Hard',
+      );
+      await setLobbySeatChoice(
+        tester,
+        playerLabel: 'P4',
+        currentChoice: 'OPEN',
+        nextChoice: 'Hard',
+      );
       await tester.ensureVisible(findAppText('START OFFLINE GAME'));
       await tester.tap(findAppText('START OFFLINE GAME'));
 
@@ -1186,7 +1259,24 @@ void registerLobbyAndProfileTests() {
       findAssetImage(fieldPlanPlayerBeekeeper.fieldPlanPath),
       findsWidgets,
     );
-    await tester.tap(find.bySemanticsLabel('P2 Easy'));
+    await tester.tap(find.bySemanticsLabel('P2 OPEN'));
+    await tester.pumpAndSettle();
+
+    final selectedOption = find.bySemanticsLabel('Set P2 OPEN');
+    final optionBottom = tester.getBottomRight(selectedOption).dy;
+    final commandTop = tester.getTopLeft(findAppText('BACK TO SETUP')).dy;
+    expect(optionBottom, lessThanOrEqualTo(commandTop));
+    expect(find.bySemanticsLabel('Set P3 Easy'), findsNothing);
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+
+    await tester.tap(find.bySemanticsLabel('P2 OPEN'));
+    await tester.pumpAndSettle();
+    await setLobbySeatChoice(
+      tester,
+      playerLabel: 'P2',
+      currentChoice: 'OPEN',
+      nextChoice: 'Easy',
+    );
     await tester.pumpAndSettle();
 
     expect(changedControllers, isNotNull);
@@ -1345,6 +1435,8 @@ void registerLobbyAndProfileTests() {
     String? hostedInviteCode;
     OnlineSessionUpdate? hostedUpdate;
     List<String>? rememberedSeats;
+    String? invitedSessionID;
+    List<String>? invitedUserIDs;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -1365,6 +1457,20 @@ void registerLobbyAndProfileTests() {
               hostedInviteCode: hostedInviteCode,
               onlineSessionUpdate: hostedUpdate,
               showHostedInviteCode: hostedInviteCode != null,
+              comradesSummary: const OnlineComradesResponse(
+                comrades: [
+                  OnlineComradeProfile(
+                    userID: 'boris',
+                    displayName: 'Boris',
+                    avatarURL: 'worker2',
+                    isOnline: true,
+                  ),
+                ],
+              ),
+              onInviteOnlineComrades: (sessionID, userIDs) async {
+                invitedSessionID = sessionID;
+                invitedUserIDs = userIDs;
+              },
               onHostOnline:
                   (
                     _,
@@ -1437,17 +1543,25 @@ void registerLobbyAndProfileTests() {
     expect(findAppText('PUBLIC'), findsWidgets);
     expect(findAppText('PRIVATE'), findsNothing);
 
-    await tester.tap(find.bySemanticsLabel('P2 Online'));
-    await tester.pumpAndSettle();
-    expect(findAppText('START ONLINE GAME'), findsWidgets);
-    final p3Hotseat = find.bySemanticsLabel('P3 Hotseat');
-    expect(p3Hotseat, findsOneWidget);
-    expect(
-      tester.getSemantics(p3Hotseat).flagsCollection.isEnabled.toBoolOrNull(),
-      isFalse,
+    await setLobbySeatChoice(
+      tester,
+      playerLabel: 'P2',
+      currentChoice: 'OPEN',
+      nextChoice: 'Comrade',
     );
-    await tester.tap(findAppText('PUBLIC').first);
-    await tester.pump();
+    expect(findAppText('START ONLINE GAME'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('hosted-comrade-invite-boris')),
+      findsNothing,
+    );
+    await tester.tap(find.bySemanticsLabel('P3 OPEN'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 140));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Set P3 Hotseat'), findsNothing);
+    expect(find.bySemanticsLabel('Set P3 OPEN'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('P3 OPEN'));
+    await tester.pumpAndSettle();
     expect(findAppText('PRIVATE'), findsWidgets);
 
     await tester.tap(findAppText('JOIN GAME').first);
@@ -1456,12 +1570,18 @@ void registerLobbyAndProfileTests() {
     await tester.pumpAndSettle();
     expect(findAppText('START ONLINE GAME'), findsWidgets);
 
-    await tester.ensureVisible(find.bySemanticsLabel('P3 Hard'));
-    await tester.tap(find.bySemanticsLabel('P3 Hard'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.bySemanticsLabel('P4 Hard'));
-    await tester.tap(find.bySemanticsLabel('P4 Hard'));
-    await tester.pumpAndSettle();
+    await setLobbySeatChoice(
+      tester,
+      playerLabel: 'P3',
+      currentChoice: 'OPEN',
+      nextChoice: 'Hard',
+    );
+    await setLobbySeatChoice(
+      tester,
+      playerLabel: 'P4',
+      currentChoice: 'OPEN',
+      nextChoice: 'Hard',
+    );
 
     expect(changedControllers, isNotNull);
     expect(changedControllers![1], KolkhozPlayerController.human);
@@ -1481,11 +1601,29 @@ void registerLobbyAndProfileTests() {
     expect(enterImmediately, isFalse);
     expect(ranked, isFalse);
     expect(enterCalls, 0);
-    expect(rememberedSeats, ['local', 'online', 'hardAI', 'hardAI']);
+    expect(rememberedSeats, ['local', 'comrade', 'hardAI', 'hardAI']);
     await tester.pumpAndSettle();
     expect(showingOnline, isFalse);
     expect(findAppText('YOUR INVITE CODE'), findsNothing);
     expect(findAppText('ABCDE'), findsWidgets);
+    final borisInvite = find.byKey(
+      const ValueKey('hosted-comrade-invite-boris'),
+    );
+    expect(borisInvite, findsOneWidget);
+    final borisInviteAction = find.bySemanticsLabel('Boris Game Invite');
+    expect(borisInviteAction, findsOneWidget);
+    expect(
+      tester
+          .getSemantics(borisInviteAction)
+          .flagsCollection
+          .isEnabled
+          .toBoolOrNull(),
+      isTrue,
+    );
+    await tester.tap(borisInviteAction);
+    await tester.pumpAndSettle();
+    expect(invitedSessionID, hostedUpdate!.sessionID);
+    expect(invitedUserIDs, ['boris']);
     expect(
       find.byWidgetPredicate(
         (widget) =>
@@ -1547,14 +1685,24 @@ void registerLobbyAndProfileTests() {
 
     await tester.tap(findAppText('ADD PLAYERS'));
     await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsLabel('P2 Online'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.bySemanticsLabel('P3 Hard'));
-    await tester.tap(find.bySemanticsLabel('P3 Hard'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.bySemanticsLabel('P4 Hard'));
-    await tester.tap(find.bySemanticsLabel('P4 Hard'));
-    await tester.pumpAndSettle();
+    await setLobbySeatChoice(
+      tester,
+      playerLabel: 'P2',
+      currentChoice: 'OPEN',
+      nextChoice: 'Online',
+    );
+    await setLobbySeatChoice(
+      tester,
+      playerLabel: 'P3',
+      currentChoice: 'OPEN',
+      nextChoice: 'Hard',
+    );
+    await setLobbySeatChoice(
+      tester,
+      playerLabel: 'P4',
+      currentChoice: 'OPEN',
+      nextChoice: 'Hard',
+    );
     await tester.ensureVisible(findAppText('START ONLINE GAME'));
     await tester.tap(findAppText('START ONLINE GAME'));
     await tester.pump();

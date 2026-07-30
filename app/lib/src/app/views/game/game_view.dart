@@ -379,6 +379,7 @@ class KolkhozBoard extends StatelessWidget {
     this.onReaction,
     this.activeReaction,
     this.turnDeadlineAt,
+    this.serverTime,
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
@@ -433,6 +434,7 @@ class KolkhozBoard extends StatelessWidget {
   final ValueChanged<String>? onReaction;
   final OnlineReaction? activeReaction;
   final double? turnDeadlineAt;
+  final double? serverTime;
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
@@ -556,6 +558,7 @@ class KolkhozBoard extends StatelessWidget {
                                     onReaction: onReaction,
                                     activeReaction: activeReaction,
                                     turnDeadlineAt: turnDeadlineAt,
+                                    serverTime: serverTime,
                                     gameOverReturnsToLobby:
                                         gameOverReturnsToLobby,
                                     onTutorial: onTutorial,
@@ -622,6 +625,7 @@ class KolkhozBoard extends StatelessWidget {
                                       onReaction: onReaction,
                                       activeReaction: activeReaction,
                                       turnDeadlineAt: turnDeadlineAt,
+                                      serverTime: serverTime,
                                       gameOverReturnsToLobby:
                                           gameOverReturnsToLobby,
                                       onTutorial: onTutorial,
@@ -768,6 +772,7 @@ class CompactBoardShell extends StatelessWidget {
     this.onReaction,
     this.activeReaction,
     this.turnDeadlineAt,
+    this.serverTime,
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
@@ -820,6 +825,7 @@ class CompactBoardShell extends StatelessWidget {
   final ValueChanged<String>? onReaction;
   final OnlineReaction? activeReaction;
   final double? turnDeadlineAt;
+  final double? serverTime;
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
@@ -874,6 +880,7 @@ class CompactBoardShell extends StatelessWidget {
             onReaction: onReaction,
             activeReaction: activeReaction,
             turnDeadlineAt: turnDeadlineAt,
+            serverTime: serverTime,
             gameOverReturnsToLobby: gameOverReturnsToLobby,
             onTutorial: onTutorial,
             animationSpeed: animationSpeed,
@@ -1099,7 +1106,21 @@ double? activePanelPreferredHeight({
   );
 }
 
-double planningPhaseOverlayInsetForSize(Size size) => size.height * 0.12;
+double planningPhaseOverlayInsetForSize(Size size) =>
+    clampDouble(size.height * 0.12, 12, 72);
+
+enum PlanningPhaseOverlayPlacement { leading, top }
+
+PlanningPhaseOverlayPlacement planningPhaseOverlayPlacementForSize(
+  Size size, {
+  required double panelWidth,
+}) {
+  final inset = planningPhaseOverlayInsetForSize(size);
+  final remainingBoardWidth = size.width - panelWidth - inset * 2;
+  return remainingBoardWidth >= size.height
+      ? PlanningPhaseOverlayPlacement.leading
+      : PlanningPhaseOverlayPlacement.top;
+}
 
 double planningPhaseOverlayTopClearance(ResponsiveBoardMetrics metrics) =>
     metrics.playAreaHorizontalPadding +
@@ -1136,6 +1157,7 @@ class BoardPlayArea extends StatelessWidget {
     this.onReaction,
     this.activeReaction,
     this.turnDeadlineAt,
+    this.serverTime,
     this.gameOverReturnsToLobby = false,
     this.onTutorial,
     this.animationSpeed = defaultGameAnimationSpeed,
@@ -1193,6 +1215,7 @@ class BoardPlayArea extends StatelessWidget {
   final ValueChanged<String>? onReaction;
   final OnlineReaction? activeReaction;
   final double? turnDeadlineAt;
+  final double? serverTime;
   final bool gameOverReturnsToLobby;
   final VoidCallback? onTutorial;
   final GameAnimationSpeed animationSpeed;
@@ -1313,6 +1336,7 @@ class BoardPlayArea extends StatelessWidget {
                   planningTrumpFocusedSuit,
                   planningTrumpAction,
                   onPlanningTrumpActionSelected,
+                  onPlanningTrumpSuitHovered,
                   onPlanningRewardsRevealed,
                 ) {
                   final activePanelWithFocus = IgnorePointer(
@@ -1335,6 +1359,7 @@ class BoardPlayArea extends StatelessWidget {
                               tokens: tokens,
                               heroOfSovietUnion: heroOfSovietUnion,
                               onAction: onAction,
+                              onHandCardTap: onHandCardTap,
                               onPlotCardTap: onPlotCardTap,
                               onNewGame: onNewGame,
                               onReturnToLobby: onReturnToLobby,
@@ -1417,41 +1442,100 @@ class BoardPlayArea extends StatelessWidget {
                                   bottom: 0,
                                   child: LayoutBuilder(
                                     builder: (context, constraints) {
+                                      final size = constraints.biggest;
                                       final inset =
                                           planningPhaseOverlayInsetForSize(
-                                            constraints.biggest,
+                                            size,
                                           );
+                                      final placement =
+                                          planningPhaseOverlayPlacementForSize(
+                                            size,
+                                            panelWidth:
+                                                planningRewardPanelWidth(
+                                                  baseCardWidth:
+                                                      tokens.card.small.width,
+                                                  cardScale:
+                                                      planningRewardCardScale,
+                                                  columnCount: 4,
+                                                ),
+                                          );
+                                      final availableWidth = math.max(
+                                        0.0,
+                                        size.width - inset * 2,
+                                      );
+                                      final rewardColumnCount =
+                                          placement ==
+                                              PlanningPhaseOverlayPlacement.top
+                                          ? planningRewardColumnCountForWidth(
+                                              availableWidth: availableWidth,
+                                              baseCardWidth:
+                                                  tokens.card.small.width,
+                                            )
+                                          : 4;
+                                      final rewardCardScale =
+                                          placement ==
+                                              PlanningPhaseOverlayPlacement.top
+                                          ? planningRewardCardScaleForWidth(
+                                              availableWidth: availableWidth,
+                                              baseCardWidth:
+                                                  tokens.card.small.width,
+                                              columnCount: rewardColumnCount,
+                                            )
+                                          : planningRewardCardScale;
+                                      final panel = PlanningPhasePanel(
+                                        model: model,
+                                        tokens: tokens,
+                                        language: language,
+                                        focusedSuit: planningTrumpFocusedSuit,
+                                        onAction: onPlanningTrumpActionSelected,
+                                        onSuitHovered:
+                                            onPlanningTrumpSuitHovered,
+                                        onRewardsRevealed:
+                                            onPlanningRewardsRevealed,
+                                        rewardCardScale: rewardCardScale,
+                                        rewardColumnCount: rewardColumnCount,
+                                      );
                                       return Stack(
                                         key: const Key(
                                           'planning-phase-panel-position',
                                         ),
                                         children: [
-                                          Positioned(
-                                            key: const Key(
-                                              'planning-phase-panel-insets',
-                                            ),
-                                            left: inset,
-                                            top: inset,
-                                            bottom: inset,
-                                            child: FittedBox(
+                                          if (placement ==
+                                              PlanningPhaseOverlayPlacement
+                                                  .leading)
+                                            Positioned(
                                               key: const Key(
-                                                'planning-phase-panel-fit',
+                                                'planning-phase-panel-insets',
                                               ),
-                                              fit: BoxFit.contain,
-                                              alignment: Alignment.centerLeft,
-                                              child: PlanningPhasePanel(
-                                                model: model,
-                                                tokens: tokens,
-                                                language: language,
-                                                focusedSuit:
-                                                    planningTrumpFocusedSuit,
-                                                onAction:
-                                                    onPlanningTrumpActionSelected,
-                                                onRewardsRevealed:
-                                                    onPlanningRewardsRevealed,
+                                              left: inset,
+                                              top: inset,
+                                              bottom: inset,
+                                              child: FittedBox(
+                                                key: const Key(
+                                                  'planning-phase-panel-fit',
+                                                ),
+                                                fit: BoxFit.contain,
+                                                alignment: Alignment.centerLeft,
+                                                child: panel,
+                                              ),
+                                            )
+                                          else
+                                            Positioned(
+                                              key: const Key(
+                                                'planning-phase-panel-insets',
+                                              ),
+                                              left: inset,
+                                              top: inset,
+                                              right: inset,
+                                              child: FittedBox(
+                                                key: const Key(
+                                                  'planning-phase-panel-fit',
+                                                ),
+                                                fit: BoxFit.scaleDown,
+                                                alignment: Alignment.topCenter,
+                                                child: panel,
                                               ),
                                             ),
-                                          ),
                                         ],
                                       );
                                     },
@@ -1600,6 +1684,7 @@ class BoardPlayArea extends StatelessWidget {
                                       language: language,
                                       animationSpeed: animationSpeed,
                                       turnDeadlineAt: turnDeadlineAt,
+                                      serverTime: serverTime,
                                     ),
                                   ),
                                 )
@@ -1610,6 +1695,7 @@ class BoardPlayArea extends StatelessWidget {
                                   language: language,
                                   animationSpeed: animationSpeed,
                                   turnDeadlineAt: turnDeadlineAt,
+                                  serverTime: serverTime,
                                   floating: true,
                                   includeYear: true,
                                 ),
@@ -1653,6 +1739,7 @@ class PlanningTrumpFocusHost extends StatefulWidget {
     String? focusedSuit,
     LegalAction? selectedAction,
     ValueChanged<LegalAction> onActionSelected,
+    ValueChanged<String?> onSuitHovered,
     VoidCallback onRewardsRevealed,
   )
   builder;
@@ -1666,6 +1753,7 @@ class _PlanningTrumpFocusHostState extends State<PlanningTrumpFocusHost> {
   Timer? selectorTimer;
   int selectorIndex = 0;
   LegalAction? selectedAction;
+  String? hoveredSuit;
   bool rewardsRevealed = false;
 
   @override
@@ -1689,6 +1777,7 @@ class _PlanningTrumpFocusHostState extends State<PlanningTrumpFocusHost> {
             widget.model.table.currentPlayerID ||
         oldWidget.model.table.phase != widget.model.table.phase) {
       selectedAction = null;
+      hoveredSuit = null;
       rewardsRevealed = false;
       syncSelectorTimer();
     }
@@ -1729,12 +1818,21 @@ class _PlanningTrumpFocusHostState extends State<PlanningTrumpFocusHost> {
     final focusedSuit =
         planningTrumpSelectorIsAI(widget.model) && rewardsRevealed
         ? displaySuitOrder[selectorIndex]
-        : selectedAction?.engineAction.suit;
+        : hoveredSuit ?? selectedAction?.engineAction.suit;
     return widget.builder(
       context,
       focusedSuit,
       selectedAction,
-      (action) => setState(() => selectedAction = action),
+      (action) => setState(() {
+        selectedAction = action;
+        hoveredSuit = null;
+      }),
+      (suit) {
+        if (planningTrumpSelectorIsAI(widget.model) || hoveredSuit == suit) {
+          return;
+        }
+        setState(() => hoveredSuit = suit);
+      },
       () {
         if (rewardsRevealed) {
           return;
@@ -1754,6 +1852,7 @@ class TopInfoStrip extends StatefulWidget {
     required this.language,
     required this.animationSpeed,
     this.turnDeadlineAt,
+    this.serverTime,
     this.floating = false,
     this.includeYear = false,
     super.key,
@@ -1765,6 +1864,7 @@ class TopInfoStrip extends StatefulWidget {
   final KolkhozLanguage language;
   final GameAnimationSpeed animationSpeed;
   final double? turnDeadlineAt;
+  final double? serverTime;
   final bool floating;
   final bool includeYear;
 
@@ -1929,7 +2029,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                     gaugesWidth +
                     scoreGroupWidth +
                     rowSpacing +
-                    (showTurnClock ? scoreWidth + rowSpacing : 0)
+                    (showTurnClock ? scoreWidth + rowSpacing * 2 : 0)
               : math.max(0, constraints.maxWidth - horizontalPadding * 2);
 
           return ClipRect(
@@ -2050,6 +2150,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                         width: scoreWidth,
                         child: DeadlineCountdownBuilder(
                           deadlineEpochSeconds: widget.turnDeadlineAt,
+                          serverEpochSeconds: widget.serverTime,
                           builder: (context, seconds) => _TopInfoUnderlay(
                             tokens: tokens,
                             child: TopInfoCell(
@@ -2574,6 +2675,7 @@ class ActivePanelView extends StatelessWidget {
     required this.tokens,
     required this.heroOfSovietUnion,
     this.onAction,
+    this.onHandCardTap,
     this.onPlotCardTap,
     this.onNewGame,
     this.onReturnToLobby,
@@ -2621,6 +2723,7 @@ class ActivePanelView extends StatelessWidget {
   final DesignTokens tokens;
   final bool heroOfSovietUnion;
   final ValueChanged<LegalAction>? onAction;
+  final ValueChanged<String>? onHandCardTap;
   final void Function(String cardID, String zone)? onPlotCardTap;
   final VoidCallback? onNewGame;
   final VoidCallback? onReturnToLobby;
@@ -2707,6 +2810,7 @@ class ActivePanelView extends StatelessWidget {
           showPlanningPanel: false,
           planningTrumpFocusedSuit: planningTrumpFocusedSuit,
           onPlanningTrumpActionSelected: onPlanningTrumpActionSelected,
+          onHandCardTap: onHandCardTap,
           onPlotCardTap: onPlotCardTap,
         );
       case panelNorth:
@@ -2753,6 +2857,7 @@ class ActivePanelView extends StatelessWidget {
           showPlanningPanel: false,
           planningTrumpFocusedSuit: planningTrumpFocusedSuit,
           onPlanningTrumpActionSelected: onPlanningTrumpActionSelected,
+          onHandCardTap: onHandCardTap,
           onPlotCardTap: onPlotCardTap,
         );
     }

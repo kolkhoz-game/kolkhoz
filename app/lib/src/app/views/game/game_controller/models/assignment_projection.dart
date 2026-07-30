@@ -130,6 +130,7 @@ TableCard _pendingAssignmentCard(TableCard card) => TableCard(
   selected: false,
   highlighted: false,
   pending: true,
+  provisional: true,
   assignmentRound: card.assignmentRound,
   nomenclature: card.nomenclature,
   ownerSeatID: card.ownerSeatID,
@@ -140,10 +141,18 @@ LegalAction? assignmentActionForJob(TableViewModel model, Job job) {
   if (selectedCardID == null) {
     return null;
   }
+  return assignmentActionForCardAndJob(model, selectedCardID, job);
+}
+
+LegalAction? assignmentActionForCardAndJob(
+  TableViewModel model,
+  String cardID,
+  Job job,
+) {
   for (final action in model.legalActions) {
     final engineAction = action.engineAction;
     if (action.kind == actionAssign &&
-        engineAction.card?.id == selectedCardID &&
+        engineAction.card?.id == cardID &&
         engineAction.targetSuit == job.suit) {
       return action;
     }

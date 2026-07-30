@@ -503,7 +503,8 @@ class _OnlinePanelState extends State<JoinGameView> {
                   label: widget.language.strings.kolkhozappRefresh,
                   prominent: false,
                   tokens: widget.tokens,
-                  iconAsset: 'assets/art/field_plan/shared/pictograms/status-connecting.png',
+                  iconAsset:
+                      'assets/art/field_plan/shared/pictograms/status-connecting.png',
                   onPressed: busy ? null : refreshSessions,
                 ),
               ),
@@ -667,6 +668,7 @@ class OnlineWaitingRoomPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DeadlineCountdownBuilder(
     deadlineEpochSeconds: update.started ? null : update.lobbyCountdownEndsAt,
+    serverEpochSeconds: update.serverTime,
     maxSeconds: 30,
     builder: (context, countdownSeconds) => _buildContent(countdownSeconds),
   );
@@ -1112,7 +1114,8 @@ Future<void> _showLobbyPlayerProfile({
                           ? KolkhozText.kolkhozappAccept
                           : KolkhozText.kolkhozappAddComrade,
                     ),
-                    iconAsset: 'assets/art/field_plan/shared/pictograms/add-friend.png',
+                    iconAsset:
+                        'assets/art/field_plan/shared/pictograms/add-friend.png',
                     prominent: hasIncomingRequest,
                     onPressed: () => unawaited(onComradeRequestToUser(userID)),
                   )
@@ -1720,7 +1723,8 @@ class _OnlineBrowserFooter extends StatelessWidget {
         Expanded(
           child: _OnlineBrowserFooterItem(
             tokens: tokens,
-            iconAsset: 'assets/art/field_plan/shared/pictograms/status-connecting.png',
+            iconAsset:
+                'assets/art/field_plan/shared/pictograms/status-connecting.png',
             message: refreshMessage,
             alignment: MainAxisAlignment.end,
           ),
@@ -1886,7 +1890,8 @@ class _OpenSessionRow extends StatelessWidget {
                       _OpenSessionBadgeIcon(
                         tokens: tokens,
                         label: language.strings.kolkhozappComrade,
-                        asset: 'assets/art/field_plan/shared/pictograms/comrade.png',
+                        asset:
+                            'assets/art/field_plan/shared/pictograms/comrade.png',
                       ),
                   ],
                 ),

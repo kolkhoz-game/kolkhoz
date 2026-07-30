@@ -1715,6 +1715,12 @@ abstract class AppLocalizations {
   /// **'Waiting for {value1}'**
   String handConsoleWaitingForValue1({required Object value1});
 
+  /// No description provided for @handConsoleWaitingForValue1ToDeclareTrump.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {value1} to declare Trump'**
+  String handConsoleWaitingForValue1ToDeclareTrump({required Object value1});
+
   /// No description provided for @handConsoleWaitingForValue1ToPlay.
   ///
   /// In en, this message translates to:

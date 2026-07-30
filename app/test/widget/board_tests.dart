@@ -322,7 +322,7 @@ void registerBoardTests() {
     expect(find.byKey(const Key('hand-console')), findsOneWidget);
     expect(find.byKey(const Key('hand-console-primary')), findsOneWidget);
     expect(find.byKey(const Key('hand-console-secondary')), findsOneWidget);
-    expect(tester.getSemantics(handCard).label, 'J Wheat, playable');
+    expect(tester.getSemantics(handCard).label, 'J of Wheat, playable');
     final cardControl = tester.widget<HandCardControl>(
       find.byType(HandCardControl),
     );
@@ -335,6 +335,17 @@ void registerBoardTests() {
     );
     expect(focusable.mouseCursor, SystemMouseCursors.click);
     expect(focusable.actions, contains(ActivateIntent));
+
+    final draggable = tester.widget<Draggable<CardDragData>>(
+      find.ancestor(
+        of: handCard,
+        matching: find.byType(Draggable<CardDragData>),
+      ),
+    );
+    draggable.data!.onAccepted();
+    expect(selectedCardID, 'wheat-11');
+    expect(confirmedAction, isNull);
+    selectedCardID = null;
 
     await tester.tap(
       find.descendant(of: handCard, matching: find.byType(GameCard)),
@@ -364,27 +375,8 @@ void registerBoardTests() {
       ),
     );
 
-    final selectedControl = tester.widget<HandCardControl>(
-      find.byType(HandCardControl),
-    );
-    expect(selectedControl.card.selected, isTrue);
-    final selectedSlide = tester.widget<AnimatedSlide>(
-      find.descendant(
-        of: find.byType(HandCardControl),
-        matching: find.byType(AnimatedSlide),
-      ),
-    );
-    expect(selectedSlide.offset.dy, lessThan(0));
-    expect(tester.getSemantics(handCard).label, 'J Wheat, selected');
-    final selectedGameCard = tester.widget<GameCard>(find.byType(GameCard));
-    expect(
-      selectedGameCard.selectedColorOverride,
-      defaultDesignTokens.colors.goldBright,
-    );
-    expect(
-      selectedGameCard.highlightColorOverride,
-      defaultDesignTokens.colors.goldBright,
-    );
+    expect(handCard, findsNothing);
+    expect(find.byType(HandCardControl), findsNothing);
 
     final primaryButton = tester.widget<ActionIconButton>(
       find.byKey(const Key('hand-console-primary')),
@@ -397,8 +389,101 @@ void registerBoardTests() {
     expect(secondaryButton.label, 'Undo');
     expect(secondaryButton.onPressed, isNotNull);
 
+    selectedCardID = null;
+    await tester.tap(find.byKey(const Key('hand-console-secondary')));
+    expect(selectedCardID, 'wheat-11');
+    expect(confirmedAction, isNull);
+
     await tester.tap(find.byKey(const Key('hand-console-primary')));
     expect(confirmedAction, same(playAction));
+  });
+
+  testWidgets('provisional trick play locks the remaining hand until undo', (
+    tester,
+  ) async {
+    String? selectedCardID;
+    final base = runtimeModel();
+    final viewer = localSeat(base);
+    final selectedCard = testCard(id: 'wheat-11', suit: 'wheat', value: 11);
+    final remainingCard = testCard(id: 'beet-8', suit: 'beet', value: 8);
+    final selectedAction = testLegalAction(
+      kind: actionPlayCard,
+      label: 'Play',
+      engineAction: const EngineAction(
+        kind: actionPlayCard,
+        playerID: 0,
+        card: EngineCard(suit: 'wheat', value: 11),
+      ),
+    );
+    final remainingAction = testLegalAction(
+      kind: actionPlayCard,
+      label: 'Play',
+      engineAction: const EngineAction(
+        kind: actionPlayCard,
+        playerID: 0,
+        card: EngineCard(suit: 'beet', value: 8),
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 700,
+          height: 180,
+          child: HandTray(
+            model: runtimeModelWith(
+              phase: phaseTrick,
+              selection: SelectionState.empty.copyWith(
+                handCardID: selectedCard.id,
+              ),
+              jobs: base.table.jobs,
+              seats: [
+                for (final seat in base.table.seats)
+                  if (seat.id == viewer.id)
+                    seatWithHand(seat, [selectedCard, remainingCard])
+                  else
+                    seat,
+              ],
+              legalActions: [selectedAction, remainingAction],
+            ),
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            visibleTrayHeight: 150,
+            onHandCardTap: (cardID) => selectedCardID = cardID,
+            onAction: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(Key('hand-card-${selectedCard.id}')), findsNothing);
+    final remaining = find.byKey(Key('hand-card-${remainingCard.id}'));
+    expect(remaining, findsOneWidget);
+    final control = tester.widget<HandCardControl>(
+      find.ancestor(of: remaining, matching: find.byType(HandCardControl)),
+    );
+    expect(control.onTap, isNull);
+    expect(control.playable, isFalse);
+    expect(control.card.highlighted, isFalse);
+    expect(control.dragData!.canDrop, isFalse);
+    expect(
+      find.ancestor(of: remaining, matching: find.byType(TetheredCardSurface)),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: remaining,
+        matching: find.byType(Draggable<CardDragData>),
+      ),
+      findsNothing,
+    );
+
+    await tester.tap(remaining);
+    control.dragData!.onAccepted();
+    expect(selectedCardID, isNull);
+
+    await tester.tap(find.byKey(const Key('hand-console-secondary')));
+    expect(selectedCardID, selectedCard.id);
   });
 
   testWidgets('game log keeps the hand console read only', (tester) async {
@@ -952,6 +1037,167 @@ void registerBoardTests() {
     );
   });
 
+  testWidgets('hovered hand cards separate their neighbors', (tester) async {
+    final base = runtimeModel();
+    final model = runtimeModelWith(
+      phase: phaseTrick,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: [
+        seatWithHand(base.table.seats[0], [
+          testCard(id: 'wheat-hover-7', suit: 'wheat', value: 7),
+          testCard(id: 'sunflower-hover-8', suit: 'sunflower', value: 8),
+          testCard(id: 'potato-hover-9', suit: 'potato', value: 9),
+        ]),
+        ...base.table.seats.skip(1),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 900,
+          height: 180,
+          child: HandTray(
+            model: model,
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            visibleTrayHeight: 150,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final controls = tester
+        .widgetList<HandCardControl>(find.byType(HandCardControl))
+        .toList(growable: false);
+    expect(controls.length, greaterThanOrEqualTo(3));
+    final hoveredID = controls[1].card.id;
+    final beforeID = controls[0].card.id;
+    final afterID = controls[2].card.id;
+    double position(String cardID) => tester
+        .widget<AnimatedPositioned>(
+          find.byKey(ValueKey('hand-card-position-$cardID')),
+        )
+        .left!;
+    final beforeStart = position(beforeID);
+    final afterStart = position(afterID);
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(
+      tester.getCenter(find.byKey(Key('hand-card-$hoveredID'))),
+    );
+    await tester.pump();
+
+    expect(position(beforeID), beforeStart - handTrayNeighborSeparation);
+    expect(position(afterID), afterStart + handTrayNeighborSeparation);
+    await mouse.removePointer();
+  });
+
+  testWidgets(
+    'planning trump preview changes card inset art and lifts matches',
+    (tester) async {
+      final base = runtimeModel();
+      final model = runtimeModelWith(
+        phase: phasePlanning,
+        selection: SelectionState.empty,
+        jobs: base.table.jobs,
+        seats: [
+          seatWithHand(base.table.seats[0], [
+            testCard(id: 'wheat-preview-8', suit: 'wheat', value: 8),
+            testCard(id: 'beet-preview-8', suit: 'beet', value: 8),
+          ]),
+          ...base.table.seats.skip(1),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            width: 900,
+            height: 180,
+            child: HandTray(
+              model: model,
+              tokens: defaultDesignTokens,
+              language: KolkhozLanguage.en,
+              visibleTrayHeight: 150,
+              planningTrumpFocusedSuit: 'wheat',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final wheatControl = find.byKey(
+        const ValueKey('hand-card-control-wheat-preview-8'),
+      );
+      final wheatCard = tester.widget<GameCard>(
+        find.descendant(of: wheatControl, matching: find.byType(GameCard)),
+      );
+      final wheatSurface = tester.widget<TactileCardSurface>(
+        find.descendant(
+          of: wheatControl,
+          matching: find.byType(TactileCardSurface),
+        ),
+      );
+      expect(wheatCard.trump, 'wheat');
+      expect(wheatSurface.focused, isTrue);
+      final wheatDragData = tester
+          .widget<HandCardControl>(wheatControl)
+          .dragData!;
+      expect(
+        find.descendant(
+          of: wheatControl,
+          matching: find.byType(TetheredCardSurface),
+        ),
+        findsOneWidget,
+      );
+      expect(wheatDragData.kind, CardDragKind.hand);
+      expect(wheatDragData.phase, phasePlanning);
+      expect(wheatDragData.canDrop, isFalse);
+
+      final beetControl = find.byKey(
+        const ValueKey('hand-card-control-beet-preview-8'),
+      );
+      final beetCard = tester.widget<GameCard>(
+        find.descendant(of: beetControl, matching: find.byType(GameCard)),
+      );
+      final beetSurface = tester.widget<TactileCardSurface>(
+        find.descendant(
+          of: beetControl,
+          matching: find.byType(TactileCardSurface),
+        ),
+      );
+      expect(
+        cardUsesTrumpTemplate(card: beetCard.card, trump: beetCard.trump),
+        isFalse,
+      );
+      expect(beetSurface.focused, isFalse);
+    },
+  );
+
+  test('English card tooltips use rank-of-suit grammar', () {
+    expect(
+      handCardAccessibilityLabel(
+        testCard(id: 'beet-8', suit: 'beet', value: 8),
+        KolkhozLanguage.en,
+        playable: true,
+        selected: false,
+        unavailable: false,
+      ),
+      '8 of Beets, playable',
+    );
+    expect(
+      assignmentCardAccessibilityLabel(
+        testCard(id: 'beet-8', suit: 'beet', value: 8),
+        KolkhozLanguage.en,
+        selected: false,
+      ),
+      '8 of Beets, available for assignment',
+    );
+  });
+
   testWidgets('Foreman hint bubble renders follow-suit reminder', (
     tester,
   ) async {
@@ -1231,6 +1477,7 @@ void registerBoardTests() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     final handCardID = base.table.seats.first.hand.first.id;
     final handCard = find.byWidgetPredicate(
@@ -1325,6 +1572,15 @@ void registerBoardTests() {
     );
     expect(pendingAssignedJobHours(jobWithPendingAssignment), 12);
     expect(displayedJobHours(jobWithPendingAssignment), 23);
+    final projectedJobs = buildProjectedJobs(
+      legalActions: const [],
+      trump: null,
+      hoursForSuit: (_) => -20,
+      claimedForSuit: (_) => false,
+      rewardForSuit: (_) => null,
+      assignedCardsForSuit: (_) => const [],
+    );
+    expect(projectedJobs.map((job) => job.hours), everyElement(0));
     final fullWidth = assignedJobCardsContentSize(
       cardCount: 5,
       cardSize: defaultDesignTokens.card.large,
@@ -1425,28 +1681,31 @@ void registerBoardTests() {
   testWidgets('swap selection frames plot and cellar cards', (tester) async {
     final card = testCard(id: 'wheat-9', suit: 'wheat', value: 9);
 
-    Widget cardView({required bool hidden}) => MaterialApp(
-      home: Center(
-        child: SizedBox(
-          width: defaultDesignTokens.card.small.width,
-          height: defaultDesignTokens.card.small.height,
-          child: Stack(
-            children: plotOverviewCardItems(
-              cards: [card],
-              stacks: const [],
-              hiddenCards: hidden,
-              cardSize: defaultDesignTokens.card.small,
-              selectedCardID: card.id,
-              selectable: true,
-              zone: hidden ? plotZoneHidden : plotZoneRevealed,
-              exiledCardIDs: const {},
-              tokens: defaultDesignTokens,
-              onPlotCardTap: (_, _) {},
+    Widget cardView({required bool hidden, bool revealHidden = false}) =>
+        MaterialApp(
+          home: Center(
+            child: SizedBox(
+              width: defaultDesignTokens.card.small.width,
+              height: defaultDesignTokens.card.small.height,
+              child: Stack(
+                children: plotOverviewCardItems(
+                  cards: [card],
+                  stacks: const [],
+                  hiddenCards: hidden,
+                  revealHiddenCards: revealHidden,
+                  splitHiddenCardFront: hidden,
+                  cardSize: defaultDesignTokens.card.small,
+                  selectedCardID: card.id,
+                  selectable: true,
+                  zone: hidden ? plotZoneHidden : plotZoneRevealed,
+                  exiledCardIDs: const {},
+                  tokens: defaultDesignTokens,
+                  onPlotCardTap: (_, _) {},
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    );
+        );
 
     await tester.pumpWidget(cardView(hidden: false));
 
@@ -1459,11 +1718,15 @@ void registerBoardTests() {
       isTrue,
     );
 
-    await tester.pumpWidget(cardView(hidden: true));
+    await tester.pumpWidget(cardView(hidden: true, revealHidden: true));
     await tester.pump();
 
     expect(
       find.byKey(ValueKey('swap-selected-plot-card-${card.id}')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(ValueKey('cellar-split-preview-${card.id}')),
       findsOneWidget,
     );
     expect(
@@ -1833,11 +2096,87 @@ void registerBoardTests() {
     expect(motion.cameraFocusOut, Duration.zero);
     expect(motion.gaugeDelta, Duration.zero);
     expect(motion.handInteraction, Duration.zero);
+    expect(motion.cardTactileResponse, Duration.zero);
+    expect(motion.cardDeal, Duration.zero);
+    expect(motion.cardReflow, Duration.zero);
     expect(motion.medalAppear, Duration.zero);
     expect(motion.heroMedalPulse, Duration.zero);
     expect(motion.activeCardSlotPulse, Duration.zero);
     expect(motion.trumpSelectorFrame, Duration.zero);
     expect(motion.rewardFlip, Duration.zero);
+  });
+
+  test(
+    'card flights arc above their linear route and settle at full scale',
+    () {
+      const from = Rect.fromLTWH(20, 500, 90, 140);
+      const to = Rect.fromLTWH(620, 140, 120, 180);
+
+      expect(cardFlightRectAt(from, to, 0), from);
+      expect(cardFlightRectAt(from, to, 1), to);
+      final midpoint = cardFlightRectAt(from, to, 0.5);
+      final linearMidpoint = Rect.lerp(from, to, 0.5)!;
+      expect(midpoint.center.dy, lessThan(linearMidpoint.center.dy));
+      expect(cardFlightScale(0), 1);
+      expect(cardFlightScale(0.5), greaterThan(1));
+      expect(cardFlightScale(0.82), lessThan(1.055));
+      expect(cardFlightScale(1), closeTo(1, 0.0001));
+      expect(cardFlightRotation('wheat-8', 0), 0);
+      expect(cardFlightRotation('wheat-8', 0.5).abs(), greaterThan(0));
+      expect(cardFlightRotation('wheat-8', 1), closeTo(0, 0.0001));
+    },
+  );
+
+  testWidgets('tactile cards lift on hover and compress on press', (
+    tester,
+  ) async {
+    const size = TokenCardSize(
+      width: 90,
+      height: 140,
+      faceInset: 0,
+      cornerWidth: 0,
+      cornerHeight: 0,
+      cornerRankFontSize: 0,
+      cornerSuitSize: 0,
+      topCornerRankSuitSpacing: 0,
+      bottomCornerRankSuitSpacing: 0,
+      topCornerSuitXOffset: 0,
+      bottomCornerSuitXOffset: 0,
+      pipSize: 0,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: TactileCardSurface(
+            tokens: defaultDesignTokens,
+            size: size,
+            child: const SizedBox(width: 90, height: 140),
+          ),
+        ),
+      ),
+    );
+
+    AnimatedScale scale() => tester.widget<AnimatedScale>(
+      find.byKey(const Key('tactile-card-scale')),
+    );
+    expect(scale().scale, 1);
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(find.byType(TactileCardSurface)));
+    await tester.pump();
+    expect(scale().scale, tactileCardHoverScale);
+    expect(find.byKey(const Key('card-hover-sheen')), findsOneWidget);
+
+    final press = await tester.startGesture(
+      tester.getCenter(find.byType(TactileCardSurface)),
+    );
+    await tester.pump();
+    expect(scale().scale, tactileCardPressedScale);
+    await press.up();
+    await mouse.removePointer();
+    await tester.pump();
+    expect(find.byKey(const Key('card-hover-sheen')), findsNothing);
   });
 
   test('planning rewards stay in the popup until planning ends', () {
@@ -2769,6 +3108,7 @@ void registerBoardTests() {
       suit: 'wheat',
       value: 9,
       pending: true,
+      provisional: true,
     );
     final committedCard = testCard(
       id: 'wheat-committed',
@@ -2817,6 +3157,12 @@ void registerBoardTests() {
 
     expect(
       find.byKey(const ValueKey('pending-assignment-card-pulse-wheat-pending')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('provisional-assignment-card-ghost-wheat-pending'),
+      ),
       findsOneWidget,
     );
     expect(
@@ -3100,7 +3446,7 @@ void registerBoardTests() {
   });
 
   testWidgets(
-    'provisional assignments animate in action order without submit replay',
+    'confirmed assignments animate in action order for the submitting player',
     (tester) async {
       final cards = [
         testCard(id: 'sunflower-7', suit: 'sunflower', value: 7),
@@ -3793,7 +4139,127 @@ void registerBoardTests() {
     expect(plotSeatIDForMotionCard(redactedOnlineModel, card.id), 2);
   });
 
-  testWidgets('field-plan cellar cards flip for their owner on hover and tap', (
+  testWidgets('player profiles keep the cellar stat nearest the board center', (
+    tester,
+  ) async {
+    const size = Size(900, 600);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final model = runtimeModelWith(
+      phase: phaseTrick,
+      selection: SelectionState.empty,
+      jobs: runtimeModel().table.jobs,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StaticHeroGamePanel(
+          kind: StaticHeroGamePanelKind.brigade,
+          model: model,
+          tokens: defaultDesignTokens,
+          language: KolkhozLanguage.en,
+          showPlanningPanel: false,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    for (final seat in model.table.seats) {
+      final portrait = tester.getCenter(
+        find.byKey(Key('player-profile-portrait-${seat.id}')),
+      );
+      final cellar = tester.getCenter(
+        find.byKey(Key('player-profile-cellar-${seat.id}')),
+      );
+      final plot = tester.getCenter(
+        find.byKey(Key('player-profile-plot-${seat.id}')),
+      );
+      expect(
+        (cellar.dx - portrait.dx).abs(),
+        lessThan((plot.dx - portrait.dx).abs()),
+        reason: 'seat ${seat.id} should place its cellar stat inward',
+      );
+    }
+  });
+
+  testWidgets('viewer cellar stat shows value while rivals show card count', (
+    tester,
+  ) async {
+    const size = Size(900, 600);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = runtimeModel();
+    final viewer = base.table.seats.singleWhere((seat) => seat.isViewer);
+    final rival = base.table.seats.firstWhere((seat) => !seat.isViewer);
+    final viewerWithCellar = seatWithPlot(
+      viewer,
+      PlotState(
+        revealed: const [],
+        hidden: [
+          testCard(id: 'wheat-8', suit: 'wheat', value: 8),
+          testCard(id: 'beet-12', suit: 'beet', value: 12),
+        ],
+        stacks: [
+          PlotStackState(
+            revealed: const [],
+            hidden: [testCard(id: 'potato-5', suit: 'potato', value: 5)],
+          ),
+        ],
+      ),
+    );
+    final rivalWithCellar = seatWithPlot(
+      rival,
+      PlotState(
+        revealed: const [],
+        hidden: [
+          testCard(id: 'wheat-7', suit: 'wheat', value: 7),
+          testCard(id: 'beet-9', suit: 'beet', value: 9),
+        ],
+        stacks: const [],
+      ),
+    );
+    final model = runtimeModelWith(
+      phase: phaseTrick,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: [
+        for (final seat in base.table.seats)
+          if (seat.id == viewer.id)
+            viewerWithCellar
+          else if (seat.id == rival.id)
+            rivalWithCellar
+          else
+            seat,
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StaticHeroGamePanel(
+          kind: StaticHeroGamePanelKind.brigade,
+          model: model,
+          tokens: defaultDesignTokens,
+          language: KolkhozLanguage.en,
+          showPlanningPanel: false,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    String cellarText(int seatID) => tester
+        .widget<Text>(
+          find.descendant(
+            of: find.byKey(Key('player-profile-cellar-$seatID')),
+            matching: find.byType(Text),
+          ),
+        )
+        .data!;
+
+    expect(cellarText(viewer.id), '25');
+    expect(cellarText(rival.id), '2');
+  });
+
+  testWidgets('field-plan cellar cards stay split-visible for their owner', (
     tester,
   ) async {
     final base = runtimeModel();
@@ -3842,34 +4308,32 @@ void registerBoardTests() {
     await tester.pump();
 
     expect(find.byType(InteractiveCardFlip), findsOneWidget);
-    expect(find.byKey(ValueKey('cellar-back-${localCard.id}')), findsOneWidget);
+    expect(find.byKey(ValueKey('cellar-face-${localCard.id}')), findsOneWidget);
     expect(
       find.byKey(ValueKey('cellar-face-${opponentCard.id}')),
       findsNothing,
     );
-
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: Offset.zero);
-    await mouse.moveTo(
-      tester.getCenter(find.byKey(Key('static-hero-card-${localCard.id}'))),
+    expect(
+      find.byKey(ValueKey('cellar-split-preview-${localCard.id}')),
+      findsOneWidget,
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 240));
-    expect(find.byKey(ValueKey('cellar-face-${localCard.id}')), findsOneWidget);
-
-    await mouse.moveTo(const Offset(899, 599));
-    await tester.pumpAndSettle();
-    expect(find.byKey(ValueKey('cellar-back-${localCard.id}')), findsOneWidget);
+    expect(
+      find.byKey(ValueKey('cellar-back-wedge-${localCard.id}')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(Key('static-hero-card-${localCard.id}')));
     await tester.pump();
     await tester.pumpAndSettle();
     expect(find.byKey(ValueKey('cellar-face-${localCard.id}')), findsOneWidget);
-    await mouse.removePointer();
+    expect(
+      find.byKey(ValueKey('cellar-split-preview-${localCard.id}')),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
-    'Swap reveals and reconceals viewer cellar cards together while rivals stay hidden',
+    'Viewer cellar cards remain split-visible throughout swap while rivals stay hidden',
     (tester) async {
       final base = runtimeModel();
       final localCards = [
@@ -3941,7 +4405,11 @@ void registerBoardTests() {
       await tester.pump();
 
       for (final card in localCards) {
-        expect(find.byKey(ValueKey('cellar-back-${card.id}')), findsOneWidget);
+        expect(find.byKey(ValueKey('cellar-face-${card.id}')), findsOneWidget);
+        expect(
+          find.byKey(ValueKey('cellar-split-preview-${card.id}')),
+          findsOneWidget,
+        );
       }
       expect(
         find.byWidgetPredicate(
@@ -3957,7 +4425,15 @@ void registerBoardTests() {
       await tester.pump(const Duration(milliseconds: 240));
 
       for (final card in localCards) {
+        expect(
+          find.byKey(ValueKey('cellar-split-preview-${card.id}')),
+          findsOneWidget,
+        );
         expect(find.byKey(ValueKey('cellar-face-${card.id}')), findsOneWidget);
+        expect(
+          find.byKey(ValueKey('cellar-back-wedge-${card.id}')),
+          findsOneWidget,
+        );
       }
       final trumpCellarCard = find.descendant(
         of: find.byKey(ValueKey('cellar-face-${localCards.last.id}')),
@@ -4006,8 +4482,8 @@ void registerBoardTests() {
         findsOneWidget,
       );
       expect(
-        find.byKey(ValueKey('cellar-back-${swappedInCard.id}')),
-        findsNothing,
+        find.byKey(ValueKey('cellar-back-wedge-${swappedInCard.id}')),
+        findsOneWidget,
       );
 
       update(
@@ -4021,7 +4497,15 @@ void registerBoardTests() {
       await tester.pump(const Duration(milliseconds: 240));
 
       for (final card in [...localCards, swappedInCard]) {
-        expect(find.byKey(ValueKey('cellar-back-${card.id}')), findsOneWidget);
+        expect(
+          find.byKey(ValueKey('cellar-split-preview-${card.id}')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(ValueKey('cellar-back-wedge-${card.id}')),
+          findsOneWidget,
+        );
+        expect(find.byKey(ValueKey('cellar-face-${card.id}')), findsOneWidget);
       }
     },
   );
@@ -4089,7 +4573,11 @@ void registerBoardTests() {
       );
       await tester.pump();
       expect(
-        find.byKey(ValueKey('cellar-back-${viewerCard.id}')),
+        find.byKey(ValueKey('cellar-face-${viewerCard.id}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(ValueKey('cellar-split-preview-${viewerCard.id}')),
         findsOneWidget,
       );
 
@@ -4099,6 +4587,10 @@ void registerBoardTests() {
 
       expect(
         find.byKey(ValueKey('cellar-face-${viewerCard.id}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(ValueKey('cellar-split-preview-${viewerCard.id}')),
         findsOneWidget,
       );
       expect(
@@ -4118,7 +4610,11 @@ void registerBoardTests() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 240));
       expect(
-        find.byKey(ValueKey('cellar-back-${viewerCard.id}')),
+        find.byKey(ValueKey('cellar-face-${viewerCard.id}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(ValueKey('cellar-split-preview-${viewerCard.id}')),
         findsOneWidget,
       );
     },
@@ -4192,6 +4688,10 @@ void registerBoardTests() {
 
       for (final card in viewerCards) {
         expect(find.byKey(ValueKey('cellar-face-${card.id}')), findsOneWidget);
+        expect(
+          find.byKey(ValueKey('cellar-split-preview-${card.id}')),
+          findsNothing,
+        );
       }
       expect(
         find.byKey(ValueKey('cellar-face-${opponentCard.id}')),
@@ -4386,6 +4886,37 @@ void registerBoardTests() {
       tester.widget<GameCard>(playedCard).sizeOverride,
       defaultDesignTokens.card.large,
     );
+    expect(
+      find.descendant(
+        of: find.byKey(Key('static-hero-trick-card-${trumpCard.id}')),
+        matching: find.byType(TetheredCardSurface),
+      ),
+      findsOneWidget,
+    );
+    final emptyTargetSize = tester.getSize(
+      find.byKey(const Key('static-hero-trick-target-0')),
+    );
+    final playedTargetSize = tester.getSize(
+      find.byKey(const Key('static-hero-trick-target-1')),
+    );
+    final playedCardAreaSize = tester.getSize(
+      find.byKey(const Key('static-hero-trick-card-area-1')),
+    );
+    expect(emptyTargetSize, playedTargetSize);
+    expect(
+      playedCardAreaSize,
+      tester.getSize(find.byKey(Key('static-hero-trick-card-${trumpCard.id}'))),
+    );
+    expect(
+      playedTargetSize.width,
+      closeTo(playedCardAreaSize.width * 1.2, 0.001),
+    );
+    expect(
+      playedTargetSize.height,
+      closeTo(playedCardAreaSize.height * 1.2, 0.001),
+    );
+    expect(playedTargetSize.width, lessThan(900 / 4));
+    expect(playedTargetSize.height, lessThan(600 / 2));
     final highQualityScale = find.descendant(
       of: find.byKey(Key('static-hero-trick-card-${trumpCard.id}')),
       matching: find.byWidgetPredicate(
@@ -4394,6 +4925,134 @@ void registerBoardTests() {
       ),
     );
     expect(highQualityScale, findsOneWidget);
+  });
+
+  testWidgets('selected trick card sits provisionally in its play zone', (
+    tester,
+  ) async {
+    final base = runtimeModel();
+    final viewer = localSeat(base);
+    String? returnedCardID;
+    final opponent = base.table.seats.firstWhere(
+      (seat) => seat.id != viewer.id,
+    );
+    final suit = base.table.trump ?? 'wheat';
+    final selectedCard = testCard(
+      id: '$suit-provisional-winner',
+      suit: suit,
+      value: 12,
+    );
+    final previousWinner = testCard(
+      id: '$suit-previous-winner',
+      suit: suit,
+      value: 10,
+    );
+    final model = runtimeModelWith(
+      phase: phaseTrick,
+      selection: SelectionState.empty.copyWith(handCardID: selectedCard.id),
+      jobs: base.table.jobs,
+      seats: [
+        for (final seat in base.table.seats)
+          if (seat.id == viewer.id)
+            seatWithHand(seat, [selectedCard])
+          else
+            seat,
+      ],
+      trick: Trick(
+        plays: [TrickPlay(seatID: opponent.id, card: previousWinner)],
+        winnerSeatID: opponent.id,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 900,
+          height: 600,
+          child: StaticHeroGamePanel(
+            kind: StaticHeroGamePanelKind.brigade,
+            model: model,
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            showPlanningPanel: false,
+            onHandCardTap: (cardID) => returnedCardID = cardID,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.descendant(
+        of: find.byKey(Key('static-hero-trick-target-${viewer.id}')),
+        matching: find.byKey(
+          ValueKey('provisional-trick-card-${selectedCard.id}'),
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(Key('static-hero-trick-card-${selectedCard.id}')),
+      findsOneWidget,
+    );
+    final provisionalDrag = tester.widget<Draggable<CardDragData>>(
+      find.ancestor(
+        of: find.byKey(ValueKey('provisional-trick-card-${selectedCard.id}')),
+        matching: find.byType(Draggable<CardDragData>),
+      ),
+    );
+    expect(provisionalDrag.data!.kind, CardDragKind.provisionalTrick);
+    provisionalDrag.data!.onAccepted();
+    expect(returnedCardID, selectedCard.id);
+    final winningCards = tester
+        .widgetList<GameCard>(find.byType(GameCard))
+        .where((card) => card.winningTrick)
+        .toList(growable: false);
+    expect(winningCards, hasLength(1));
+    expect(winningCards.single.card.id, selectedCard.id);
+    expect(
+      find.byKey(const ValueKey('winning-trick-card-frame')),
+      findsOneWidget,
+    );
+  });
+
+  test('provisional trick winner mirrors engine suit priority', () {
+    final lead = TrickPlay(
+      seatID: 1,
+      card: testCard(id: 'wheat-12', suit: 'wheat', value: 12),
+    );
+    final offSuit = TrickPlay(
+      seatID: 0,
+      card: testCard(id: 'beet-13', suit: 'beet', value: 13),
+    );
+    final wrecker = TrickPlay(
+      seatID: 0,
+      card: testCard(id: 'wrecker-0', suit: wreckerSuit, value: 0),
+    );
+
+    expect(
+      provisionalTrickWinnerSeatID(
+        plays: [lead],
+        provisionalPlay: offSuit,
+        trump: null,
+      ),
+      1,
+    );
+    expect(
+      provisionalTrickWinnerSeatID(
+        plays: [lead],
+        provisionalPlay: offSuit,
+        trump: 'beet',
+      ),
+      0,
+    );
+    expect(
+      provisionalTrickWinnerSeatID(
+        plays: [lead],
+        provisionalPlay: wrecker,
+        trump: 'potato',
+      ),
+      0,
+    );
   });
 
   testWidgets('field-plan Fields cards retain their trump artwork', (
@@ -4550,6 +5209,42 @@ void registerBoardTests() {
     await tester.tapAt(const Offset(700, 450));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('job-gauge-overlay-wheat')), findsNothing);
+  });
+
+  testWidgets('online turn clock uses the server clock anchor', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 1200,
+          height: 500,
+          child: TopInfoStrip(
+            model: runtimeModel(),
+            tokens: defaultDesignTokens,
+            metrics: ResponsiveBoardMetrics.fromSize(
+              const Size(1200, 500),
+              defaultDesignTokens,
+            ),
+            language: KolkhozLanguage.en,
+            animationSpeed: defaultGameAnimationSpeed,
+            turnDeadlineAt: 1030,
+            serverTime: 1000,
+          ),
+        ),
+      ),
+    );
+
+    final clock = find.byKey(const Key('online-turn-clock'));
+    expect(clock, findsOneWidget);
+    expect(
+      tester
+          .widget<TopInfoCell>(
+            find.descendant(of: clock, matching: find.byType(TopInfoCell)),
+          )
+          .value,
+      '30s',
+    );
   });
 
   testWidgets('top info hides job gauges on the Fields panel', (tester) async {
@@ -5176,6 +5871,245 @@ void registerBoardTests() {
     expect(flights[1].to.center, fieldRect.center);
     expect(flights[1].reportsJobArrival, isFalse);
     expect(plan.nextFlightID, 6);
+  });
+
+  testWidgets('rejected card drags animate back to their source', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: DraggableCardSurface(
+            data: CardDragData(
+              cardID: 'wheat-8',
+              kind: CardDragKind.hand,
+              phase: phaseTrick,
+              onAccepted: () {},
+            ),
+            feedback: const SizedBox(
+              key: Key('drag-feedback'),
+              width: 60,
+              height: 90,
+              child: ColoredBox(color: Colors.red),
+            ),
+            child: const SizedBox(
+              key: Key('drag-source'),
+              width: 60,
+              height: 90,
+              child: ColoredBox(color: Colors.blue),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final mouse = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('drag-source'))),
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.moveBy(const Offset(0, -20));
+    await tester.pump();
+    await mouse.moveBy(const Offset(0, -80));
+    await tester.pump();
+    expect(find.byKey(const Key('drag-feedback')), findsOneWidget);
+
+    await mouse.up();
+    await tester.pump();
+    expect(find.byKey(const Key('drag-feedback')), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('drag-feedback')), findsNothing);
+  });
+
+  testWidgets('fidget-only cards resist travel and snap back quickly', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: DraggableCardSurface(
+            data: CardDragData(
+              cardID: 'fidget-card',
+              kind: CardDragKind.hand,
+              phase: phaseTrick,
+              canDrop: false,
+              onAccepted: () {},
+            ),
+            feedback: const SizedBox(width: 60, height: 90),
+            child: const SizedBox(
+              key: Key('fidget-card'),
+              width: 60,
+              height: 90,
+              child: ColoredBox(color: Colors.blue),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final start = tester.getCenter(find.byKey(const Key('fidget-card')));
+    final mouse = await tester.startGesture(
+      start,
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.moveBy(const Offset(200, -120));
+    await tester.pump();
+    final displaced = tester.getCenter(find.byKey(const Key('fidget-card')));
+    expect((displaced - start).distance, greaterThan(0));
+    expect(
+      (displaced - start).distance,
+      lessThanOrEqualTo(cardFidgetMaximumDistance + 0.01),
+    );
+    expect(find.byType(Draggable<CardDragData>), findsNothing);
+
+    await mouse.up();
+    await tester.pump();
+    await tester.pump(cardFidgetSnapBackDuration);
+    expect(tester.getCenter(find.byKey(const Key('fidget-card'))), start);
+  });
+
+  testWidgets('provisional trick card can be dragged back to the hand', (
+    tester,
+  ) async {
+    var returned = false;
+    final base = runtimeModel();
+    final selectedCard = localSeat(base).hand.first;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 700,
+          height: 400,
+          child: Column(
+            children: [
+              DraggableCardSurface(
+                data: CardDragData(
+                  cardID: selectedCard.id,
+                  kind: CardDragKind.provisionalTrick,
+                  phase: phaseTrick,
+                  onAccepted: () => returned = true,
+                ),
+                feedback: const SizedBox(
+                  width: 60,
+                  height: 90,
+                  child: ColoredBox(color: Colors.red),
+                ),
+                child: const SizedBox(
+                  key: Key('provisional-drag-source'),
+                  width: 60,
+                  height: 90,
+                  child: ColoredBox(color: Colors.blue),
+                ),
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                height: 180,
+                child: HandTray(
+                  model: runtimeModelWith(
+                    phase: phaseTrick,
+                    selection: SelectionState.empty.copyWith(
+                      handCardID: selectedCard.id,
+                    ),
+                    jobs: base.table.jobs,
+                  ),
+                  tokens: defaultDesignTokens,
+                  language: KolkhozLanguage.en,
+                  visibleTrayHeight: 150,
+                  onHandCardTap: (_) {},
+                  onAction: (_) {},
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final handTarget = find.byType(CardDropTarget).first;
+    final mouse = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('provisional-drag-source'))),
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.moveTo(tester.getCenter(handTarget));
+    await tester.pump();
+    expect(find.byKey(const Key('card-drop-zone-highlight')), findsOneWidget);
+    await mouse.up();
+    await tester.pump();
+    expect(returned, isTrue);
+  });
+
+  testWidgets('valid card drop targets accept mouse drags without snap-back', (
+    tester,
+  ) async {
+    var accepted = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CardDropTarget(
+              highlightColor: defaultDesignTokens.colors.green,
+              accepts: (data) => data.phase == phaseTrick,
+              labelBuilder: (data) => data.actionLabel!,
+              onAccepted: (data) => data.onAccepted(),
+              child: const SizedBox(
+                key: Key('drag-target'),
+                width: 100,
+                height: 100,
+                child: ColoredBox(color: Colors.green),
+              ),
+            ),
+            const SizedBox(height: 30),
+            DraggableCardSurface(
+              data: CardDragData(
+                cardID: 'wheat-8',
+                kind: CardDragKind.hand,
+                phase: phaseTrick,
+                actionLabel: 'Play Card',
+                onAccepted: () => accepted = true,
+              ),
+              feedback: const SizedBox(
+                key: Key('accepted-feedback'),
+                width: 60,
+                height: 90,
+                child: ColoredBox(color: Colors.red),
+              ),
+              child: const SizedBox(
+                key: Key('accepted-source'),
+                width: 60,
+                height: 90,
+                child: ColoredBox(color: Colors.blue),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final mouse = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('accepted-source'))),
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.moveBy(const Offset(0, -20));
+    await tester.pump();
+    expect(find.byKey(const Key('card-drop-zone-highlight')), findsOneWidget);
+    expect(
+      tester
+          .widget<DisplayText>(
+            find.descendant(
+              of: find.byKey(const Key('card-drop-zone-highlight')),
+              matching: find.byType(DisplayText),
+            ),
+          )
+          .text,
+      'Play Card',
+    );
+    await mouse.moveTo(tester.getCenter(find.byKey(const Key('drag-target'))));
+    await tester.pump();
+    await mouse.up();
+    await tester.pump();
+
+    expect(accepted, isTrue);
+    expect(find.byKey(const Key('accepted-feedback')), findsNothing);
   });
 
   testWidgets('options panel tabs expose game controls and settings', (

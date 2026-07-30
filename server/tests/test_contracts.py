@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 import unittest
 from http import HTTPStatus
+from unittest import mock
 
 from engine.python.kolkhoz_c_engine import (
     CEngine,
@@ -180,6 +181,35 @@ class ProjectionContractTests(unittest.TestCase):
                 "finalYearTrumpCard",
             },
         )
+
+    def test_snapshot_reads_work_hours_through_the_c_api(self) -> None:
+        pointer = self.engine.new_engine(
+            322,
+            variants=variants_native(normalize_variants(None)),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = ctypes.cast(pointer, ctypes.POINTER(KCEngineSnapshot)).contents
+            state.work_hours[0] = -20
+            with mock.patch.object(
+                self.engine,
+                "work_hours",
+                side_effect=[0, 9, 18, 27],
+            ) as work_hours:
+                viewed = snapshot_json(self.engine, pointer, 0)
+        finally:
+            self.engine.free_engine(pointer)
+
+        self.assertEqual(
+            viewed["workHours"],
+            [
+                {"suit": 0, "value": 0},
+                {"suit": 1, "value": 9},
+                {"suit": 2, "value": 18},
+                {"suit": 3, "value": 27},
+            ],
+        )
+        self.assertEqual(work_hours.call_count, 4)
 
     def test_snapshot_pairs_each_exiled_card_with_its_player(self) -> None:
         pointer = self.engine.new_engine(

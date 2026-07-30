@@ -264,7 +264,8 @@ def snapshot_json(
         "revealedJobs": revealed_jobs_json(state),
         "claimedJobs": [s for s in range(SUIT_COUNT) if bool(state.claimed_jobs[s])],
         "workHours": [
-            {"suit": s, "value": int(state.work_hours[s])} for s in range(SUIT_COUNT)
+            {"suit": s, "value": engine.work_hours(pointer, s)}
+            for s in range(SUIT_COUNT)
         ],
         "jobBuckets": job_buckets_json(state),
         "accumulatedJobCards": redacted_suit_cards(SUIT_COUNT),

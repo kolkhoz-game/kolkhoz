@@ -36,6 +36,9 @@ class GameMotion {
   Duration get trumpSelectorHop => duration(_trumpSelectorHopDuration);
   Duration get gaugeDelta => duration(_gaugeDeltaDuration);
   Duration get handInteraction => duration(_handInteractionDuration);
+  Duration get cardTactileResponse => duration(_cardTactileResponseDuration);
+  Duration get cardDeal => duration(_cardDealDuration);
+  Duration get cardReflow => duration(_cardReflowDuration);
   Duration get medalAppear => duration(_medalAppearDuration);
   Duration get heroMedalPulse => duration(_heroMedalPulseDuration);
   Duration get activeCardSlotPulse => duration(_activeCardSlotPulseDuration);
@@ -45,12 +48,14 @@ class GameMotion {
   Duration get logChevron => duration(_logChevronDuration);
   Duration get logSectionResize => duration(_logSectionResizeDuration);
 
-  static const Curve cardFlightCurve = Curves.easeInOutCubic;
+  static const Curve cardFlightCurve = Cubic(0.18, 0.78, 0.22, 1);
   static const Curve cameraFollowCurve = Curves.easeOut;
   static const Curve cameraTravelCurve = Curves.easeOutCubic;
   static const Curve focusCurve = Curves.easeInOutCubic;
   static const Curve gaugeDeltaCurve = Curves.easeOutCubic;
   static const Curve handInteractionCurve = Curves.easeOutCubic;
+  static const Curve cardTactileCurve = Curves.easeOutBack;
+  static const Curve cardReflowCurve = Curves.easeOutCubic;
   static const Curve rewardFlipCurve = Curves.easeInOutCubic;
   static const Curve medalInCurve = Curves.easeOutBack;
   static const Curve medalOutCurve = Curves.easeInCubic;
@@ -63,6 +68,11 @@ class GameMotion {
   static const Duration _trumpSelectorHopDuration = Duration(milliseconds: 230);
   static const Duration _gaugeDeltaDuration = Duration(milliseconds: 1600);
   static const Duration _handInteractionDuration = Duration(milliseconds: 150);
+  static const Duration _cardTactileResponseDuration = Duration(
+    milliseconds: 105,
+  );
+  static const Duration _cardDealDuration = Duration(milliseconds: 260);
+  static const Duration _cardReflowDuration = Duration(milliseconds: 135);
   static const Duration _medalAppearDuration = Duration(milliseconds: 520);
   static const Duration _heroMedalPulseDuration = Duration(milliseconds: 900);
   static const Duration _activeCardSlotPulseDuration = Duration(

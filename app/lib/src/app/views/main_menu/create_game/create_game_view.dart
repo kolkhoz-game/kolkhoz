@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
@@ -41,7 +43,6 @@ class CreateGameView extends StatefulWidget {
     required this.comradesSummary,
     required this.compactRail,
     required this.onStart,
-    this.onResumeLocalGame,
     required this.onHostOnline,
     this.onHostOnlineSeries,
     required this.onInviteOnlineComrades,
@@ -76,7 +77,6 @@ class CreateGameView extends StatefulWidget {
   final OnlineComradesResponse comradesSummary;
   final bool compactRail;
   final VoidCallback onStart;
-  final VoidCallback? onResumeLocalGame;
   final Future<String> Function(
     Uri baseURL,
     List<KolkhozPlayerController> controllers,
@@ -124,7 +124,11 @@ class _VariantPanelState extends State<CreateGameView> {
   static const lobbyPageKey = ValueKey('create-game-lobby-page');
 
   late List<_LobbySeatChoice> seatChoices;
-  final Map<int, String> selectedComradeUserIDsBySeat = {};
+  final Set<String> invitedLobbyComradeUserIDs = {};
+  final Set<String> invitingLobbyComradeUserIDs = {};
+  final seatSelectorWheelKey = GlobalKey<_SeatSelectorWheelState>();
+  int? selectedSeatPlayerID;
+  bool changingSelectedSeat = false;
   bool showingSeatLobby = false;
   bool startingOnline = false;
   bool browserJoinable = true;
@@ -188,17 +192,6 @@ class _VariantPanelState extends State<CreateGameView> {
   bool get hasUnassignedSeats =>
       effectiveSeatChoices.contains(_LobbySeatChoice.empty);
 
-  bool get hasUnassignedComradeSeats {
-    for (var playerID = 1; playerID < kolkhozPlayerCount; playerID += 1) {
-      final userID = selectedComradeUserIDsBySeat[playerID];
-      if (effectiveSeatChoices[playerID] == _LobbySeatChoice.comrade &&
-          !_hasComradeUserID(userID)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   void setOnlineStatus(String? message) {
     onlineStatus = message;
     onlineStatusIsError = false;
@@ -211,29 +204,8 @@ class _VariantPanelState extends State<CreateGameView> {
     onlineStatusDisablesAction = false;
   }
 
-  List<String> get invitedComradeUserIDs {
-    final userIDs = <String>{};
-    for (var playerID = 1; playerID < kolkhozPlayerCount; playerID += 1) {
-      if (effectiveSeatChoices[playerID] == _LobbySeatChoice.comrade) {
-        final userID = selectedComradeUserIDsBySeat[playerID];
-        if (_hasComradeUserID(userID)) {
-          userIDs.add(userID!);
-        }
-      }
-    }
-    return userIDs.toList(growable: false);
-  }
-
-  bool _hasComradeUserID(String? userID) {
-    if (userID == null || userID.isEmpty) {
-      return false;
-    }
-    return widget.comradesSummary.comrades.any(
-      (comrade) => comrade.userID == userID,
-    );
-  }
-
   void setSeatChoice(int playerID, _LobbySeatChoice choice) {
+    final previousChoice = effectiveSeatChoices[playerID];
     final next = List<_LobbySeatChoice>.of(effectiveSeatChoices);
     next[playerID] = choice;
     final exclusive = _LobbySeatChoice.withExclusiveHumanMode(
@@ -243,32 +215,16 @@ class _VariantPanelState extends State<CreateGameView> {
     setState(() {
       seatChoices = exclusive;
       if (choice == _LobbySeatChoice.comrade) {
-        final comrades = widget.comradesSummary.comrades;
-        if (selectedComradeUserIDsBySeat[playerID] == null &&
-            comrades.isNotEmpty) {
-          selectedComradeUserIDsBySeat[playerID] = comrades.first.userID;
-        }
         browserJoinable = false;
-      } else {
-        selectedComradeUserIDsBySeat.remove(playerID);
-      }
-      for (var index = 1; index < kolkhozPlayerCount; index += 1) {
-        if (exclusive[index] != _LobbySeatChoice.comrade) {
-          selectedComradeUserIDsBySeat.remove(index);
-        }
+      } else if (previousChoice == _LobbySeatChoice.comrade &&
+          choice == _LobbySeatChoice.online) {
+        browserJoinable = true;
       }
       setOnlineStatus(null);
     });
     widget.onPlayerControllersChanged(
       _LobbySeatChoice.toControllers(exclusive),
     );
-  }
-
-  void setSeatComrade(int playerID, String userID) {
-    setState(() {
-      selectedComradeUserIDsBySeat[playerID] = userID;
-      setOnlineStatus(null);
-    });
   }
 
   Future<void> startGame() async {
@@ -283,29 +239,29 @@ class _VariantPanelState extends State<CreateGameView> {
     }
     setState(() {
       startingOnline = true;
+      invitedLobbyComradeUserIDs.clear();
+      invitingLobbyComradeUserIDs.clear();
       setOnlineStatus(null);
     });
     try {
-      final sessionID = bestOf == 1 || widget.onHostOnlineSeries == null
-          ? await widget.onHostOnline(
-              onlineServerURL,
-              effectiveControllers,
-              false,
-              false,
-              browserJoinable,
-            )
-          : await widget.onHostOnlineSeries!(
-              onlineServerURL,
-              effectiveControllers,
-              false,
-              false,
-              browserJoinable,
-              bestOf,
-            );
-      await widget.onInviteOnlineComrades?.call(
-        sessionID,
-        invitedComradeUserIDs,
-      );
+      if (bestOf == 1 || widget.onHostOnlineSeries == null) {
+        await widget.onHostOnline(
+          onlineServerURL,
+          effectiveControllers,
+          false,
+          false,
+          browserJoinable,
+        );
+      } else {
+        await widget.onHostOnlineSeries!(
+          onlineServerURL,
+          effectiveControllers,
+          false,
+          false,
+          browserJoinable,
+          bestOf,
+        );
+      }
       rememberEffectiveSetup();
     } catch (exception) {
       if (!mounted) {
@@ -317,6 +273,35 @@ class _VariantPanelState extends State<CreateGameView> {
     } finally {
       if (mounted) {
         setState(() => startingOnline = false);
+      }
+    }
+  }
+
+  Future<void> inviteComradeToHostedLobby(
+    String sessionID,
+    String userID,
+  ) async {
+    if (widget.onInviteOnlineComrades == null ||
+        invitedLobbyComradeUserIDs.contains(userID) ||
+        invitingLobbyComradeUserIDs.contains(userID)) {
+      return;
+    }
+    setState(() {
+      invitingLobbyComradeUserIDs.add(userID);
+      setOnlineStatus(null);
+    });
+    try {
+      await widget.onInviteOnlineComrades!(sessionID, [userID]);
+      if (mounted) {
+        setState(() => invitedLobbyComradeUserIDs.add(userID));
+      }
+    } catch (exception) {
+      if (mounted) {
+        setState(() => setOnlineFailure(exception));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => invitingLobbyComradeUserIDs.remove(userID));
       }
     }
   }
@@ -369,7 +354,37 @@ class _VariantPanelState extends State<CreateGameView> {
     if (showingSeatLobby == show) {
       return;
     }
-    setState(() => showingSeatLobby = show);
+    setState(() {
+      showingSeatLobby = show;
+      if (!show) {
+        selectedSeatPlayerID = null;
+      }
+    });
+  }
+
+  Future<void> toggleSeatSelector(int playerID) async {
+    if (changingSelectedSeat) {
+      return;
+    }
+    changingSelectedSeat = true;
+    final previousPlayerID = selectedSeatPlayerID;
+    try {
+      if (previousPlayerID != null) {
+        await seatSelectorWheelKey.currentState?.returnToStart();
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        selectedSeatPlayerID = previousPlayerID == playerID ? null : playerID;
+      });
+      if (previousPlayerID != playerID) {
+        await WidgetsBinding.instance.endOfFrame;
+        await seatSelectorWheelKey.currentState?.ratchetToSelection();
+      }
+    } finally {
+      changingSelectedSeat = false;
+    }
   }
 
   Widget _buildSetupStep() => _buildFieldPlanSetupStep();
@@ -385,12 +400,6 @@ class _VariantPanelState extends State<CreateGameView> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: widget.compactRail ? 7 : 10,
           children: [
-            if (widget.onResumeLocalGame != null)
-              _primaryCommandButton(
-                label: widget.language.strings.lobbyResumeGame,
-                iconAsset: fieldPlanToolbarConfirmIconPath,
-                onPressed: widget.onResumeLocalGame,
-              ),
             _FieldPlanPresetSelector(
               tokens: widget.tokens,
               language: widget.language,
@@ -448,12 +457,6 @@ class _VariantPanelState extends State<CreateGameView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 10,
       children: [
-        if (widget.onResumeLocalGame != null)
-          _primaryCommandButton(
-            label: widget.language.strings.lobbyResumeGame,
-            iconAsset: fieldPlanToolbarConfirmIconPath,
-            onPressed: widget.onResumeLocalGame,
-          ),
         _PresetSummaryStrip(
           tokens: widget.tokens,
           language: widget.language,
@@ -486,11 +489,10 @@ class _VariantPanelState extends State<CreateGameView> {
                       displayName: widget.displayName,
                       portraitAsset: widget.portraitAsset,
                       profileStats: widget.profileStats,
-                      comrades: widget.comradesSummary.comrades,
-                      selectedComradeUserIDsBySeat:
-                          selectedComradeUserIDsBySeat,
-                      onComradeChanged: widget.demoMode ? null : setSeatComrade,
-                      onChanged: widget.demoMode ? null : setSeatChoice,
+                      selectedPlayerID: selectedSeatPlayerID,
+                      onSeatPressed: widget.demoMode
+                          ? null
+                          : toggleSeatSelector,
                       compact: widget.compactRail,
                     ),
                     if (hasOnlineSeats)
@@ -506,6 +508,25 @@ class _VariantPanelState extends State<CreateGameView> {
             ),
           ),
         ),
+        if (selectedSeatPlayerID case final playerID?)
+          _SeatSelectorWheel(
+            key: seatSelectorWheelKey,
+            tokens: widget.tokens,
+            language: widget.language,
+            playerID: playerID,
+            choice: effectiveSeatChoices[playerID],
+            options: _LobbySeatChoice.optionsForPlayer(playerID)
+                .where(
+                  (option) => _LobbySeatChoice.isOptionEnabledForPlayer(
+                    playerID,
+                    effectiveSeatChoices,
+                    option,
+                  ),
+                )
+                .toList(),
+            compact: widget.compactRail,
+            onChanged: (choice) => setSeatChoice(playerID, choice),
+          ),
         _lobbyCommandRow(),
       ],
     );
@@ -538,16 +559,10 @@ class _VariantPanelState extends State<CreateGameView> {
             label: _startButtonLabel(),
             iconAsset: _startButtonIconAsset(),
             onPressed:
-                startingOnline ||
-                    _startButtonShowsBan() ||
-                    hasUnassignedSeats ||
-                    hasUnassignedComradeSeats
+                startingOnline || _startButtonShowsBan() || hasUnassignedSeats
                 ? null
                 : startGame,
-            enabled:
-                !_startButtonShowsBan() &&
-                !hasUnassignedSeats &&
-                !hasUnassignedComradeSeats,
+            enabled: !_startButtonShowsBan() && !hasUnassignedSeats,
           ),
         ),
       ],
@@ -597,6 +612,20 @@ class _VariantPanelState extends State<CreateGameView> {
             isError: onlineStatusIsError,
           ),
         MainMenuGoldDivider(tokens: widget.tokens),
+        if (!update.started &&
+            effectiveSeatChoices.contains(_LobbySeatChoice.comrade))
+          _HostedComradeInviteStrip(
+            tokens: widget.tokens,
+            language: widget.language,
+            comrades: widget.comradesSummary.comrades,
+            invitedUserIDs: invitedLobbyComradeUserIDs,
+            invitingUserIDs: invitingLobbyComradeUserIDs,
+            compact: widget.compactRail,
+            onInvite: widget.onInviteOnlineComrades == null
+                ? null
+                : (userID) =>
+                      inviteComradeToHostedLobby(update.sessionID, userID),
+          ),
         Expanded(
           child: OnlineWaitingRoomPanel(
             tokens: widget.tokens,
@@ -731,6 +760,7 @@ class _VariantPanelState extends State<CreateGameView> {
             deadlineEpochSeconds: update.started
                 ? null
                 : update.lobbyCountdownEndsAt,
+            serverEpochSeconds: update.serverTime,
             maxSeconds: 30,
             builder: (context, countdownSeconds) {
               final waitingLabel = countdownSeconds == null
@@ -1367,10 +1397,8 @@ class _SeatLobbyEditor extends StatelessWidget {
     required this.displayName,
     required this.portraitAsset,
     required this.profileStats,
-    required this.comrades,
-    required this.selectedComradeUserIDsBySeat,
-    required this.onComradeChanged,
-    required this.onChanged,
+    required this.selectedPlayerID,
+    required this.onSeatPressed,
     required this.compact,
   });
 
@@ -1380,10 +1408,8 @@ class _SeatLobbyEditor extends StatelessWidget {
   final String displayName;
   final String portraitAsset;
   final KolkhozProfileStats profileStats;
-  final List<OnlineComradeProfile> comrades;
-  final Map<int, String> selectedComradeUserIDsBySeat;
-  final void Function(int playerID, String userID)? onComradeChanged;
-  final void Function(int playerID, _LobbySeatChoice choice)? onChanged;
+  final int? selectedPlayerID;
+  final ValueChanged<int>? onSeatPressed;
   final bool compact;
 
   @override
@@ -1414,16 +1440,10 @@ class _SeatLobbyEditor extends StatelessWidget {
                   displayName: displayName,
                   portraitAsset: portraitAsset,
                   profileStats: profileStats,
-                  comrades: comrades,
-                  selectedComradeUserID: selectedComradeUserIDsBySeat[playerID],
-                  choices: normalized,
-                  options: _LobbySeatChoice.optionsForPlayer(playerID),
-                  onComradeChanged: onComradeChanged == null || playerID == 0
+                  selected: selectedPlayerID == playerID,
+                  onPressed: onSeatPressed == null || playerID == 0
                       ? null
-                      : (userID) => onComradeChanged!(playerID, userID),
-                  onChanged: onChanged == null || playerID == 0
-                      ? null
-                      : (choice) => onChanged!(playerID, choice),
+                      : () => onSeatPressed!(playerID),
                   compact: compact,
                 ),
               ),
@@ -1443,12 +1463,8 @@ class _SeatLobbyColumn extends StatelessWidget {
     required this.displayName,
     required this.portraitAsset,
     required this.profileStats,
-    required this.comrades,
-    required this.selectedComradeUserID,
-    required this.choices,
-    required this.options,
-    required this.onComradeChanged,
-    required this.onChanged,
+    required this.selected,
+    required this.onPressed,
     required this.compact,
   });
 
@@ -1459,12 +1475,8 @@ class _SeatLobbyColumn extends StatelessWidget {
   final String displayName;
   final String portraitAsset;
   final KolkhozProfileStats profileStats;
-  final List<OnlineComradeProfile> comrades;
-  final String? selectedComradeUserID;
-  final List<_LobbySeatChoice> choices;
-  final List<_LobbySeatChoice> options;
-  final ValueChanged<String>? onComradeChanged;
-  final ValueChanged<_LobbySeatChoice>? onChanged;
+  final bool selected;
+  final VoidCallback? onPressed;
   final bool compact;
 
   @override
@@ -1473,18 +1485,11 @@ class _SeatLobbyColumn extends StatelessWidget {
       value1: playerID + 1,
     );
     final localProfile = playerID == 0 && choice == _LobbySeatChoice.local;
-    final selectedComrade = choice == _LobbySeatChoice.comrade
-        ? _selectedComrade()
-        : null;
     final occupantLabel = localProfile
         ? displayName
-        : selectedComrade != null
-        ? selectedComrade.displayLabel
         : choice.shortTitle(language);
     final subtitle = localProfile
         ? profileRatingSummary(language, profileStats)
-        : selectedComrade != null
-        ? comradePresenceSummary(language, selectedComrade)
         : choice == _LobbySeatChoice.empty
         ? language.strings.kolkhozappOpen
         : choice.shortTitle(language);
@@ -1494,118 +1499,40 @@ class _SeatLobbyColumn extends StatelessWidget {
       displayName: occupantLabel,
       portraitAsset: localProfile
           ? portraitAsset
-          : selectedComrade?.portraitAsset ??
-                _seatPortraitAsset(playerID, choice),
+          : _seatPortraitAsset(playerID, choice),
       seatLabel: playerLabel,
       subtitle: subtitle,
       subtitleIconAsset: localProfile ? null : choice.iconAsset,
       portraitSize: compact ? 42 : 48,
       minHeight: compact ? 78 : 92,
-      active: playerID == 0,
+      active: playerID == 0 || selected,
       muted: choice == _LobbySeatChoice.empty,
+      trailing: onPressed == null
+          ? null
+          : Icon(
+              selected ? Icons.expand_less : Icons.expand_more,
+              color: selected
+                  ? tokens.colors.red
+                  : tokens.colors.cardInk.withValues(alpha: 0.62),
+              size: compact ? 20 : 22,
+            ),
     );
-    if (onChanged != null) {
-      final visibleOptions = options
-          .where((option) => option != _LobbySeatChoice.empty)
-          .toList();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: compact ? 6 : 8,
-        children: [
-          ExcludeSemantics(child: card),
-          for (final option in visibleOptions)
-            _SeatChoiceOptionButton(
-              tokens: tokens,
-              language: language,
-              playerLabel: playerLabel,
-              option: option,
-              selected: option == choice,
-              enabled: _LobbySeatChoice.isOptionEnabledForPlayer(
-                playerID,
-                choices,
-                option,
-              ),
-              compact: compact,
-              onPressed: () => onChanged!(option),
-            ),
-          if (choice == _LobbySeatChoice.comrade)
-            _SeatComradePicker(
-              tokens: tokens,
-              language: language,
-              comrades: comrades,
-              selectedUserID: selectedComradeUserID,
-              compact: compact,
-              onChanged: onComradeChanged,
-            ),
-        ],
-      );
-    }
     return Semantics(
       button: true,
-      enabled: onChanged != null,
+      enabled: onPressed != null,
+      selected: selected,
       label: semanticLabel,
       child: ExcludeSemantics(
         child: Tooltip(
           message: semanticLabel,
-          child: PopupMenuButton<_LobbySeatChoice>(
-            tooltip: semanticLabel,
-            enabled: onChanged != null,
-            offset: const Offset(0, -172),
-            color: tokens.colors.panel,
-            surfaceTintColor: Colors.transparent,
-            elevation: 8,
-            onSelected: onChanged,
-            itemBuilder: (context) => [
-              for (final option in options)
-                PopupMenuItem(
-                  value: option,
-                  enabled: _LobbySeatChoice.isOptionEnabledForPlayer(
-                    playerID,
-                    choices,
-                    option,
-                  ),
-                  child: Row(
-                    spacing: 8,
-                    children: [
-                      MainMenuAssetIcon(
-                        option.iconAsset,
-                        size: 24,
-                        opacity: option == choice ? 1 : 0.72,
-                      ),
-                      Text(
-                        option.shortTitle(language).toUpperCase(),
-                        style: kolkhozFontStyle.copyWith(
-                          color: option == choice
-                              ? tokens.colors.goldBright
-                              : _LobbySeatChoice.isOptionEnabledForPlayer(
-                                  playerID,
-                                  choices,
-                                  option,
-                                )
-                              ? tokens.colors.creamDim
-                              : tokens.colors.creamDim.withValues(alpha: 0.48),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onPressed,
             child: card,
           ),
         ),
       ),
     );
-  }
-
-  OnlineComradeProfile? _selectedComrade() {
-    for (final comrade in comrades) {
-      if (comrade.userID == selectedComradeUserID) {
-        return comrade;
-      }
-    }
-    return null;
   }
 
   String _seatPortraitAsset(int playerID, _LobbySeatChoice choice) {
@@ -1625,190 +1552,650 @@ class _SeatLobbyColumn extends StatelessWidget {
   }
 }
 
-class _SeatComradePicker extends StatelessWidget {
-  const _SeatComradePicker({
+class _SeatSelectorWheel extends StatefulWidget {
+  const _SeatSelectorWheel({
+    super.key,
     required this.tokens,
     required this.language,
-    required this.comrades,
-    required this.selectedUserID,
+    required this.playerID,
+    required this.choice,
+    required this.options,
     required this.compact,
     required this.onChanged,
   });
 
   final DesignTokens tokens;
   final KolkhozLanguage language;
-  final List<OnlineComradeProfile> comrades;
-  final String? selectedUserID;
+  final int playerID;
+  final _LobbySeatChoice choice;
+  final List<_LobbySeatChoice> options;
   final bool compact;
-  final ValueChanged<String>? onChanged;
+  final ValueChanged<_LobbySeatChoice> onChanged;
+
+  @override
+  State<_SeatSelectorWheel> createState() => _SeatSelectorWheelState();
+}
+
+class _SeatSelectorWheelState extends State<_SeatSelectorWheel> {
+  static const viewportFraction = 0.18;
+  late PageController controller;
+  bool returningToStart = false;
+  bool ratchetingToSelection = false;
+  bool snappingToWell = false;
+  bool userDragging = false;
+  bool userDragMoved = false;
+  double? userDragStartPage;
+  int? returnNotch;
+
+  double? get currentPage =>
+      controller.positions.length == 1 ? controller.page : null;
+  bool get mechanicallyAnimating => returningToStart || ratchetingToSelection;
+
+  List<_LobbySeatChoice> get slots {
+    final available = widget.options.toSet();
+    final ordered = <_LobbySeatChoice>[
+      _LobbySeatChoice.easyAI,
+      _LobbySeatChoice.mediumAI,
+      _LobbySeatChoice.hardAI,
+      _LobbySeatChoice.local,
+      _LobbySeatChoice.comrade,
+      _LobbySeatChoice.online,
+    ].where(available.contains).toList();
+    if (!available.contains(_LobbySeatChoice.empty)) {
+      return ordered;
+    }
+    return [_LobbySeatChoice.empty, ...ordered, _LobbySeatChoice.empty];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    controller = _makeController(0);
+  }
+
+  PageController _makeController(int initialPage) {
+    final next = PageController(
+      initialPage: initialPage,
+      viewportFraction: viewportFraction,
+    );
+    next.addListener(_handleControllerTick);
+    return next;
+  }
+
+  @override
+  void didUpdateWidget(covariant _SeatSelectorWheel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.options, widget.options)) {
+      controller.removeListener(_handleControllerTick);
+      controller.dispose();
+      controller = _makeController(_indexForChoice(widget.choice));
+      return;
+    }
+  }
+
+  int _indexForChoice(_LobbySeatChoice choice, {double? nearPage}) {
+    final matches = <int>[
+      for (var index = 0; index < slots.length; index += 1)
+        if (slots[index] == choice) index,
+    ];
+    if (matches.isEmpty) {
+      return 0;
+    }
+    if (nearPage == null) {
+      return matches.first;
+    }
+    return matches.reduce(
+      (nearest, candidate) =>
+          (candidate - nearPage).abs() < (nearest - nearPage).abs()
+          ? candidate
+          : nearest,
+    );
+  }
+
+  void _handleControllerTick() {
+    if (!mechanicallyAnimating || !controller.hasClients) {
+      return;
+    }
+    final notch = currentPage?.round();
+    if (notch == null || notch == returnNotch) {
+      return;
+    }
+    returnNotch = notch;
+    unawaited(HapticFeedback.selectionClick());
+  }
+
+  Future<void> returnToStart() async {
+    if (!controller.hasClients || mechanicallyAnimating) {
+      return;
+    }
+    returningToStart = true;
+    returnNotch = currentPage?.round();
+    try {
+      final position = controller.position;
+      final notchExtent = position.viewportDimension * viewportFraction;
+      final woundPixels = math.min(
+        position.pixels + notchExtent * 0.14,
+        position.maxScrollExtent,
+      );
+      unawaited(HapticFeedback.lightImpact());
+      if ((woundPixels - position.pixels).abs() > 0.5) {
+        await controller.animateTo(
+          woundPixels,
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOutCubic,
+        );
+      }
+      final distance = (currentPage ?? 0).abs();
+      await controller.animateToPage(
+        0,
+        duration: Duration(
+          milliseconds: (240 + distance * 75).round().clamp(260, 680),
+        ),
+        curve: Curves.easeInCubic,
+      );
+      unawaited(HapticFeedback.mediumImpact());
+      // Let the pointer visibly rest on the first blank slot before the
+      // selector closes or begins ratcheting toward another seat.
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+    } finally {
+      returningToStart = false;
+      returnNotch = null;
+    }
+  }
+
+  Future<void> ratchetToSelection() async {
+    if (!controller.hasClients || mechanicallyAnimating) {
+      return;
+    }
+    final target = _indexForChoice(widget.choice, nearPage: 0);
+    if (target == 0) {
+      return;
+    }
+    ratchetingToSelection = true;
+    returnNotch = currentPage?.round() ?? 0;
+    try {
+      unawaited(HapticFeedback.lightImpact());
+      await controller.animateToPage(
+        target,
+        duration: Duration(milliseconds: (210 + target * 75).clamp(285, 680)),
+        curve: Curves.easeOutCubic,
+      );
+      unawaited(HapticFeedback.mediumImpact());
+    } finally {
+      ratchetingToSelection = false;
+      returnNotch = null;
+    }
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (mechanicallyAnimating || snappingToWell) {
+      return false;
+    }
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      userDragging = true;
+      userDragMoved = false;
+      userDragStartPage = currentPage;
+      return false;
+    }
+    if (notification is ScrollUpdateNotification &&
+        notification.dragDetails != null) {
+      userDragging = true;
+      userDragStartPage ??= currentPage;
+      final startPage = userDragStartPage;
+      final page = currentPage;
+      if ((notification.scrollDelta?.abs() ?? 0) > 0.5 ||
+          (startPage != null &&
+              page != null &&
+              (page - startPage).abs() >= 0.04)) {
+        userDragMoved = true;
+      }
+      return false;
+    }
+    if (notification is ScrollEndNotification && userDragging) {
+      final shouldSnap = userDragMoved;
+      userDragging = false;
+      userDragMoved = false;
+      userDragStartPage = null;
+      if (shouldSnap) {
+        unawaited(_snapToNearestWell());
+      }
+    }
+    return false;
+  }
+
+  Future<void> _snapToNearestWell() async {
+    // Let Scrollable finish dismissing its drag activity before installing the
+    // short snap animation; starting it inside ScrollEndNotification is
+    // immediately cancelled by the outgoing activity on some platforms.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted ||
+        userDragging ||
+        mechanicallyAnimating ||
+        !controller.hasClients ||
+        slots.isEmpty) {
+      return;
+    }
+    final page = currentPage;
+    if (page == null) {
+      return;
+    }
+    snappingToWell = true;
+    final index = page.round().clamp(0, slots.length - 1);
+    final activeController = controller;
+    try {
+      await activeController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+      );
+    } finally {
+      snappingToWell = false;
+    }
+    if (!mounted || controller != activeController || index >= slots.length) {
+      return;
+    }
+    final option = slots[index];
+    if (option != widget.choice) {
+      widget.onChanged(option);
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.removeListener(_handleControllerTick);
+    controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final selected = _selectedComrade();
-    final label =
-        selected?.displayLabel ?? language.strings.kolkhozappNoComrades;
-    final enabled = onChanged != null && comrades.isNotEmpty;
-    return Tooltip(
-      message: label,
-      child: Opacity(
-        opacity: enabled ? 1 : 0.56,
-        child: PopupMenuButton<String>(
-          enabled: enabled,
-          tooltip: label,
-          color: tokens.colors.panel,
-          surfaceTintColor: Colors.transparent,
-          elevation: 8,
-          onSelected: onChanged,
-          itemBuilder: (context) => [
-            for (final comrade in comrades)
-              PopupMenuItem(
-                value: comrade.userID,
-                child: Row(
-                  spacing: 8,
-                  children: [
-                    PlayerProfilePortraitImage(
-                      tokens: tokens,
-                      asset:
-                          comrade.portraitAsset ?? defaultProfilePortraitAsset,
-                      size: 28,
-                      selected: comrade.userID == selectedUserID,
-                    ),
-                    Expanded(
-                      child: Text(
-                        comrade.displayLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: kolkhozFontStyle.copyWith(
-                          color: comrade.userID == selectedUserID
-                              ? tokens.colors.goldBright
-                              : tokens.colors.creamDim,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ],
+    final playerLabel = widget.language.strings.kolkhozappPValue1(
+      value1: widget.playerID + 1,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final baseWidth = constraints.maxWidth * 0.8;
+        final baseHeight = baseWidth * 760 / 1356;
+        final baseLeft = (constraints.maxWidth - baseWidth) / 2;
+        final wellSize = widget.compact ? 64.0 : 72.0;
+        final naturalVisibleHeight = baseWidth * 0.169 + wellSize / 2;
+        final trayHeight = naturalVisibleHeight.clamp(
+          widget.compact ? 124.0 : 144.0,
+          widget.compact ? 180.0 : 240.0,
+        );
+        const selectorAngle = -math.pi / 6;
+        final wellRadius = baseWidth * 0.2;
+        final dialCenter = Offset(constraints.maxWidth / 2, baseHeight * 0.48);
+        final selectedWellCenter = Offset(
+          dialCenter.dx + math.cos(selectorAngle) * wellRadius,
+          dialCenter.dy + math.sin(selectorAngle) * wellRadius,
+        );
+        final pointerWidth = math.min(
+          baseWidth * 0.126,
+          widget.compact ? 83.0 : 102.0,
+        );
+        final pointerHeight = pointerWidth * 508 / 680;
+        final pointerTip =
+            selectedWellCenter +
+            Offset(math.cos(selectorAngle), math.sin(selectorAngle)) *
+                (wellSize * 0.23);
+        // A compact, finite pitch keeps the wells grouped like a telephone
+        // dial while the blank end stops make its open range apparent.
+        const angleStep = math.pi / 6.5;
+        return SizedBox(
+          height: trayHeight,
+          child: ClipRect(
+            child: Stack(
+              clipBehavior: Clip.hardEdge,
+              children: [
+                Positioned(
+                  left: baseLeft,
+                  top: 0,
+                  width: baseWidth,
+                  height: baseHeight,
+                  child: Image.asset(
+                    'assets/art/field_plan/shared/controls/'
+                    'rotary-seat-selector-base-v2.png',
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                  ),
                 ),
-              ),
-          ],
-          child: SizedBox(
-            height: compact ? 34 : 38,
-            child: VariantRowBackground(
-              tokens: tokens,
-              active: selected != null,
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 8 : 10,
-                vertical: compact ? 6 : 7,
-              ),
-              child: Row(
-                spacing: 8,
-                children: [
-                  MainMenuAssetIcon(
-                    'assets/art/field_plan/shared/pictograms/comrade.png',
-                    size: compact ? 20 : 24,
-                    opacity: selected != null ? 1 : 0.7,
-                  ),
-                  Expanded(
-                    child: ChromeScaledLabel(
-                      label,
-                      color: selected != null
-                          ? tokens.colors.activeSurfaceText
-                          : tokens.colors.cardInk.withValues(alpha: 0.72),
-                      size: compact
-                          ? DisplayTextSize.caption2
-                          : DisplayTextSize.caption,
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedBuilder(
+                      animation: controller,
+                      builder: (context, _) {
+                        final currentPage = controller.hasClients
+                            ? this.currentPage ??
+                                  _indexForChoice(widget.choice).toDouble()
+                            : _indexForChoice(widget.choice).toDouble();
+                        final indices =
+                            List<int>.generate(slots.length, (index) => index)
+                              ..sort((a, b) {
+                                final aDistance = (a - currentPage).abs();
+                                final bDistance = (b - currentPage).abs();
+                                return bDistance.compareTo(aDistance);
+                              });
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            for (final index in indices)
+                              _positionedRotaryOption(
+                                index: index,
+                                option: slots[index],
+                                currentPage: currentPage,
+                                dialCenter: dialCenter,
+                                radius: wellRadius,
+                                selectorAngle: selectorAngle,
+                                angleStep: angleStep,
+                                wellSize: wellSize,
+                              ),
+                          ],
+                        );
+                      },
                     ),
                   ),
-                ],
-              ),
+                ),
+                Positioned(
+                  left: pointerTip.dx - pointerWidth * 0.03,
+                  top: pointerTip.dy - pointerHeight * 0.92,
+                  width: pointerWidth,
+                  height: pointerHeight,
+                  child: IgnorePointer(
+                    child: Image.asset(
+                      'assets/art/field_plan/shared/controls/'
+                      'rotary-seat-selector-pointer-v2.png',
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: _handleScrollNotification,
+                    child: PageView.builder(
+                      key: ValueKey(
+                        'seat-selector-wheel-${widget.playerID + 1}',
+                      ),
+                      controller: controller,
+                      padEnds: true,
+                      pageSnapping: false,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      itemCount: slots.length,
+                      itemBuilder: (context, index) {
+                        final option = slots[index];
+                        final label = option.shortTitle(widget.language);
+                        return Semantics(
+                          button: true,
+                          selected:
+                              index ==
+                              _indexForChoice(
+                                widget.choice,
+                                nearPage:
+                                    currentPage ??
+                                    (controller.hasClients
+                                        ? controller.initialPage.toDouble()
+                                        : null),
+                              ),
+                          label: 'Set $playerLabel $label',
+                          child: const SizedBox.expand(),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _positionedRotaryOption({
+    required int index,
+    required _LobbySeatChoice option,
+    required double currentPage,
+    required Offset dialCenter,
+    required double radius,
+    required double selectorAngle,
+    required double angleStep,
+    required double wellSize,
+  }) {
+    if (option == _LobbySeatChoice.empty) {
+      return const SizedBox.shrink();
+    }
+    final pageOffset = index - currentPage;
+    final distance = pageOffset.abs();
+    final angle = selectorAngle + pageOffset * angleStep;
+    final center = Offset(
+      dialCenter.dx + math.cos(angle) * radius,
+      dialCenter.dy + math.sin(angle) * radius,
+    );
+    final opacity = (1 - distance * 0.22).clamp(0.2, 1.0);
+    final scale = (1 - distance * 0.06).clamp(0.78, 1.0);
+    final label = option.shortTitle(widget.language);
+    return Positioned(
+      left: center.dx - wellSize / 2,
+      top: center.dy - wellSize / 2,
+      width: wellSize,
+      height: wellSize,
+      child: Opacity(
+        opacity: opacity,
+        child: Transform.scale(
+          scale: scale,
+          child: _RotarySeatWell(
+            tokens: widget.tokens,
+            iconAsset: option.iconAsset,
+            selected: distance < 0.5,
+            label: label,
+            compact: widget.compact,
           ),
         ),
       ),
     );
   }
+}
 
-  OnlineComradeProfile? _selectedComrade() {
-    for (final comrade in comrades) {
-      if (comrade.userID == selectedUserID) {
-        return comrade;
-      }
-    }
-    return null;
+class _RotarySeatWell extends StatelessWidget {
+  const _RotarySeatWell({
+    required this.tokens,
+    required this.iconAsset,
+    required this.selected,
+    required this.label,
+    required this.compact,
+  });
+
+  final DesignTokens tokens;
+  final String iconAsset;
+  final bool selected;
+  final String label;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: selected
+                ? tokens.colors.red
+                : tokens.colors.cardInk.withValues(alpha: 0.94),
+            border: Border.all(
+              color: selected ? tokens.colors.cream : tokens.colors.gold,
+              width: selected ? 3 : 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: tokens.colors.cardInk.withValues(alpha: 0.45),
+                blurRadius: 3,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(6, 7, 6, 5),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                MainMenuAssetIcon(
+                  iconAsset,
+                  size: compact ? 25 : 28,
+                  opacity: selected ? 1 : 0.82,
+                ),
+                const SizedBox(height: 1),
+                Expanded(
+                  child: ChromeScaledLabel(
+                    label,
+                    color: selected ? tokens.colors.cream : tokens.colors.gold,
+                    size: DisplayTextSize.caption2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
-class _SeatChoiceOptionButton extends StatelessWidget {
-  const _SeatChoiceOptionButton({
+class _HostedComradeInviteStrip extends StatelessWidget {
+  const _HostedComradeInviteStrip({
     required this.tokens,
     required this.language,
-    required this.playerLabel,
-    required this.option,
-    required this.selected,
-    required this.enabled,
+    required this.comrades,
+    required this.invitedUserIDs,
+    required this.invitingUserIDs,
     required this.compact,
-    required this.onPressed,
+    required this.onInvite,
   });
 
   final DesignTokens tokens;
   final KolkhozLanguage language;
-  final String playerLabel;
-  final _LobbySeatChoice option;
-  final bool selected;
-  final bool enabled;
+  final List<OnlineComradeProfile> comrades;
+  final Set<String> invitedUserIDs;
+  final Set<String> invitingUserIDs;
   final bool compact;
-  final VoidCallback onPressed;
+  final Future<void> Function(String userID)? onInvite;
 
   @override
   Widget build(BuildContext context) {
-    final label = option.shortTitle(language);
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: '$playerLabel $label',
-      child: ExcludeSemantics(
-        child: Tooltip(
-          message: label,
-          child: Opacity(
-            opacity: enabled ? 1 : 0.54,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: enabled ? onPressed : null,
-              child: SizedBox(
-                height: compact ? 34 : 38,
-                child: VariantRowBackground(
-                  tokens: tokens,
-                  active: selected,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 8 : 10,
-                    vertical: compact ? 6 : 7,
-                  ),
-                  child: Row(
-                    spacing: 8,
-                    children: [
-                      MainMenuAssetIcon(
-                        option.iconAsset,
-                        size: compact ? 20 : 24,
-                        opacity: selected ? 1 : 0.82,
-                      ),
-                      Expanded(
-                        child: ChromeScaledLabel(
-                          label,
-                          color: selected
-                              ? tokens.colors.activeSurfaceText
-                              : tokens.colors.cardInk,
-                          size: compact
-                              ? DisplayTextSize.caption2
-                              : DisplayTextSize.caption,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+    return SizedBox(
+      height: compact ? 48 : 56,
+      child: Row(
+        spacing: 8,
+        children: [
+          MainMenuAssetIcon(
+            'assets/art/field_plan/shared/pictograms/comrade.png',
+            size: compact ? 22 : 26,
           ),
-        ),
+          ChromeScaledLabel(
+            language.strings.kolkhozappComrades,
+            color: tokens.colors.cardInk,
+            size: compact ? DisplayTextSize.caption2 : DisplayTextSize.caption,
+          ),
+          Expanded(
+            child: comrades.isEmpty
+                ? ChromeScaledLabel(
+                    language.strings.kolkhozappNoComrades,
+                    color: tokens.colors.cardInk.withValues(alpha: 0.62),
+                    size: DisplayTextSize.caption2,
+                    textAlign: TextAlign.start,
+                  )
+                : ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: comrades.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 6),
+                    itemBuilder: (context, index) {
+                      final comrade = comrades[index];
+                      final invited = invitedUserIDs.contains(comrade.userID);
+                      final inviting = invitingUserIDs.contains(comrade.userID);
+                      final enabled = onInvite != null && !invited && !inviting;
+                      final actionLabel = invited || inviting
+                          ? language.strings.kolkhozappPending
+                          : language.strings.kolkhozappGameInvite;
+                      final semanticLabel =
+                          '${comrade.displayLabel} $actionLabel';
+                      return Semantics(
+                        button: true,
+                        enabled: enabled,
+                        label: semanticLabel,
+                        child: ExcludeSemantics(
+                          child: Tooltip(
+                            message: semanticLabel,
+                            child: Opacity(
+                              opacity: enabled ? 1 : 0.64,
+                              child: GestureDetector(
+                                key: ValueKey(
+                                  'hosted-comrade-invite-${comrade.userID}',
+                                ),
+                                behavior: HitTestBehavior.opaque,
+                                onTap: enabled
+                                    ? () => unawaited(onInvite!(comrade.userID))
+                                    : null,
+                                child: SizedBox(
+                                  width: compact ? 132 : 154,
+                                  child: VariantRowBackground(
+                                    tokens: tokens,
+                                    active: invited || inviting,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 5,
+                                    ),
+                                    child: Row(
+                                      spacing: 7,
+                                      children: [
+                                        PlayerProfilePortraitImage(
+                                          tokens: tokens,
+                                          asset:
+                                              comrade.portraitAsset ??
+                                              defaultProfilePortraitAsset,
+                                          size: compact ? 28 : 32,
+                                          selected: invited || inviting,
+                                        ),
+                                        Expanded(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            spacing: 1,
+                                            children: [
+                                              ChromeScaledLabel(
+                                                comrade.displayLabel,
+                                                color: tokens.colors.cardInk,
+                                                size: DisplayTextSize.caption2,
+                                                textAlign: TextAlign.start,
+                                              ),
+                                              ChromeScaledLabel(
+                                                actionLabel,
+                                                color: tokens.colors.cardInk
+                                                    .withValues(alpha: 0.66),
+                                                size: DisplayTextSize.xSmall,
+                                                textAlign: TextAlign.start,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -1992,13 +2379,13 @@ enum _LobbySeatChoice {
       return const [local];
     }
     return const [
-      _LobbySeatChoice.local,
-      _LobbySeatChoice.online,
-      _LobbySeatChoice.comrade,
+      _LobbySeatChoice.empty,
       _LobbySeatChoice.easyAI,
       _LobbySeatChoice.mediumAI,
       _LobbySeatChoice.hardAI,
-      _LobbySeatChoice.empty,
+      _LobbySeatChoice.local,
+      _LobbySeatChoice.comrade,
+      _LobbySeatChoice.online,
     ];
   }
 
@@ -2074,12 +2461,7 @@ enum _LobbySeatChoice {
   }
 
   static List<String> storedValues(List<_LobbySeatChoice> choices) {
-    return [
-      for (final choice in normalized(choices))
-        choice == _LobbySeatChoice.comrade
-            ? _LobbySeatChoice.online.name
-            : choice.name,
-    ];
+    return [for (final choice in normalized(choices)) choice.name];
   }
 
   bool get isHumanSeat {

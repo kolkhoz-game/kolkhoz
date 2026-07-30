@@ -396,6 +396,14 @@
       }
     }
   },
+  "handConsoleWaitingForValue1ToDeclareTrump": "Ждём объявления козыря: {value1}",
+  "@handConsoleWaitingForValue1ToDeclareTrump": {
+    "placeholders": {
+      "value1": {
+        "type": "Object"
+      }
+    }
+  },
   "handConsoleWaitingForValue1ToPlay": "Ждём хода: {value1}",
   "@handConsoleWaitingForValue1ToPlay": {
     "placeholders": {

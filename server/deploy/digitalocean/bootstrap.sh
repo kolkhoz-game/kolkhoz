@@ -145,7 +145,7 @@ runuser -u "$RUN_USER" -- "$ROOT/.venv/bin/pip" install \
   --disable-pip-version-check --no-cache-dir --only-binary :all: --require-hashes \
   -r "$ROOT/server/deploy/requirements.lock"
 chown -R root:root "$ROOT/.venv"
-"$ROOT/.venv/bin/python" -c 'from engine.python.kolkhoz_c_engine import CEngine; CEngine()'
+"$ROOT/.venv/bin/python" -c 'from engine.python.kolkhoz_c_engine import CEngine, build_shared_library; CEngine(build_shared_library(force=True))'
 test -s "$ROOT/policies/medium_policy.json"
 test -s "$ROOT/policies/hard_policy.json"
 "$ROOT/.venv/bin/python" -m server.kolkhoz_server.preflight --repo-root "$ROOT"

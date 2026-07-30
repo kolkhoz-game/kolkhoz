@@ -61,7 +61,9 @@ class FlyingCard extends StatelessWidget {
         final flightProgress = GameMotion.cardFlightCurve.transform(
           rawFlightProgress,
         );
-        final rect = Rect.lerp(flight.from, flight.to, flightProgress)!;
+        final rect = cardFlightRectAt(flight.from, flight.to, flightProgress);
+        final rotation = cardFlightRotation(flight.card.id, rawFlightProgress);
+        final scale = cardFlightScale(rawFlightProgress);
         final card = _flyingCardFace(
           faceDown:
               flight.faceDown ||
@@ -78,21 +80,24 @@ class FlyingCard extends StatelessWidget {
           rect: rect,
           child: Opacity(
             opacity: visible ? 1 : 0,
-            child: Transform.scale(
-              scale: lerpDouble(1.04, 1, flightProgress)!,
-              child: flipTransform == null
-                  ? card
-                  : Transform(
-                      alignment: Alignment.center,
-                      transform: flipTransform,
-                      child: flipProgress >= 0.5
-                          ? Transform(
-                              alignment: Alignment.center,
-                              transform: Matrix4.rotationY(math.pi),
-                              child: card,
-                            )
-                          : card,
-                    ),
+            child: Transform.rotate(
+              angle: rotation,
+              child: Transform.scale(
+                scale: scale,
+                child: flipTransform == null
+                    ? card
+                    : Transform(
+                        alignment: Alignment.center,
+                        transform: flipTransform,
+                        child: flipProgress >= 0.5
+                            ? Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.rotationY(math.pi),
+                                child: card,
+                              )
+                            : card,
+                      ),
+              ),
             ),
           ),
         );
@@ -132,6 +137,52 @@ class FlyingCard extends StatelessWidget {
       child: card,
     );
   }
+}
+
+Rect cardFlightRectAt(Rect from, Rect to, double progress) {
+  final clamped = progress.clamp(0.0, 1.0);
+  final width = lerpDouble(from.width, to.width, clamped)!;
+  final height = lerpDouble(from.height, to.height, clamped)!;
+  final linearCenter = Offset.lerp(from.center, to.center, clamped)!;
+  final distance = (to.center - from.center).distance;
+  final arcHeight = math.min(76.0, distance * 0.14);
+  final arcOffset = -4 * arcHeight * clamped * (1 - clamped);
+  return Rect.fromCenter(
+    center: linearCenter.translate(0, arcOffset),
+    width: width,
+    height: height,
+  );
+}
+
+double cardFlightRotation(String cardID, double progress) {
+  final direction =
+      cardID.codeUnits.fold<int>(0, (total, unit) => total + unit).isEven
+      ? 1.0
+      : -1.0;
+  return direction * math.sin(math.pi * progress.clamp(0.0, 1.0)) * 0.038;
+}
+
+double cardFlightScale(double progress) {
+  final clamped = progress.clamp(0.0, 1.0);
+  if (clamped < 0.68) {
+    return lerpDouble(
+      1.0,
+      1.055,
+      Curves.easeOutCubic.transform(clamped / 0.68),
+    )!;
+  }
+  if (clamped < 0.88) {
+    return lerpDouble(
+      1.055,
+      0.972,
+      Curves.easeInCubic.transform((clamped - 0.68) / 0.2),
+    )!;
+  }
+  return lerpDouble(
+    0.972,
+    1.0,
+    Curves.easeOutBack.transform((clamped - 0.88) / 0.12),
+  )!;
 }
 
 class _FlyingCardBack extends StatelessWidget {
