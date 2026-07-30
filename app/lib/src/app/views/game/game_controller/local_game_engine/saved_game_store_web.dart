@@ -27,11 +27,9 @@ class KolkhozSavedGamePayload {
 class KolkhozAutosaveStore {
   const KolkhozAutosaveStore();
 
-  static KolkhozAutosaveStore defaultStore() =>
-      KolkhozAutosaveStore();
+  static KolkhozAutosaveStore defaultStore() => KolkhozAutosaveStore();
 
-  static KolkhozAutosaveStore defaultTutorialStore() =>
-      KolkhozAutosaveStore();
+  static KolkhozAutosaveStore defaultTutorialStore() => KolkhozAutosaveStore();
 
   static File defaultFile() => File('/kolkhoz-web-demo.json');
 

@@ -36,9 +36,8 @@ class RemoteConnection extends ChangeNotifier {
   final String deviceID;
   final RemoteRequestHandler? requestHandler;
 
-  RemoteStatus get status => const RemoteStatus(
-    availability: RemoteAvailability.unreachable,
-  );
+  RemoteStatus get status =>
+      const RemoteStatus(availability: RemoteAvailability.unreachable);
   bool get heartbeatRunning => false;
 
   Future<Object?> request({

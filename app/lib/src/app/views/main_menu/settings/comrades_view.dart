@@ -170,7 +170,8 @@ class _ComradesPanelState extends State<ComradesView> {
                 _ComradeSectionTitle(
                   tokens: widget.tokens,
                   label: widget.language.strings.kolkhozappComrades,
-                  iconAsset: 'assets/art/field_plan/shared/pictograms/friends-list.png',
+                  iconAsset:
+                      'assets/art/field_plan/shared/pictograms/friends-list.png',
                 ),
                 if (comrades.comrades.isEmpty)
                   _ComradeEmptyRow(
@@ -195,7 +196,8 @@ class _ComradesPanelState extends State<ComradesView> {
                         language: widget.language,
                         label:
                             widget.language.strings.kolkhozappIncomingRequests,
-                        iconAsset: 'assets/art/field_plan/shared/pictograms/add-friend.png',
+                        iconAsset:
+                            'assets/art/field_plan/shared/pictograms/add-friend.png',
                         requests: comrades.incomingRequests,
                         busy: busy,
                         incoming: true,
@@ -209,7 +211,8 @@ class _ComradesPanelState extends State<ComradesView> {
                         language: widget.language,
                         label:
                             widget.language.strings.kolkhozappOutgoingRequests,
-                        iconAsset: 'assets/art/field_plan/shared/pictograms/friends-list.png',
+                        iconAsset:
+                            'assets/art/field_plan/shared/pictograms/friends-list.png',
                         requests: comrades.outgoingRequests,
                         busy: busy,
                         incoming: false,
@@ -266,7 +269,8 @@ class _ComradesPanelState extends State<ComradesView> {
                 label: widget.language.strings.kolkhozappCopyCode,
                 prominent: false,
                 tokens: widget.tokens,
-                iconAsset: 'assets/art/field_plan/shared/pictograms/comrade.png',
+                iconAsset:
+                    'assets/art/field_plan/shared/pictograms/comrade.png',
                 expandLabel: false,
                 onPressed: comrades.comradeCode == null
                     ? null
@@ -316,7 +320,8 @@ class _ComradesPanelState extends State<ComradesView> {
                     : widget.language.strings.kolkhozappAddComrade,
                 prominent: true,
                 tokens: widget.tokens,
-                iconAsset: 'assets/art/field_plan/shared/pictograms/add-friend.png',
+                iconAsset:
+                    'assets/art/field_plan/shared/pictograms/add-friend.png',
                 onPressed: busy ? null : addComrade,
               ),
             );

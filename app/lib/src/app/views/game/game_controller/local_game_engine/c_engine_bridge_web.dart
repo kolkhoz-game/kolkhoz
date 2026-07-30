@@ -69,11 +69,8 @@ class KolkhozCEngineBridge {
       _get(engine, 14, playerID) != 0;
   int handCount(KCEngineHandle engine, int playerID) =>
       _get(engine, 15, playerID);
-  EngineCardValue handCard(
-    KCEngineHandle engine,
-    int playerID,
-    int index,
-  ) => _card(_get(engine, 16, playerID, index));
+  EngineCardValue handCard(KCEngineHandle engine, int playerID, int index) =>
+      _card(_get(engine, 16, playerID, index));
   int plotRevealedCount(KCEngineHandle engine, int playerID) =>
       _get(engine, 17, playerID);
   EngineCardValue plotRevealedCard(
@@ -119,13 +116,9 @@ class KolkhozCEngineBridge {
   bool claimedJob(KCEngineHandle engine, int suit) =>
       _get(engine, 28, suit) != 0;
   int workHours(KCEngineHandle engine, int suit) => _get(engine, 29, suit);
-  int jobBucketCount(KCEngineHandle engine, int suit) =>
-      _get(engine, 30, suit);
-  EngineCardValue jobBucketCard(
-    KCEngineHandle engine,
-    int suit,
-    int index,
-  ) => _card(_get(engine, 31, suit, index));
+  int jobBucketCount(KCEngineHandle engine, int suit) => _get(engine, 30, suit);
+  EngineCardValue jobBucketCard(KCEngineHandle engine, int suit, int index) =>
+      _card(_get(engine, 31, suit, index));
   int jobBucketTrick(KCEngineHandle engine, int suit, int index) =>
       _get(engine, 32, suit, index);
   int currentTrickCount(KCEngineHandle engine) => _get(engine, 33);
@@ -142,11 +135,8 @@ class KolkhozCEngineBridge {
   int pendingAssignmentTarget(KCEngineHandle engine, int index) =>
       _get(engine, 40, index);
   int exiledCount(KCEngineHandle engine, int year) => _get(engine, 41, year);
-  EngineCardValue exiledCard(
-    KCEngineHandle engine,
-    int year,
-    int index,
-  ) => _card(_get(engine, 42, year, index));
+  EngineCardValue exiledCard(KCEngineHandle engine, int year, int index) =>
+      _card(_get(engine, 42, year, index));
   int exiledPlayer(KCEngineHandle engine, int year, int index) =>
       _get(engine, 43, year, index);
   int requisitionEventCount(KCEngineHandle engine) => _get(engine, 44);
@@ -154,10 +144,8 @@ class KolkhozCEngineBridge {
       _get(engine, 45, index);
   int requisitionEventSuit(KCEngineHandle engine, int index) =>
       _get(engine, 46, index);
-  EngineCardValue requisitionEventCard(
-    KCEngineHandle engine,
-    int index,
-  ) => _card(_get(engine, 47, index));
+  EngineCardValue requisitionEventCard(KCEngineHandle engine, int index) =>
+      _card(_get(engine, 47, index));
   int requisitionEventMessageKind(KCEngineHandle engine, int index) =>
       _get(engine, 48, index);
 
@@ -239,25 +227,22 @@ class KolkhozCEngineBridge {
   Object allocPolicyWorkspace(Object model) => model;
   void freePolicyWorkspace(Object workspace) {}
 
-  int _apply(
-    KCEngineHandle engine,
-    CEngineActionValue action,
-    int mode,
-  ) => _call('kc_web_engine_apply', [
-    engine.address,
-    mode,
-    action.kind,
-    action.playerID,
-    action.suit,
-    action.card.suit,
-    action.card.value,
-    action.handCard.suit,
-    action.handCard.value,
-    action.plotCard.suit,
-    action.plotCard.value,
-    action.plotZone,
-    action.targetSuit,
-  ]);
+  int _apply(KCEngineHandle engine, CEngineActionValue action, int mode) =>
+      _call('kc_web_engine_apply', [
+        engine.address,
+        mode,
+        action.kind,
+        action.playerID,
+        action.suit,
+        action.card.suit,
+        action.card.value,
+        action.handCard.suit,
+        action.handCard.value,
+        action.plotCard.suit,
+        action.plotCard.value,
+        action.plotZone,
+        action.targetSuit,
+      ]);
 
   int _get(
     KCEngineHandle engine,
@@ -267,8 +252,7 @@ class KolkhozCEngineBridge {
     int c = 0,
   ]) => _call('kc_web_engine_get', [engine.address, field, a, b, c]);
 
-  int _selected(int field) =>
-      _call('kc_web_selected_action_get', [field]);
+  int _selected(int field) => _call('kc_web_selected_action_get', [field]);
 
   int _controllerCode(KolkhozPlayerController controller) {
     return switch (controller) {

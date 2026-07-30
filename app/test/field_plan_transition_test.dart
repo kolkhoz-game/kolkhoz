@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_view.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_world_scene.dart';
 
-
 void main() {
   test('camera travel eases at both maps and moves faster between them', () {
     expect(fieldPlanCameraTravelProgress(0), 0);

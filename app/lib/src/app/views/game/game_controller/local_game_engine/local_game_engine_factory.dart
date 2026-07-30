@@ -80,8 +80,7 @@ class LocalGameEngineFactory {
   }) : _bridge = bridge ?? KolkhozCEngineBridge(),
        _autosaveStore = autosaveStore ?? KolkhozAutosaveStore.defaultStore(),
        _tutorialAutosaveStore =
-           tutorialAutosaveStore ??
-           KolkhozAutosaveStore.defaultTutorialStore(),
+           tutorialAutosaveStore ?? KolkhozAutosaveStore.defaultTutorialStore(),
        _mediumPolicy = mediumPolicy,
        _mediumPolicyLoader = mediumPolicy == null
            ? mediumPolicyLoader ??
