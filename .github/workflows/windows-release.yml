@@ -31,8 +31,6 @@ jobs:
     timeout-minutes: 30
     env:
       KOLKHOZ_BETA: ${{ inputs.prerelease }}
-      KOLKHOZ_SUPABASE_URL: ${{ secrets.KOLKHOZ_SUPABASE_URL }}
-      KOLKHOZ_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.KOLKHOZ_SUPABASE_PUBLISHABLE_KEY }}
     defaults:
       run:
         working-directory: app
@@ -68,19 +66,11 @@ jobs:
       - name: Build configured Windows release
         shell: pwsh
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:KOLKHOZ_SUPABASE_URL)) {
-            throw "Missing KOLKHOZ_SUPABASE_URL"
-          }
-          if ([string]::IsNullOrWhiteSpace($env:KOLKHOZ_SUPABASE_PUBLISHABLE_KEY)) {
-            throw "Missing KOLKHOZ_SUPABASE_PUBLISHABLE_KEY"
-          }
           if ($env:KOLKHOZ_BETA -notin @("true", "false")) {
             throw "KOLKHOZ_BETA must be true or false"
           }
           flutter build windows --release `
-            "--dart-define=KOLKHOZ_BETA=$env:KOLKHOZ_BETA" `
-            "--dart-define=KOLKHOZ_SUPABASE_URL=$env:KOLKHOZ_SUPABASE_URL" `
-            "--dart-define=KOLKHOZ_SUPABASE_PUBLISHABLE_KEY=$env:KOLKHOZ_SUPABASE_PUBLISHABLE_KEY"
+            "--dart-define=KOLKHOZ_BETA=$env:KOLKHOZ_BETA"
 
       - name: Test Windows release
         shell: pwsh
@@ -105,13 +95,6 @@ jobs:
             throw "Missing policy assets"
           }
 
-          $appAot = [System.Text.Encoding]::UTF8.GetString(
-            [System.IO.File]::ReadAllBytes("$bundle/data/app.so")
-          )
-          if (-not $appAot.Contains($env:KOLKHOZ_SUPABASE_URL)) {
-            throw "Supabase URL was not compiled into the Windows release"
-          }
-
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $vsInstall = & $vswhere -latest -products * -property installationPath
           if ([string]::IsNullOrWhiteSpace($vsInstall)) { throw "Visual Studio installation not found" }
@@ -132,7 +115,7 @@ jobs:
             "Workflow run: $env:GITHUB_RUN_ID"
             "Built UTC: $([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
             "Architecture: x64"
-            "Cloud profiles: configured"
+            "Online server: production"
             "Beta full-game unlock: $env:KOLKHOZ_BETA"
           ) | Set-Content "$bundle/BUILD_INFO.txt"
 
