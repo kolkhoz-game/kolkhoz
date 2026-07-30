@@ -9,9 +9,13 @@ Build the deployable site from the repository root:
 ./app/tool/build_web_demo.sh
 ```
 
+The build requires Flutter, Emscripten, Python 3, and the `cwebp` command from
+the WebP tools package.
+
 The script compiles `engine/KolkhozCEngine` to WebAssembly, builds Flutter with
-`KOLKHOZ_WEB_DEMO=true`, removes neural-policy assets that the web build cannot
-request, and writes the result to `app/build/web`.
+`KOLKHOZ_WEB_DEMO=true`, converts generated PNG assets to WebP, and removes
+neural-policy assets, obsolete artwork, and the unused local CanvasKit copy. It
+writes the result to `app/build/web`.
 
 Set `BASE_HREF` only when hosting below a URL path. The production deployment
 at `play.kolkhoz.online` uses the default `/`.

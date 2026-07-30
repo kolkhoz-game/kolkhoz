@@ -5,7 +5,7 @@ app_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 repo_dir="$(cd "${app_dir}/.." && pwd)"
 base_href="${BASE_HREF:-/}"
 
-for command_name in emcc flutter; do
+for command_name in cwebp emcc flutter python3; do
   if ! command -v "${command_name}" >/dev/null 2>&1; then
     echo "Missing required command: ${command_name}" >&2
     exit 1
@@ -38,8 +38,6 @@ flutter build web \
   --dart-define=KOLKHOZ_WEB_DEMO=true \
   "--base-href=${base_href}"
 
-# The public build uses heuristic AI only. Neural policy files are intentionally
-# omitted from the deployment artifact while remaining available to native apps.
-rm -rf build/web/assets/assets/policies
+python3 tool/optimize_web_demo.py build/web
 
 echo "Web demo ready at ${app_dir}/build/web"
