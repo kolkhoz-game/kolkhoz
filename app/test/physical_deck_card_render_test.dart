@@ -140,6 +140,28 @@ void main() {
       matchesGoldenFile('goldens/physical_deck_cards_dark.png'),
     );
   });
+
+  testWidgets(
+    'missing physical layout uses card fallback instead of error UI',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            width: 90,
+            height: 126,
+            child: PhysicalDeckCardContent(
+              card: _card('wheat-99', 'wheat', 99, '99'),
+              tokens: defaultDesignTokens,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ErrorWidget), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 TableCard _card(

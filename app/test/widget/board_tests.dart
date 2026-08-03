@@ -5951,6 +5951,7 @@ void registerBoardTests() {
       const JobCardArrival(cardID: 'wheat-7', suit: 'wheat'),
     );
     await tester.pump();
+    await tester.pump();
     expect(findAppText('17/40'), findsWidgets);
     expect(findAppText('+7'), findsWidgets);
     await tester.pump(const Duration(milliseconds: 80));
@@ -5979,6 +5980,7 @@ void registerBoardTests() {
       const JobCardArrival(cardID: 'wheat-8', suit: 'wheat'),
     );
     await tester.pump();
+    await tester.pump();
     expect(findAppText('25/40'), findsWidgets);
     expect(findAppText('+8'), findsWidgets);
     await tester.pumpAndSettle();
@@ -6006,7 +6008,197 @@ void registerBoardTests() {
       const JobCardArrival(cardID: 'wheat-15', suit: 'wheat'),
     );
     await tester.pump();
+    await tester.pump();
     expect(findAppText('40/40'), findsWidgets);
+  });
+
+  testWidgets('job gauge never shows negative hours between flight frames', (
+    tester,
+  ) async {
+    const pending = TableCard(
+      id: 'wheat-8',
+      suit: 'wheat',
+      value: 8,
+      rank: '8',
+      selected: false,
+      highlighted: false,
+      pending: true,
+    );
+
+    Widget gauge(List<TableCard> cards) => MaterialApp(
+      home: JobGauge(
+        job: Job(
+          suit: 'wheat',
+          hours: 0,
+          requiredHours: jobRequiredHours,
+          claimed: false,
+          reward: null,
+          assignedCards: cards,
+          validAssignmentTarget: false,
+          highlighted: false,
+        ),
+        highlighted: false,
+        width: 118,
+        height: 38,
+        tokens: defaultDesignTokens,
+      ),
+    );
+
+    await tester.pumpWidget(gauge(const []));
+    await tester.pumpWidget(gauge(const [pending]));
+    await tester.pumpWidget(gauge(const []));
+
+    expect(findAppText('0/40'), findsWidgets);
+    expect(findAppText('-8/40'), findsNothing);
+  });
+
+  testWidgets('first assignment flight lands without Flutter error UI', (
+    tester,
+  ) async {
+    final base = runtimeModel();
+    final card = testCard(id: 'wheat-8', suit: 'wheat', value: 8);
+    final pendingCard = testCard(
+      id: card.id,
+      suit: card.suit,
+      value: card.value,
+      pending: true,
+    );
+    final before = modelWithActivePanel(
+      runtimeModelWith(
+        phase: phaseAssignment,
+        selection: SelectionState.empty,
+        jobs: base.table.jobs,
+        lastTrick: Trick(
+          plays: [TrickPlay(seatID: 0, card: card)],
+          winnerSeatID: 0,
+        ),
+      ),
+      panelBrigade,
+    );
+    final after = runtimeModelWith(
+      phase: phaseAssignment,
+      selection: SelectionState.empty,
+      jobs: [
+        for (final job in base.table.jobs)
+          job.suit == 'wheat'
+              ? Job(
+                  suit: job.suit,
+                  hours: job.hours,
+                  requiredHours: job.requiredHours,
+                  claimed: job.claimed,
+                  reward: job.reward,
+                  assignedCards: [pendingCard],
+                  validAssignmentTarget: job.validAssignmentTarget,
+                  highlighted: job.highlighted,
+                )
+              : job,
+      ],
+      lastTrick: before.table.lastTrick,
+    );
+    var model = before;
+    GamePresentationTransition? transition;
+    late StateSetter setMotionState;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setMotionState = setState;
+            final wheatJob = model.table.jobs.singleWhere(
+              (job) => job.suit == 'wheat',
+            );
+            return SizedBox(
+              width: 500,
+              height: 300,
+              child: CardMotionLayer(
+                model: model,
+                tokens: defaultDesignTokens,
+                speed: GameAnimationSpeed.normal,
+                transition: transition,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: 40,
+                      top: 180,
+                      child: MotionTrackedRegion(
+                        motionKey: trickCardMotionSourceKey(card.id),
+                        child: GameCard(
+                          card: card,
+                          tokens: defaultDesignTokens,
+                          sizeOverride: defaultDesignTokens.card.small,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 300,
+                      top: 20,
+                      child: MotionTrackedRegion(
+                        motionKey: jobGaugeMotionTargetKey('wheat'),
+                        child: JobGauge(
+                          job: wheatJob,
+                          highlighted: false,
+                          width: 118,
+                          height: 38,
+                          tokens: defaultDesignTokens,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    setMotionState(() {
+      model = after;
+      transition = GamePresentationTransition(
+        id: 901,
+        before: before,
+        after: after,
+        event: EngineTransitionEvent(
+          kind: kcTransitionAssignmentTargeted,
+          playerID: 0,
+          card: EngineCardValue(suit: 0, value: 8),
+          fromZone: kcObjectZoneLastTrick,
+          toZone: kcObjectZonePendingAssignment,
+          fromOwner: 0,
+          toOwner: 0,
+          targetSuit: 0,
+        ),
+      );
+    });
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(FlyingCard), findsWidgets);
+
+    await tester.pump(const Duration(milliseconds: 1100));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(ErrorWidget), findsNothing);
+    expect(findAppText('+8'), findsWidgets);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  test('drag target scaling rejects transient layout extremes', () {
+    expect(
+      cardDragTargetScale(const Size(0, 0), const Size(100, 140)),
+      cardDragFeedbackScale,
+    );
+    expect(
+      cardDragTargetScale(const Size(2, 2), const Size(1200, 900)),
+      cardDragMaximumTargetScale,
+    );
+    expect(
+      cardDragTargetScale(const Size(1000, 1000), const Size(10, 10)),
+      cardDragMinimumTargetScale,
+    );
   });
 
   test('AI card flights originate from the player info card', () {

@@ -42,6 +42,8 @@ const tactileCardMaximumTilt = 0.028;
 const tactileCardSheenWidthFraction = 0.46;
 const tactileCardSheenDuration = Duration(milliseconds: 475);
 const cardDragFeedbackScale = 1.06;
+const cardDragMinimumTargetScale = 0.72;
+const cardDragMaximumTargetScale = 1.65;
 const cardDragSnapBackDuration = Duration(milliseconds: 180);
 const cardDragTargetScaleDuration = Duration(milliseconds: 45);
 const cardFidgetResistance = 0.22;
@@ -113,6 +115,22 @@ double _distanceToRect(Offset point, Rect rect) {
       ? point.dy - rect.bottom
       : 0.0;
   return math.sqrt(dx * dx + dy * dy);
+}
+
+double cardDragTargetScale(Size source, Size target) {
+  if (!source.width.isFinite ||
+      !source.height.isFinite ||
+      !target.width.isFinite ||
+      !target.height.isFinite ||
+      source.width < 1 ||
+      source.height < 1 ||
+      target.width < 1 ||
+      target.height < 1) {
+    return cardDragFeedbackScale;
+  }
+  return math
+      .min(target.width / source.width, target.height / source.height)
+      .clamp(cardDragMinimumTargetScale, cardDragMaximumTargetScale);
 }
 
 String assignmentCardDropLabel(CardDragData data) =>
@@ -207,9 +225,9 @@ class _DraggableCardSurfaceState extends State<DraggableCardSurface> {
         continue;
       }
       bestProgress = progress;
-      final destinationScale = math.min(
-        target.feedbackSize.width / sourceSize.width,
-        target.feedbackSize.height / sourceSize.height,
+      final destinationScale = cardDragTargetScale(
+        sourceSize,
+        target.feedbackSize,
       );
       nextScale = lerpDouble(
         cardDragFeedbackScale,
@@ -1770,7 +1788,7 @@ class PhysicalDeckCardContent extends StatelessWidget {
       future: _layouts,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return ErrorWidget(snapshot.error!);
+          return _fallbackContent();
         }
         final payload = snapshot.data;
         final layouts = payload?['layouts'] as Map<String, dynamic>?;
@@ -1779,7 +1797,7 @@ class PhysicalDeckCardContent extends StatelessWidget {
           if (snapshot.connectionState != ConnectionState.done) {
             return _fallbackContent();
           }
-          return ErrorWidget('Missing physical-deck layout: $_layoutCardID');
+          return _fallbackContent();
         }
         return KeyedSubtree(
           key: ValueKey('physical-deck-layout-$_layoutCardID'),

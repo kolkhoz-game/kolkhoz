@@ -2334,6 +2334,7 @@ class _JobGaugeState extends State<JobGauge>
   final List<_VisibleJobGaugeDelta> visibleDeltas = [];
   final LayerLink deltaLink = LayerLink();
   OverlayEntry? deltaOverlayEntry;
+  bool deltaOverlayInserted = false;
   late final AnimationController impactController;
 
   @override
@@ -2368,25 +2369,42 @@ class _JobGaugeState extends State<JobGauge>
         pendingCardDeltas[card.id] = card.value;
       }
     }
-    deltaOverlayEntry?.markNeedsBuild();
+    if (deltaOverlayInserted) {
+      deltaOverlayEntry?.markNeedsBuild();
+    }
   }
 
   @override
   void dispose() {
     motionController?.jobCardArrival.removeListener(_handleJobCardArrival);
-    deltaOverlayEntry?.remove();
+    if (deltaOverlayInserted) {
+      deltaOverlayEntry?.remove();
+    }
     impactController.dispose();
     super.dispose();
   }
 
   void _showDeltaOverlay() {
     if (deltaOverlayEntry != null) {
-      deltaOverlayEntry!.markNeedsBuild();
+      if (deltaOverlayInserted) {
+        deltaOverlayEntry!.markNeedsBuild();
+      }
       return;
     }
     final entry = OverlayEntry(builder: _buildDeltaOverlay);
     deltaOverlayEntry = entry;
-    Overlay.of(context).insert(entry);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !identical(deltaOverlayEntry, entry)) {
+        return;
+      }
+      final overlay = Overlay.maybeOf(context);
+      if (overlay == null) {
+        deltaOverlayEntry = null;
+        return;
+      }
+      overlay.insert(entry);
+      deltaOverlayInserted = true;
+    });
   }
 
   Widget _buildDeltaOverlay(BuildContext context) {
@@ -2453,10 +2471,15 @@ class _JobGaugeState extends State<JobGauge>
       () => visibleDeltas.removeWhere((entry) => entry.serial == serial),
     );
     if (visibleDeltas.isEmpty) {
-      deltaOverlayEntry?.remove();
+      if (deltaOverlayInserted) {
+        deltaOverlayEntry?.remove();
+      }
       deltaOverlayEntry = null;
+      deltaOverlayInserted = false;
     } else {
-      deltaOverlayEntry?.markNeedsBuild();
+      if (deltaOverlayInserted) {
+        deltaOverlayEntry?.markNeedsBuild();
+      }
     }
   }
 
@@ -2481,7 +2504,10 @@ class _JobGaugeState extends State<JobGauge>
       0,
       (total, value) => total + value,
     );
-    final displayedHours = displayedJobHours(job) - pendingArrivalHours;
+    final displayedHours = math.max(
+      0,
+      displayedJobHours(job) - pendingArrivalHours,
+    );
     final progress = (displayedHours / jobRequiredHours).clamp(0.0, 1.0);
     const paper = Color(0xffe2d1a8);
     const ink = Color(0xff2b2c26);

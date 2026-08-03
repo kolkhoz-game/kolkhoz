@@ -3853,6 +3853,73 @@ void registerStoreAndOnlineTests() {
     expect(uiState.selection.planningRewardSuit, isNull);
   });
 
+  testWidgets('local AI considers every reward before keeping them unchanged', (
+    tester,
+  ) async {
+    NativeGameEngine? native;
+    for (var seed = 1; seed <= 100 && native == null; seed += 1) {
+      final candidate = NativeGameEngine(
+        bridge: KolkhozCEngineBridge(),
+        seed: seed,
+        variants: KolkhozGameVariants.kolkhoz,
+        controllers: const [
+          KolkhozPlayerController.heuristicAI,
+          KolkhozPlayerController.heuristicAI,
+          KolkhozPlayerController.heuristicAI,
+          KolkhozPlayerController.heuristicAI,
+        ],
+      );
+      while (candidate.legalActions.length == 1 &&
+          candidate.legalActions.single.kind == kcActionRevealReward) {
+        expect(candidate.applyManual(candidate.legalActions.single), 0);
+      }
+      if (candidate.heuristicAction()?.kind == kcActionConfirmRewardSwaps) {
+        native = candidate;
+      } else {
+        candidate.dispose();
+      }
+    }
+    expect(native, isNotNull);
+
+    var uiState = const GameUiState();
+    final consideredSuits = <String?>[];
+    final local = LocalGameEngine(
+      engine: native!,
+      players: () => [
+        for (var seatID = 0; seatID < kolkhozPlayerCount; seatID += 1)
+          HeuristicAIPlayer(seatID: seatID),
+      ],
+      lobby: () => throw UnimplementedError(),
+      animationSpeed: () => GameAnimationSpeed.normal,
+      uiState: () => uiState,
+      setUiState: (next) => uiState = next,
+      revealedPlayerID: () => null,
+      setRevealedPlayerID: (_) {},
+      lastSyncedPhase: () => null,
+      setLastSyncedPhase: (_) {},
+      onGameUpdate: (_) {},
+      onStateChanged: () {
+        consideredSuits.add(uiState.selection.planningRewardSuit);
+      },
+      onError: (_) {},
+      onPersist: () {},
+    );
+    addTearDown(local.dispose);
+
+    local.scheduleAutomaticStep();
+    expect(uiState.selection.planningRewardSuit, 'wheat');
+    await tester.pump(const Duration(seconds: 10));
+    expect(
+      consideredSuits.whereType<String>(),
+      containsAllInOrder(displaySuitOrder),
+    );
+    expect(uiState.selection.planningRewardSuit, isNull);
+    expect(
+      native.legalActions.every((action) => action.kind == kcActionSetTrump),
+      isTrue,
+    );
+  });
+
   testWidgets('managed reward actions cannot create trump focus', (
     tester,
   ) async {

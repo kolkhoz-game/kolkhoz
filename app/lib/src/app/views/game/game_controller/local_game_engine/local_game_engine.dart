@@ -54,6 +54,7 @@ class LocalGameEngine implements GameEngine {
   Timer? _automaticStepTimer;
   GameCommand? _scheduledAutomaticCommand;
   String? _automaticRewardPreviewSuit;
+  final Set<String> _automaticRewardConsideredSuits = {};
   final math.Random _automaticDelayRandom = math.Random();
   int? _automaticPhaseBefore;
   int _automaticRequisitionCountBefore = 0;
@@ -138,6 +139,9 @@ class LocalGameEngine implements GameEngine {
     if (command == null) {
       return;
     }
+    if (_scheduleAutomaticRewardConsideration(command)) {
+      return;
+    }
     _scheduledAutomaticCommand = command;
     _automaticStepTimer = Timer(
       _automaticStepDelay(engine, command),
@@ -204,6 +208,11 @@ class LocalGameEngine implements GameEngine {
     if (suit == null || suit == _automaticRewardPreviewSuit) {
       return;
     }
+    _automaticRewardConsideredSuits.add(suit);
+    _showAutomaticRewardPreviewSuit(suit);
+  }
+
+  void _showAutomaticRewardPreviewSuit(String suit) {
     _automaticRewardPreviewSuit = suit;
     setUiState(
       uiState().copyWith(
@@ -211,6 +220,37 @@ class LocalGameEngine implements GameEngine {
       ),
     );
     onStateChanged();
+  }
+
+  bool _scheduleAutomaticRewardConsideration(GameCommand command) {
+    final confirmsRewards = switch (command) {
+      SubmitGameAction(:final action) =>
+        action.kind == actionConfirmRewardSwaps,
+      _ => false,
+    };
+    if (!confirmsRewards) {
+      return false;
+    }
+    final nextSuit = displaySuitOrder
+        .where((suit) => !_automaticRewardConsideredSuits.contains(suit))
+        .firstOrNull;
+    if (nextSuit == null) {
+      return false;
+    }
+    _automaticRewardConsideredSuits.add(nextSuit);
+    _scheduledAutomaticCommand = null;
+    _showAutomaticRewardPreviewSuit(nextSuit);
+    _automaticStepTimer = Timer(
+      jitteredAutomaticRewardPlanningDelay(
+        animationSpeed(),
+        _automaticDelayRandom.nextDouble(),
+      ),
+      () {
+        _automaticStepTimer = null;
+        scheduleAutomaticStep();
+      },
+    );
+    return true;
   }
 
   void _clearAutomaticRewardPreview({required bool notify}) {
@@ -355,6 +395,9 @@ class LocalGameEngine implements GameEngine {
       if (command case SubmitGameAction(:final action)) {
         actionLog = [...actionLog, action];
         gameLog = [...gameLog, action];
+        if (action.kind == actionConfirmRewardSwaps) {
+          _automaticRewardConsideredSuits.clear();
+        }
       }
       if (_automaticPhaseBefore == kcPhaseRequisition &&
           engine.requisitionEventCount > _automaticRequisitionCountBefore) {
