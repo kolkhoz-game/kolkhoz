@@ -801,10 +801,10 @@ void registerTutorialAndLayoutTests() {
       ),
     );
 
-    final portrait = tester.widget<GestureDetector>(
+    final portrait = tester.widget<TactileControlSurface>(
       find.byKey(const Key('player-portrait-0-inspect')),
     );
-    portrait.onTap!();
+    portrait.onPressed!();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
@@ -813,6 +813,43 @@ void registerTutorialAndLayoutTests() {
     expect(find.textContaining('PLAYER'), findsOneWidget);
     expect(find.textContaining('SCORE'), findsOneWidget);
     expect(find.textContaining('HAND'), findsOneWidget);
+  });
+
+  testWidgets('expanded player info closes through a tactile footer', (
+    tester,
+  ) async {
+    var closed = false;
+    final model = runtimeModel();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 360,
+          height: 420,
+          child: ExpandedPlayerInfoPanel(
+            seat: model.table.seats.first,
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            maxTricks: model.table.maxTricks,
+            onClose: () => closed = true,
+          ),
+        ),
+      ),
+    );
+
+    final closeSemantics = find.byWidgetPredicate(
+      (widget) =>
+          widget is Semantics &&
+          widget.properties.button == true &&
+          widget.properties.label == 'Cancel',
+    );
+    expect(closeSemantics, findsOneWidget);
+    final closeControl = find.descendant(
+      of: closeSemantics,
+      matching: find.byType(TactileControlSurface),
+    );
+    expect(closeControl, findsOneWidget);
+    await tester.tap(closeControl);
+    expect(closed, isTrue);
   });
 
   test('brigade display helpers project column geometry', () {

@@ -35,6 +35,12 @@ class GameMotion {
   Duration get cameraFocusOut => duration(_cameraFocusOut);
   Duration get trumpSelectorHop => duration(_trumpSelectorHopDuration);
   Duration get gaugeDelta => duration(_gaugeDeltaDuration);
+  Duration get jobGaugeImpact => duration(_jobGaugeImpactDuration);
+  Duration get consequenceImpact => duration(_consequenceImpactDuration);
+  Duration get valueImpact => duration(_valueImpactDuration);
+  Duration get panelTransition => duration(_panelTransitionDuration);
+  Duration get turnTransition => duration(_turnTransitionDuration);
+  Duration get invalidShake => duration(_invalidShakeDuration);
   Duration get handInteraction => duration(_handInteractionDuration);
   Duration get cardTactileResponse => duration(_cardTactileResponseDuration);
   Duration get cardDeal => duration(_cardDealDuration);
@@ -65,8 +71,16 @@ class GameMotion {
 
   static const Duration _cameraFocusIn = Duration(milliseconds: 440);
   static const Duration _cameraFocusOut = Duration(milliseconds: 320);
-  static const Duration _trumpSelectorHopDuration = Duration(milliseconds: 230);
+  static const Duration _trumpSelectorHopDuration = Duration(milliseconds: 350);
   static const Duration _gaugeDeltaDuration = Duration(milliseconds: 1600);
+  static const Duration _jobGaugeImpactDuration = Duration(milliseconds: 520);
+  static const Duration _consequenceImpactDuration = Duration(
+    milliseconds: 460,
+  );
+  static const Duration _valueImpactDuration = Duration(milliseconds: 360);
+  static const Duration _panelTransitionDuration = Duration(milliseconds: 260);
+  static const Duration _turnTransitionDuration = Duration(milliseconds: 340);
+  static const Duration _invalidShakeDuration = Duration(milliseconds: 300);
   static const Duration _handInteractionDuration = Duration(milliseconds: 150);
   static const Duration _cardTactileResponseDuration = Duration(
     milliseconds: 105,

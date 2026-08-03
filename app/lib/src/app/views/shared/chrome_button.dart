@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
@@ -46,6 +47,293 @@ const chromeIconMutedSaturationMatrix = <double>[
   1,
   0,
 ];
+
+const tactileControlPressDuration = Duration(milliseconds: 70);
+const tactileControlReleaseDuration = Duration(milliseconds: 240);
+const tactileControlHoverDuration = Duration(milliseconds: 150);
+const tactileControlPressScale = 0.975;
+const tactileControlHoverScale = 1.018;
+const tactileControlFocusScale = 1.01;
+const tactileControlPressTravel = 3.5;
+const tactileControlHoverLift = -1.5;
+
+/// Gives non-card controls the same physical pick-up and settle language as
+/// the gameplay surfaces without changing their visual ownership.
+class TactileControlSurface extends StatefulWidget {
+  const TactileControlSurface({
+    required this.child,
+    this.onPressed,
+    this.enabled = true,
+    this.pressTravel = tactileControlPressTravel,
+    this.hoverLift = tactileControlHoverLift,
+    this.pressScale = tactileControlPressScale,
+    this.hoverScale = tactileControlHoverScale,
+    this.haptics = true,
+    super.key,
+  });
+
+  final Widget child;
+  final VoidCallback? onPressed;
+  final bool enabled;
+  final double pressTravel;
+  final double hoverLift;
+  final double pressScale;
+  final double hoverScale;
+  final bool haptics;
+
+  @override
+  State<TactileControlSurface> createState() => _TactileControlSurfaceState();
+}
+
+class _TactileControlSurfaceState extends State<TactileControlSurface> {
+  bool _hovered = false;
+  bool _focused = false;
+  bool _pressed = false;
+
+  bool get _enabled => widget.enabled && widget.onPressed != null;
+
+  @override
+  void didUpdateWidget(TactileControlSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled && !widget.enabled ||
+        oldWidget.onPressed != null && widget.onPressed == null) {
+      _hovered = false;
+      _focused = false;
+      _pressed = false;
+    }
+  }
+
+  void _setPressed(bool pressed) {
+    if (_pressed == pressed || !_enabled) {
+      return;
+    }
+    setState(() => _pressed = pressed);
+    if (pressed && widget.haptics) {
+      unawaited(HapticFeedback.selectionClick());
+    }
+  }
+
+  void _activate() {
+    if (_enabled) {
+      widget.onPressed?.call();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final scale = !_enabled
+        ? 1.0
+        : _pressed
+        ? widget.pressScale
+        : _hovered
+        ? widget.hoverScale
+        : _focused
+        ? tactileControlFocusScale
+        : 1.0;
+    final offset = !_enabled
+        ? 0.0
+        : _pressed
+        ? widget.pressTravel
+        : _hovered
+        ? widget.hoverLift
+        : 0.0;
+    final duration = reduceMotion
+        ? Duration.zero
+        : _pressed
+        ? tactileControlPressDuration
+        : _hovered
+        ? tactileControlHoverDuration
+        : tactileControlReleaseDuration;
+    final curve = _pressed ? Curves.easeOutCubic : Curves.easeOutBack;
+    final transform = Matrix4.translationValues(0, offset, 0)
+      ..multiply(Matrix4.diagonal3Values(scale, scale, 1));
+
+    return MouseRegion(
+      cursor: _enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: _enabled ? (_) => setState(() => _hovered = true) : null,
+      onExit: _enabled
+          ? (_) => setState(() {
+              _hovered = false;
+              _pressed = false;
+            })
+          : null,
+      child: FocusableActionDetector(
+        enabled: _enabled,
+        onShowFocusHighlight: (focused) => setState(() => _focused = focused),
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              _activate();
+              return null;
+            },
+          ),
+        },
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: _enabled ? (_) => _setPressed(true) : null,
+          onTapUp: _enabled ? (_) => _setPressed(false) : null,
+          onTapCancel: _enabled ? () => _setPressed(false) : null,
+          onTap: _enabled ? _activate : null,
+          child: AnimatedContainer(
+            key: const Key('tactile-control-transform'),
+            duration: duration,
+            curve: curve,
+            transformAlignment: Alignment.center,
+            transform: transform,
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Preserves Material text-button styling while routing activation and motion
+/// through [TactileControlSurface].
+class TactileTextButton extends StatelessWidget {
+  const TactileTextButton({
+    required this.onPressed,
+    required this.child,
+    this.style,
+    super.key,
+  });
+
+  final VoidCallback? onPressed;
+  final Widget child;
+  final ButtonStyle? style;
+
+  static void _visualButtonCallback() {}
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      onTap: onPressed,
+      child: ExcludeSemantics(
+        child: TactileControlSurface(
+          enabled: enabled,
+          onPressed: onPressed,
+          pressTravel: 2,
+          hoverLift: -0.5,
+          hoverScale: 1.03,
+          child: IgnorePointer(
+            child: TextButton(
+              onPressed: enabled ? _visualButtonCallback : null,
+              style: style,
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Adds a short directional handoff between substantial pieces of UI.
+class MechanicalPanelSwitcher extends StatelessWidget {
+  const MechanicalPanelSwitcher({
+    required this.panelKey,
+    required this.child,
+    this.duration = const Duration(milliseconds: 260),
+    this.expand = true,
+    super.key,
+  });
+
+  final Object panelKey;
+  final Widget child;
+  final Duration duration;
+  final bool expand;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return AnimatedSwitcher(
+      duration: reduceMotion ? Duration.zero : duration,
+      reverseDuration: reduceMotion
+          ? Duration.zero
+          : Duration(milliseconds: (duration.inMilliseconds * 0.72).round()),
+      switchInCurve: Curves.linear,
+      switchOutCurve: Curves.linear,
+      layoutBuilder: (currentChild, previousChildren) {
+        final children = <Widget>[...previousChildren];
+        if (currentChild case final child?) {
+          children.add(child);
+        }
+        return Stack(
+          fit: expand ? StackFit.expand : StackFit.loose,
+          alignment: Alignment.topLeft,
+          children: children,
+        );
+      },
+      transitionBuilder: (child, animation) {
+        final fade = CurvedAnimation(
+          parent: animation,
+          curve: const Interval(0.08, 1),
+        );
+        final settle = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+          reverseCurve: Curves.easeInCubic,
+        );
+        final slide = Tween<Offset>(
+          begin: const Offset(0.025, 0),
+          end: Offset.zero,
+        ).animate(settle);
+        final scale = Tween<double>(begin: 0.985, end: 1).animate(settle);
+        return FadeTransition(
+          opacity: fade,
+          alwaysIncludeSemantics: true,
+          child: SlideTransition(
+            position: slide,
+            child: ScaleTransition(scale: scale, child: child),
+          ),
+        );
+      },
+      child: KeyedSubtree(key: ValueKey(panelKey), child: child),
+    );
+  }
+}
+
+/// Treats mutually exclusive options like printed plates that seat into place.
+class MechanicalSelectionSurface extends StatelessWidget {
+  const MechanicalSelectionSurface({
+    required this.selected,
+    required this.onPressed,
+    required this.child,
+    this.enabled = true,
+    super.key,
+  });
+
+  final bool selected;
+  final VoidCallback? onPressed;
+  final Widget child;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return TactileControlSurface(
+      enabled: enabled,
+      onPressed: onPressed,
+      pressTravel: 4,
+      hoverLift: -1.5,
+      child: AnimatedScale(
+        scale: selected ? 1 : 0.985,
+        duration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 220),
+        curve: selected ? Curves.easeOutBack : Curves.easeOutCubic,
+        child: child,
+      ),
+    );
+  }
+}
 
 class ChromeScaledLabel extends StatelessWidget {
   const ChromeScaledLabel(
@@ -608,9 +896,9 @@ class ChromeAssetButton extends StatelessWidget {
       label: uppercase ? label.toUpperCase() : label,
       onTap: canActivate ? onPressed : null,
       child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: canActivate ? onPressed : null,
+        child: TactileControlSurface(
+          enabled: canActivate,
+          onPressed: onPressed,
           child: child,
         ),
       ),

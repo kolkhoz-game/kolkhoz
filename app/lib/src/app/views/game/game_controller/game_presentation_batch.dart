@@ -29,12 +29,50 @@ int assignmentTargetRunEnd(List<EngineTransitionEvent> events, int startIndex) {
       : startIndex;
 }
 
+int swapMoveRunEnd(List<EngineTransitionEvent> events, int startIndex) {
+  if (startIndex + 1 >= events.length) {
+    return startIndex;
+  }
+  final first = events[startIndex];
+  final second = events[startIndex + 1];
+  final firstIsSwapRoute =
+      first.kind == kcTransitionCardMoved &&
+      first.card.isValid &&
+      _isHandPlotRoute(first.fromZone, first.toZone);
+  final secondIsComplement =
+      second.kind == kcTransitionCardMoved &&
+      second.card.isValid &&
+      (second.card.suit != first.card.suit ||
+          second.card.value != first.card.value) &&
+      second.playerID == first.playerID &&
+      second.fromOwner == first.fromOwner &&
+      second.toOwner == first.toOwner &&
+      second.fromZone == first.toZone &&
+      second.toZone == first.fromZone;
+  return firstIsSwapRoute && secondIsComplement ? startIndex + 1 : startIndex;
+}
+
+bool _isHandPlotRoute(int fromZone, int toZone) =>
+    (fromZone == kcObjectZoneHand &&
+        (toZone == kcObjectZonePlotHidden ||
+            toZone == kcObjectZonePlotRevealed)) ||
+    (toZone == kcObjectZoneHand &&
+        (fromZone == kcObjectZonePlotHidden ||
+            fromZone == kcObjectZonePlotRevealed));
+
 bool needsFinalPresentationBoundary(
   TableViewModel presented,
   TableViewModel authoritative,
 ) =>
     presented.table.phase != authoritative.table.phase ||
-    presented.table.year != authoritative.table.year;
+    presented.table.year != authoritative.table.year ||
+    !sameSelection(presented.selection, authoritative.selection);
+
+bool sameSelection(SelectionState left, SelectionState right) =>
+    left.handCardID == right.handCardID &&
+    left.plotCardID == right.plotCardID &&
+    left.plotZone == right.plotZone &&
+    left.assignmentCardID == right.assignmentCardID;
 
 /// Builds the visible state at each semantic boundary in one engine dispatch.
 ///
@@ -97,6 +135,11 @@ List<TableViewModel> projectPresentationBatch({
         _holdBrigadePhase(after, previous: visible),
       _ => after,
     };
+    visible = _withTable(
+      visible,
+      table: visible.table,
+      selection: before.selection,
+    );
     final futureEvents = events.skip(projected.length + 1);
     projected.add(
       _withoutFutureCellarMoves(
@@ -132,6 +175,7 @@ TableViewModel withRequisitionAdjustedHiddenCounts(TableViewModel model) {
           _seatWithAdjustedRequisitionCount(seat, exiledCards),
       ],
     ),
+    legalActions: model.legalActions,
   );
 }
 
@@ -619,12 +663,13 @@ TableViewModel _withTable(
   required TableState table,
   Panels? panels,
   SelectionState? selection,
+  List<LegalAction> legalActions = const [],
 }) => TableViewModel(
   viewer: model.viewer,
   table: table,
   panels: panels ?? model.panels,
   selection: selection ?? model.selection,
-  legalActions: const [],
+  legalActions: legalActions,
   seed: model.seed,
 );
 

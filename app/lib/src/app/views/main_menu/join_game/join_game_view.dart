@@ -699,10 +699,12 @@ class OnlineWaitingRoomPanel extends StatelessWidget {
                   child: Semantics(
                     button: true,
                     label: language.strings.kolkhozappCancel,
-                    child: GestureDetector(
+                    child: TactileControlSurface(
                       key: const Key('online-waiting-cancel'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: onCancelOnlineGame,
+                      onPressed: onCancelOnlineGame,
+                      pressTravel: 2.5,
+                      hoverLift: -1,
+                      hoverScale: 1.06,
                       child: Container(
                         width: 36,
                         height: 36,
@@ -1122,7 +1124,7 @@ Future<void> _showLobbyPlayerProfile({
                 : null,
             footer: Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
+              child: TactileTextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('CLOSE'),
               ),
@@ -1832,9 +1834,9 @@ class _OpenSessionRow extends StatelessWidget {
               '${session.ranked ? language.strings.kolkhozappRanked : language.strings.kolkhozappCasual}'
               '${hasComrade ? ', ${language.strings.kolkhozappComrade}' : ''}',
           child: ExcludeSemantics(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onToggle,
+            child: MechanicalSelectionSurface(
+              selected: expanded,
+              onPressed: onToggle,
               child: VariantRowBackground(
                 tokens: tokens,
                 active: expanded,

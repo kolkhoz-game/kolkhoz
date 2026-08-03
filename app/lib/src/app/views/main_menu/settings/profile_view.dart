@@ -338,7 +338,7 @@ class _RecentGamesPanel extends StatelessWidget {
               ),
             ),
             if (error != null)
-              TextButton(onPressed: onRetry, child: const Text('RETRY')),
+              TactileTextButton(onPressed: onRetry, child: const Text('RETRY')),
           ],
         ),
         if (loading)
@@ -355,8 +355,9 @@ class _RecentGamesPanel extends StatelessWidget {
           )
         else
           for (final game in games)
-            InkWell(
-              onTap: profileController == null
+            TactileControlSurface(
+              enabled: profileController != null,
+              onPressed: profileController == null
                   ? null
                   : () => showDialog<void>(
                       context: context,
@@ -471,7 +472,7 @@ class _DailyChallengePanel extends StatelessWidget {
               ),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
+              child: TactileTextButton(
                 key: const Key('daily-challenge-play-button'),
                 onPressed: onPlay == null ? null : () => onPlay!(),
                 child: Text(value?.bestScore == null ? 'PLAY' : 'PLAY AGAIN'),
@@ -566,13 +567,13 @@ class _ReplayDialogState extends State<_ReplayDialog> {
                   ),
                   Row(
                     children: [
-                      TextButton(
+                      TactileTextButton(
                         onPressed: revision == 0
                             ? null
                             : () => setState(() => revision--),
                         child: const Text('PREVIOUS'),
                       ),
-                      TextButton(
+                      TactileTextButton(
                         onPressed: revision >= events.length - 1
                             ? null
                             : () => setState(() => revision++),
@@ -585,12 +586,16 @@ class _ReplayDialogState extends State<_ReplayDialog> {
                   Expanded(
                     child: ListView.builder(
                       itemCount: events.length,
-                      itemBuilder: (context, index) => ListTile(
-                        dense: true,
-                        selected: index == revision,
-                        title: Text(actionLabel(events[index])),
-                        onTap: () => setState(() => revision = index),
-                      ),
+                      itemBuilder: (context, index) =>
+                          MechanicalSelectionSurface(
+                            selected: index == revision,
+                            onPressed: () => setState(() => revision = index),
+                            child: ListTile(
+                              dense: true,
+                              selected: index == revision,
+                              title: Text(actionLabel(events[index])),
+                            ),
+                          ),
                     ),
                   ),
                 ] else
@@ -599,7 +604,7 @@ class _ReplayDialogState extends State<_ReplayDialog> {
                   ),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(
+                  child: TactileTextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: const Text('CLOSE'),
                   ),

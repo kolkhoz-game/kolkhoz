@@ -61,11 +61,11 @@ class _AdminOperationsPanelState extends State<AdminOperationsView> {
           'briefly reconnect. A five-minute cooldown applies.',
         ),
         actions: [
-          TextButton(
+          TactileTextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('CANCEL'),
           ),
-          TextButton(
+          TactileTextButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('RESTART'),
           ),
@@ -97,7 +97,7 @@ class _AdminOperationsPanelState extends State<AdminOperationsView> {
                 color: widget.tokens.colors.gold,
               ),
             ),
-            TextButton(onPressed: load, child: const Text('RETRY')),
+            TactileTextButton(onPressed: load, child: const Text('RETRY')),
           ],
         ),
       );
@@ -123,8 +123,8 @@ class _AdminOperationsPanelState extends State<AdminOperationsView> {
                 ),
               ),
             ),
-            TextButton(onPressed: load, child: const Text('REFRESH')),
-            TextButton(
+            TactileTextButton(onPressed: load, child: const Text('REFRESH')),
+            TactileTextButton(
               onPressed: restarting ? null : restart,
               child: Text(restarting ? 'RESTARTING…' : 'RESTART SERVER'),
             ),

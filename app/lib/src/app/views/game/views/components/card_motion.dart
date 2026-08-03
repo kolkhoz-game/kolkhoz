@@ -28,6 +28,7 @@ class CardMotionLayer extends StatefulWidget {
     required this.speed,
     required this.child,
     this.transition,
+    this.draggedCardID,
     this.onTransitionComplete,
     super.key,
   });
@@ -37,6 +38,7 @@ class CardMotionLayer extends StatefulWidget {
   final GameAnimationSpeed speed;
   final Widget child;
   final GamePresentationTransition? transition;
+  final String? draggedCardID;
   final ValueChanged<int>? onTransitionComplete;
 
   @override
@@ -101,11 +103,15 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
             owner: event.toOwner,
             targetSuit: event.targetSuit,
           );
+    final provisionalPreviousZone = eventCardID == null
+        ? null
+        : provisionalTrickCardMotionZone(previousModel, eventCardID);
+    final effectiveFromZone = provisionalPreviousZone ?? explicitFromZone;
     final previousZones = event == null
         ? cardMotionZones(previousModel)
-        : {
-            if (eventCardID != null && explicitFromZone != null)
-              eventCardID: explicitFromZone,
+        : <String, MotionZone>{
+            if (eventCardID != null && effectiveFromZone != null)
+              eventCardID: effectiveFromZone,
           };
     final nextZones = event == null
         ? cardMotionZones(nextModel)
@@ -124,6 +130,10 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
     final suppressedCardIDs = Set<String>.of(
       widget.transition?.suppressedCardIDs ?? const {},
     );
+    final draggedCardID = widget.draggedCardID;
+    if (event == null && draggedCardID != null) {
+      suppressedCardIDs.add(draggedCardID);
+    }
     _pendingFlightCardIDs = {
       for (final entry in nextZones.entries)
         if (previousZones[entry.key] != entry.value &&
@@ -211,6 +221,10 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
     if (flight == null || !_landedFlightIDs.add(id)) {
       return;
     }
+    _controller.recordCardLanding(
+      cardID: flight.card.id,
+      destination: flight.destinationZone,
+    );
     if (flight.destinationZone.kind == MotionZoneKind.job) {
       if (flight.reportsJobArrival) {
         _controller.recordJobCardArrival(

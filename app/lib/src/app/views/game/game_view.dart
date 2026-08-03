@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show clampDouble, lerpDouble;
+import 'dart:ui' show clampDouble;
 
 import 'package:flutter/material.dart';
 import 'package:simple_animations/simple_animations.dart';
@@ -361,6 +361,7 @@ class KolkhozBoard extends StatelessWidget {
     this.onAppearanceToggle,
     this.onCardBackChanged,
     this.onSwapHandCardTap,
+    this.onSwapCardDrop,
     this.onHandCardTap,
     this.onPlotCardTap,
     this.onAssignmentCardTap,
@@ -416,6 +417,7 @@ class KolkhozBoard extends StatelessWidget {
   final VoidCallback? onAppearanceToggle;
   final ValueChanged<KolkhozCardBack>? onCardBackChanged;
   final ValueChanged<String>? onSwapHandCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
   final ValueChanged<String>? onHandCardTap;
   final void Function(String cardID, String zone)? onPlotCardTap;
   final ValueChanged<String>? onAssignmentCardTap;
@@ -492,6 +494,7 @@ class KolkhozBoard extends StatelessWidget {
                   tokens: tokens,
                   speed: animationSpeed,
                   transition: transition,
+                  draggedCardID: activeCardDrag.value?.cardID,
                   onTransitionComplete: onTransitionComplete,
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -541,6 +544,7 @@ class KolkhozBoard extends StatelessWidget {
                                     onAction: onAction,
                                     onPanelSelected: onPanelSelected,
                                     onSwapHandCardTap: onSwapHandCardTap,
+                                    onSwapCardDrop: onSwapCardDrop,
                                     onHandCardTap: onHandCardTap,
                                     onPlotCardTap: onPlotCardTap,
                                     onAssignmentCardTap: onAssignmentCardTap,
@@ -606,6 +610,7 @@ class KolkhozBoard extends StatelessWidget {
                                       onAction: onAction,
                                       onPanelSelected: onPanelSelected,
                                       onSwapHandCardTap: onSwapHandCardTap,
+                                      onSwapCardDrop: onSwapCardDrop,
                                       onHandCardTap: onHandCardTap,
                                       onPlotCardTap: onPlotCardTap,
                                       onAssignmentCardTap: onAssignmentCardTap,
@@ -755,6 +760,7 @@ class CompactBoardShell extends StatelessWidget {
     this.onAction,
     this.onPanelSelected,
     this.onSwapHandCardTap,
+    this.onSwapCardDrop,
     this.onHandCardTap,
     this.onPlotCardTap,
     this.onAssignmentCardTap,
@@ -808,6 +814,7 @@ class CompactBoardShell extends StatelessWidget {
   final ValueChanged<LegalAction>? onAction;
   final ValueChanged<String>? onPanelSelected;
   final ValueChanged<String>? onSwapHandCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
   final ValueChanged<String>? onHandCardTap;
   final void Function(String cardID, String zone)? onPlotCardTap;
   final ValueChanged<String>? onAssignmentCardTap;
@@ -863,6 +870,7 @@ class CompactBoardShell extends StatelessWidget {
             onAction: onAction,
             onPanelSelected: onPanelSelected,
             onSwapHandCardTap: onSwapHandCardTap,
+            onSwapCardDrop: onSwapCardDrop,
             onHandCardTap: onHandCardTap,
             onPlotCardTap: onPlotCardTap,
             onAssignmentCardTap: onAssignmentCardTap,
@@ -1140,6 +1148,7 @@ class BoardPlayArea extends StatelessWidget {
     this.onAction,
     this.onPanelSelected,
     this.onSwapHandCardTap,
+    this.onSwapCardDrop,
     this.onHandCardTap,
     this.onPlotCardTap,
     this.onAssignmentCardTap,
@@ -1198,6 +1207,7 @@ class BoardPlayArea extends StatelessWidget {
   final ValueChanged<LegalAction>? onAction;
   final ValueChanged<String>? onPanelSelected;
   final ValueChanged<String>? onSwapHandCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
   final ValueChanged<String>? onHandCardTap;
   final void Function(String cardID, String zone)? onPlotCardTap;
   final ValueChanged<String>? onAssignmentCardTap;
@@ -1361,6 +1371,7 @@ class BoardPlayArea extends StatelessWidget {
                               onAction: onAction,
                               onHandCardTap: onHandCardTap,
                               onPlotCardTap: onPlotCardTap,
+                              onSwapCardDrop: onSwapCardDrop,
                               onNewGame: onNewGame,
                               onReturnToLobby: onReturnToLobby,
                               onCopyGameResult: onCopyGameResult,
@@ -1645,6 +1656,7 @@ class BoardPlayArea extends StatelessWidget {
                                     onAction: onAction,
                                     onPanelSelected: onPanelSelected,
                                     onSwapHandCardTap: onSwapHandCardTap,
+                                    onSwapCardDrop: onSwapCardDrop,
                                     onHandCardTap: onHandCardTap,
                                     onAssignmentCardTap: onAssignmentCardTap,
                                     onInvalidHandCardTap: onInvalidHandCardTap,
@@ -2073,12 +2085,15 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                                       label:
                                           '${widget.language.suitName(job.suit)} job',
                                       expanded: openJobSuit == job.suit,
-                                      child: GestureDetector(
+                                      child: TactileControlSurface(
                                         key: ValueKey(
                                           'job-gauge-button-${job.suit}',
                                         ),
-                                        behavior: HitTestBehavior.opaque,
-                                        onTap: () => toggleJobOverlay(job.suit),
+                                        onPressed: () =>
+                                            toggleJobOverlay(job.suit),
+                                        pressTravel: 2,
+                                        hoverLift: -1,
+                                        hoverScale: 1.025,
                                         child: MotionTrackedRegion(
                                           motionKey: jobGaugeMotionTargetKey(
                                             job.suit,
@@ -2240,11 +2255,16 @@ class TopInfoCell extends StatelessWidget {
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: DisplayText(
-                    value,
-                    size: DisplayTextSize.cardRank,
-                    variant: DisplayTextWeight.bold,
-                    color: tokens.colors.gold,
+                  child: ValueImpactSurface<String>(
+                    value: value,
+                    impactKey: 'top-info-$icon',
+                    alignment: Alignment.centerLeft,
+                    child: DisplayText(
+                      value,
+                      size: DisplayTextSize.cardRank,
+                      variant: DisplayTextWeight.bold,
+                      color: tokens.colors.gold,
+                    ),
                   ),
                 ),
               ),
@@ -2277,15 +2297,24 @@ class JobGauge extends StatefulWidget {
   State<JobGauge> createState() => _JobGaugeState();
 }
 
-class _JobGaugeState extends State<JobGauge> {
+class _JobGaugeState extends State<JobGauge>
+    with SingleTickerProviderStateMixin {
   int deltaSerial = 0;
   CardMotionController? motionController;
   final Map<String, int> pendingCardDeltas = {};
   final List<_VisibleJobGaugeDelta> visibleDeltas = [];
+  final LayerLink deltaLink = LayerLink();
+  final OverlayPortalController deltaOverlayController =
+      OverlayPortalController();
+  late final AnimationController impactController;
 
   @override
   void initState() {
     super.initState();
+    impactController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    );
   }
 
   @override
@@ -2316,6 +2345,7 @@ class _JobGaugeState extends State<JobGauge> {
   @override
   void dispose() {
     motionController?.jobCardArrival.removeListener(_handleJobCardArrival);
+    impactController.dispose();
     super.dispose();
   }
 
@@ -2333,6 +2363,25 @@ class _JobGaugeState extends State<JobGauge> {
         _VisibleJobGaugeDelta(serial: deltaSerial++, delta: delta),
       );
     });
+    deltaOverlayController.show();
+    final motion = GameMotion.of(context);
+    if (motion.enabled) {
+      impactController
+        ..duration = motion.jobGaugeImpact
+        ..forward(from: 0);
+    }
+  }
+
+  void _removeVisibleDelta(int serial) {
+    if (!mounted) {
+      return;
+    }
+    setState(
+      () => visibleDeltas.removeWhere((entry) => entry.serial == serial),
+    );
+    if (visibleDeltas.isEmpty) {
+      deltaOverlayController.hide();
+    }
   }
 
   @override
@@ -2364,233 +2413,289 @@ class _JobGaugeState extends State<JobGauge> {
     const olive = Color(0xff6f7848);
     final accent = widget.highlighted ? red : olive;
     final trailingWidth = math.min(markerWidth, width * 0.42);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        SizedBox(
-          width: width,
+    return OverlayPortal(
+      controller: deltaOverlayController,
+      overlayChildBuilder: (context) => CompositedTransformFollower(
+        link: deltaLink,
+        targetAnchor: Alignment.topRight,
+        followerAnchor: Alignment.topRight,
+        offset: const Offset(-6, 0),
+        showWhenUnlinked: false,
+        child: SizedBox(
+          width: 80,
           height: height,
-          child: Container(
-            decoration: BoxDecoration(
-              color: paper,
-              border: Border.all(
-                color: widget.highlighted ? red : ink,
-                width: widget.highlighted ? 2 : 1.4,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (final (index, delta) in visibleDeltas.indexed)
+                Positioned(
+                  key: ValueKey(delta.serial),
+                  right: 0,
+                  top: index * 8,
+                  child: JobGaugeDeltaBadge(
+                    delta: delta.delta,
+                    tokens: tokens,
+                    onDone: () => _removeVisibleDelta(delta.serial),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      child: CompositedTransformTarget(
+        link: deltaLink,
+        child: AnimatedBuilder(
+          animation: impactController,
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: Container(
+              decoration: BoxDecoration(
+                color: paper,
+                border: Border.all(
+                  color: widget.highlighted ? red : ink,
+                  width: widget.highlighted ? 2 : 1.4,
+                ),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x6613120f), offset: Offset(2, 2)),
+                ],
               ),
-              boxShadow: const [
-                BoxShadow(color: Color(0x6613120f), offset: Offset(2, 2)),
-              ],
-            ),
-            child: ClipRect(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Opacity(
-                    opacity: 0.12,
-                    child: Image.asset(
-                      'assets/art/field_plan/shared/textures/paper-light.png',
-                      fit: BoxFit.none,
-                      repeat: ImageRepeat.repeat,
-                      filterQuality: FilterQuality.low,
+              child: ClipRect(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Opacity(
+                      opacity: 0.12,
+                      child: Image.asset(
+                        'assets/art/field_plan/shared/textures/paper-light.png',
+                        fit: BoxFit.none,
+                        repeat: ImageRepeat.repeat,
+                        filterQuality: FilterQuality.low,
+                      ),
                     ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: SizedBox(
-                      width: math.max(3, height * 0.1),
-                      child: ColoredBox(color: accent),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: math.max(3, height * 0.1),
+                        child: ColoredBox(color: accent),
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      height * 0.16,
-                      2,
-                      height * 0.1,
-                      2,
-                    ),
-                    child: Row(
-                      children: [
-                        SuitMark(
-                          key: job.claimed
-                              ? ValueKey('job-gauge-completed-suit-${job.suit}')
-                              : null,
-                          suit: job.suit,
-                          tokens: tokens,
-                          size: height * 0.52,
-                        ),
-                        SizedBox(width: height * 0.1),
-                        Container(
-                          width: 1,
-                          height: height * 0.58,
-                          color: ink.withValues(alpha: 0.42),
-                        ),
-                        SizedBox(width: height * 0.1),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  '$displayedHours/$jobRequiredHours',
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  style: fieldPlanDisplayTextStyle.copyWith(
-                                    color: widget.highlighted ? red : ink,
-                                    fontSize: height * 0.46,
-                                    height: 0.9,
-                                    letterSpacing: 0.4,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: math.max(1, height * 0.04)),
-                              ClipRect(
-                                child: SizedBox(
-                                  height: math.max(2, height * 0.07),
-                                  child: ColoredBox(
-                                    color: ink.withValues(alpha: 0.18),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: FractionallySizedBox(
-                                        widthFactor: progress,
-                                        child: ColoredBox(color: accent),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        height * 0.16,
+                        2,
+                        height * 0.1,
+                        2,
+                      ),
+                      child: Row(
+                        children: [
+                          SuitMark(
+                            key: job.claimed
+                                ? ValueKey(
+                                    'job-gauge-completed-suit-${job.suit}',
+                                  )
+                                : null,
+                            suit: job.suit,
+                            tokens: tokens,
+                            size: height * 0.52,
                           ),
-                        ),
-                        if (trailingWidth > 0) ...[
                           SizedBox(width: height * 0.1),
                           Container(
                             width: 1,
                             height: height * 0.58,
                             color: ink.withValues(alpha: 0.42),
                           ),
-                          SizedBox(
-                            width: trailingWidth,
-                            height: height,
-                            child: Center(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  spacing: containsWrecker ? 2 : 0,
-                                  children: [
-                                    if (job.claimed)
-                                      Image.asset(
-                                        fieldPlanToolbarConfirmIconPath,
-                                        width:
-                                            height *
-                                            tokens
-                                                .layout
-                                                .topInfo
-                                                .checkIconHeightMultiplier,
-                                        height:
-                                            height *
-                                            tokens
-                                                .layout
-                                                .topInfo
-                                                .checkIconHeightMultiplier,
-                                        filterQuality: FilterQuality.none,
-                                      )
-                                    else if (reward == null)
-                                      Text(
-                                        '—',
-                                        style: fieldPlanDisplayTextStyle
-                                            .copyWith(
-                                              color: ink.withValues(alpha: 0.6),
-                                              fontSize: height * 0.42,
-                                              height: 1,
-                                            ),
-                                      )
-                                    else
-                                      Row(
-                                        key: ValueKey(
-                                          'job-gauge-reward-${job.suit}',
+                          SizedBox(width: height * 0.1),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    '$displayedHours/$jobRequiredHours',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    style: fieldPlanDisplayTextStyle.copyWith(
+                                      color: widget.highlighted ? red : ink,
+                                      fontSize: height * 0.46,
+                                      height: 0.9,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: math.max(1, height * 0.04)),
+                                ClipRect(
+                                  child: SizedBox(
+                                    height: math.max(2, height * 0.07),
+                                    child: ColoredBox(
+                                      color: ink.withValues(alpha: 0.18),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: FractionallySizedBox(
+                                          widthFactor: progress,
+                                          child: ColoredBox(color: accent),
                                         ),
-                                        mainAxisSize: MainAxisSize.min,
-                                        spacing: 2,
-                                        children: [
-                                          Text(
-                                            reward.rank,
-                                            style: fieldPlanDisplayTextStyle
-                                                .copyWith(
-                                                  color: ink,
-                                                  fontSize: height * 0.38,
-                                                  height: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (trailingWidth > 0) ...[
+                            SizedBox(width: height * 0.1),
+                            Container(
+                              width: 1,
+                              height: height * 0.58,
+                              color: ink.withValues(alpha: 0.42),
+                            ),
+                            SizedBox(
+                              width: trailingWidth,
+                              height: height,
+                              child: Center(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    spacing: containsWrecker ? 2 : 0,
+                                    children: [
+                                      if (job.claimed)
+                                        Image.asset(
+                                          fieldPlanToolbarConfirmIconPath,
+                                          width:
+                                              height *
+                                              tokens
+                                                  .layout
+                                                  .topInfo
+                                                  .checkIconHeightMultiplier,
+                                          height:
+                                              height *
+                                              tokens
+                                                  .layout
+                                                  .topInfo
+                                                  .checkIconHeightMultiplier,
+                                          filterQuality: FilterQuality.none,
+                                        )
+                                      else if (reward == null)
+                                        Text(
+                                          '—',
+                                          style: fieldPlanDisplayTextStyle
+                                              .copyWith(
+                                                color: ink.withValues(
+                                                  alpha: 0.6,
                                                 ),
+                                                fontSize: height * 0.42,
+                                                height: 1,
+                                              ),
+                                        )
+                                      else
+                                        Row(
+                                          key: ValueKey(
+                                            'job-gauge-reward-${job.suit}',
                                           ),
-                                          SuitMark(
-                                            key: ValueKey(
-                                              'job-gauge-reward-suit-${job.suit}',
+                                          mainAxisSize: MainAxisSize.min,
+                                          spacing: 2,
+                                          children: [
+                                            Text(
+                                              reward.rank,
+                                              style: fieldPlanDisplayTextStyle
+                                                  .copyWith(
+                                                    color: ink,
+                                                    fontSize: height * 0.38,
+                                                    height: 1,
+                                                  ),
                                             ),
-                                            suit: reward.suit,
-                                            tokens: tokens,
-                                            size: height * 0.36,
+                                            SuitMark(
+                                              key: ValueKey(
+                                                'job-gauge-reward-suit-${job.suit}',
+                                              ),
+                                              suit: reward.suit,
+                                              tokens: tokens,
+                                              size: height * 0.36,
+                                            ),
+                                          ],
+                                        ),
+                                      if (containsWrecker)
+                                        Image.asset(
+                                          fieldPlanVariantSaboteur
+                                              .fieldPlanPath,
+                                          key: ValueKey(
+                                            'job-gauge-wrecker-${job.suit}',
                                           ),
-                                        ],
-                                      ),
-                                    if (containsWrecker)
-                                      Image.asset(
-                                        fieldPlanVariantSaboteur.fieldPlanPath,
-                                        key: ValueKey(
-                                          'job-gauge-wrecker-${job.suit}',
+                                          width: pileEffectIconSize,
+                                          height: pileEffectIconSize,
+                                          fit: BoxFit.contain,
+                                          filterQuality: FilterQuality.none,
                                         ),
-                                        width: pileEffectIconSize,
-                                        height: pileEffectIconSize,
-                                        fit: BoxFit.contain,
-                                        filterQuality: FilterQuality.none,
-                                      ),
-                                    for (final value in nomenklaturaValues)
-                                      Image.asset(
-                                        nomenklaturaPileIconAsset(value),
-                                        key: ValueKey(
-                                          'job-gauge-nomenklatura-$value-${job.suit}',
+                                      for (final value in nomenklaturaValues)
+                                        Image.asset(
+                                          nomenklaturaPileIconAsset(value),
+                                          key: ValueKey(
+                                            'job-gauge-nomenklatura-$value-${job.suit}',
+                                          ),
+                                          width: pileEffectIconSize,
+                                          height: pileEffectIconSize,
+                                          fit: BoxFit.contain,
+                                          filterQuality: FilterQuality.none,
                                         ),
-                                        width: pileEffectIconSize,
-                                        height: pileEffectIconSize,
-                                        fit: BoxFit.contain,
-                                        filterQuality: FilterQuality.none,
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
+          builder: (context, child) {
+            final offsetY = _jobGaugeImpactOffset(impactController.value);
+            final glowOpacity = _jobGaugeImpactGlow(impactController.value);
+            return Transform.translate(
+              key: ValueKey('job-gauge-impact-${job.suit}'),
+              offset: Offset(0, offsetY),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  boxShadow: glowOpacity == 0
+                      ? const []
+                      : [
+                          BoxShadow(
+                            color: accent.withValues(alpha: glowOpacity),
+                            blurRadius: 12,
+                            spreadRadius: 3,
+                          ),
+                        ],
+                ),
+                child: child,
+              ),
+            );
+          },
         ),
-        for (final (index, delta) in visibleDeltas.indexed)
-          Positioned(
-            key: ValueKey(delta.serial),
-            right: 6,
-            top: index * 8,
-            child: JobGaugeDeltaBadge(
-              delta: delta.delta,
-              tokens: tokens,
-              onDone: () {
-                if (mounted) {
-                  setState(
-                    () => visibleDeltas.removeWhere(
-                      (entry) => entry.serial == delta.serial,
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
-      ],
+      ),
     );
   }
+}
+
+double _jobGaugeImpactGlow(double value) =>
+    value <= 0 || value >= 1 ? 0 : math.sin(math.pi * value) * 0.42;
+
+double _jobGaugeImpactOffset(double value) {
+  final clamped = value.clamp(0.0, 1.0);
+  if (clamped <= 0 || clamped >= 1) {
+    return 0;
+  }
+  if (clamped < 0.14) {
+    return 4 * Curves.easeOutCubic.transform(clamped / 0.14);
+  }
+  if (clamped < 0.32) {
+    return 4;
+  }
+  return 4 * (1 - Curves.easeOutCubic.transform((clamped - 0.32) / 0.68));
 }
 
 class _VisibleJobGaugeDelta {
@@ -2628,14 +2733,7 @@ class JobGaugeDeltaBadge extends StatelessWidget {
         opacity: (1 - value).clamp(0.0, 1.0),
         child: Transform.translate(
           offset: Offset(0, jobGaugeDeltaDropDistance * value),
-          child: Transform.scale(
-            scale: lerpDouble(
-              jobGaugeDeltaStartScale,
-              jobGaugeDeltaEndScale,
-              math.min(value * 1.8, 1),
-            ),
-            child: child,
-          ),
+          child: child,
         ),
       ),
       child: DecoratedBox(
@@ -2666,8 +2764,6 @@ class JobGaugeDeltaBadge extends StatelessWidget {
 }
 
 const jobGaugeDeltaDropDistance = 46.0;
-const jobGaugeDeltaStartScale = 1.64;
-const jobGaugeDeltaEndScale = 2.16;
 
 class ActivePanelView extends StatelessWidget {
   const ActivePanelView({
@@ -2677,6 +2773,7 @@ class ActivePanelView extends StatelessWidget {
     this.onAction,
     this.onHandCardTap,
     this.onPlotCardTap,
+    this.onSwapCardDrop,
     this.onNewGame,
     this.onReturnToLobby,
     this.onCopyGameResult,
@@ -2725,6 +2822,7 @@ class ActivePanelView extends StatelessWidget {
   final ValueChanged<LegalAction>? onAction;
   final ValueChanged<String>? onHandCardTap;
   final void Function(String cardID, String zone)? onPlotCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
   final VoidCallback? onNewGame;
   final VoidCallback? onReturnToLobby;
   final VoidCallback? onCopyGameResult;
@@ -2812,6 +2910,7 @@ class ActivePanelView extends StatelessWidget {
           onPlanningTrumpActionSelected: onPlanningTrumpActionSelected,
           onHandCardTap: onHandCardTap,
           onPlotCardTap: onPlotCardTap,
+          onSwapCardDrop: onSwapCardDrop,
         );
       case panelNorth:
         return StaticHeroGamePanel(
@@ -2859,6 +2958,7 @@ class ActivePanelView extends StatelessWidget {
           onPlanningTrumpActionSelected: onPlanningTrumpActionSelected,
           onHandCardTap: onHandCardTap,
           onPlotCardTap: onPlotCardTap,
+          onSwapCardDrop: onSwapCardDrop,
         );
     }
   }

@@ -1435,6 +1435,7 @@ void registerBoardTests() {
             tokens: defaultDesignTokens,
             language: KolkhozLanguage.en,
             visibleTrayHeight: visibleHeight,
+            onCardTap: (_) {},
           ),
         ),
       ),
@@ -1447,6 +1448,11 @@ void registerBoardTests() {
     final assignmentCard = tester.widget<GameCard>(find.byType(GameCard));
     expect(assignmentCard.sizeOverride?.width, expected.width);
     expect(assignmentCard.sizeOverride?.height, expected.height);
+    final assignmentDrag = tester.widget<Draggable<CardDragData>>(
+      find.byType(Draggable<CardDragData>),
+    );
+    expect(assignmentDrag.data!.actionLabel, 'DRAG TO ASSIGN');
+    expect(assignmentCardDropLabel(assignmentDrag.data!), 'DRAG TO ASSIGN');
   });
 
   testWidgets('hand and assignment cards share one vertical baseline', (
@@ -1680,6 +1686,9 @@ void registerBoardTests() {
 
   testWidgets('swap selection frames plot and cellar cards', (tester) async {
     final card = testCard(id: 'wheat-9', suit: 'wheat', value: 9);
+    String? draggedPlotCardID;
+    String? draggedHandCardID;
+    (String, String, String)? committedSwap;
 
     Widget cardView({required bool hidden, bool revealHidden = false}) =>
         MaterialApp(
@@ -1700,7 +1709,9 @@ void registerBoardTests() {
                   zone: hidden ? plotZoneHidden : plotZoneRevealed,
                   exiledCardIDs: const {},
                   tokens: defaultDesignTokens,
-                  onPlotCardTap: (_, _) {},
+                  onPlotCardTap: (cardID, _) => draggedPlotCardID = cardID,
+                  onSwapCardDrop: (handCardID, plotCardID, plotZone) =>
+                      committedSwap = (handCardID, plotCardID, plotZone),
                 ),
               ),
             ),
@@ -1717,6 +1728,29 @@ void registerBoardTests() {
       tester.widgetList<GameCard>(find.byType(GameCard)).single.card.selected,
       isTrue,
     );
+    final plotDrag = tester.widget<Draggable<CardDragData>>(
+      find.byType(Draggable<CardDragData>),
+    );
+    expect(plotDrag.data!.kind, CardDragKind.plot);
+    expect(plotDrag.data!.plotZone, plotZoneRevealed);
+    plotDrag.data!.onSwapWith!('beet-8', plotZoneRevealed);
+    expect(committedSwap, ('beet-8', card.id, plotZoneRevealed));
+    committedSwap = null;
+    plotDrag.data!.onAccepted();
+    expect(draggedPlotCardID, card.id);
+    draggedPlotCardID = null;
+
+    final handDrag = CardDragData(
+      cardID: 'beet-8',
+      kind: CardDragKind.hand,
+      phase: phaseSwap,
+      onAccepted: () => draggedHandCardID = 'beet-8',
+    );
+    final plotDrop = tester.widget<CardDropTarget>(find.byType(CardDropTarget));
+    expect(plotDrop.accepts(handDrag), isTrue);
+    plotDrop.onAccepted(handDrag);
+    expect(draggedHandCardID, handDrag.cardID);
+    expect(draggedPlotCardID, card.id);
 
     await tester.pumpWidget(cardView(hidden: true, revealHidden: true));
     await tester.pump();
@@ -1738,6 +1772,95 @@ void registerBoardTests() {
           .selected,
       isTrue,
     );
+  });
+
+  testWidgets('swap plot cards can be dropped onto eligible hand cards', (
+    tester,
+  ) async {
+    final base = runtimeModel();
+    final handCard = cardWithSelection(
+      base.table.seats.first.hand.first,
+      highlighted: true,
+    );
+    String? selectedPlotCardID;
+    String? selectedHandCardID;
+    (String, String, String)? committedSwap;
+    final plotDrag = CardDragData(
+      cardID: 'beet-8',
+      kind: CardDragKind.plot,
+      phase: phaseSwap,
+      onAccepted: () => selectedPlotCardID = 'beet-8',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 520,
+          height: 180,
+          child: HandTray(
+            model: runtimeModelWith(
+              phase: phaseSwap,
+              selection: SelectionState.empty,
+              jobs: base.table.jobs,
+              seats: [
+                seatWithHand(base.table.seats.first, [handCard]),
+                ...base.table.seats.skip(1),
+              ],
+            ),
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            visibleTrayHeight: 150,
+            onSwapHandCardTap: (cardID) => selectedHandCardID = cardID,
+            onSwapCardDrop: (handCardID, plotCardID, plotZone) =>
+                committedSwap = (handCardID, plotCardID, plotZone),
+          ),
+        ),
+      ),
+    );
+
+    final handCardFinder = find.byKey(Key('hand-card-${handCard.id}'));
+    final dropTargets = tester
+        .widgetList<CardDropTarget>(
+          find.ancestor(
+            of: handCardFinder,
+            matching: find.byType(CardDropTarget),
+          ),
+        )
+        .where((target) => target.accepts(plotDrag))
+        .toList(growable: false);
+    expect(dropTargets, hasLength(1));
+
+    dropTargets.single.onAccepted(plotDrag);
+
+    expect(selectedPlotCardID, plotDrag.cardID);
+    expect(selectedHandCardID, handCard.id);
+
+    selectedPlotCardID = null;
+    selectedHandCardID = null;
+    final directPlotDrag = CardDragData(
+      cardID: 'beet-8',
+      kind: CardDragKind.plot,
+      phase: phaseSwap,
+      plotZone: plotZoneHidden,
+      onSwapWith: (droppedHandCardID, _) =>
+          committedSwap = (droppedHandCardID, 'beet-8', plotZoneHidden),
+      onAccepted: () => selectedPlotCardID = 'beet-8',
+    );
+    dropTargets.single.onAccepted(directPlotDrag);
+
+    expect(committedSwap, (handCard.id, directPlotDrag.cardID, plotZoneHidden));
+    expect(selectedPlotCardID, isNull);
+    expect(selectedHandCardID, isNull);
+
+    committedSwap = null;
+    final handDrag = tester.widget<Draggable<CardDragData>>(
+      find.ancestor(
+        of: handCardFinder,
+        matching: find.byType(Draggable<CardDragData>),
+      ),
+    );
+    handDrag.data!.onSwapWith!('beet-8', plotZoneHidden);
+    expect(committedSwap, (handCard.id, 'beet-8', plotZoneHidden));
   });
 
   testWidgets('plot stack mini exposes revealed and hidden stack cards', (
@@ -1978,7 +2101,7 @@ void registerBoardTests() {
     expect(optionsMenuSectionSpacing(1000), optionsMenuSectionSpacingMax);
     expect(
       const GameMotion(speed: GameAnimationSpeed.normal).trumpSelectorHop,
-      const Duration(milliseconds: 230),
+      const Duration(milliseconds: 350),
     );
     expect(defaultGameAnimationSpeed, GameAnimationSpeed.normal);
     expect(GameAnimationSpeed.instant.automaticStepDelay, Duration.zero);
@@ -2083,6 +2206,36 @@ void registerBoardTests() {
     expect(cards['wheat-11']?.rank, 'J');
   });
 
+  test('selected trick cards move into the provisional motion zone', () {
+    final before = runtimeModel();
+    final viewer = localSeat(before);
+    final card = viewer.hand.single;
+    final selected = runtimeModelWith(
+      phase: phaseTrick,
+      selection: SelectionState.empty.copyWith(handCardID: card.id),
+      jobs: before.table.jobs,
+      seats: before.table.seats,
+      trick: before.table.trick,
+    );
+    final committed = runtimeModelWith(
+      phase: phaseTrick,
+      selection: SelectionState.empty,
+      jobs: before.table.jobs,
+      seats: [
+        seatWithHand(viewer, const []),
+        ...before.table.seats.where((seat) => seat.id != viewer.id),
+      ],
+      trick: Trick(
+        plays: [TrickPlay(seatID: viewer.id, card: card)],
+        winnerSeatID: null,
+      ),
+    );
+
+    expect(cardMotionZones(before)[card.id], MotionZone.hand(viewer.id));
+    expect(cardMotionZones(selected)[card.id], MotionZone.trick(viewer.id));
+    expect(cardMotionZones(committed)[card.id], MotionZone.trick(viewer.id));
+  });
+
   test('game motion disables every gameplay duration for reduced motion', () {
     const motion = GameMotion(
       speed: GameAnimationSpeed.normal,
@@ -2095,6 +2248,12 @@ void registerBoardTests() {
     expect(motion.cameraFocusIn, Duration.zero);
     expect(motion.cameraFocusOut, Duration.zero);
     expect(motion.gaugeDelta, Duration.zero);
+    expect(motion.jobGaugeImpact, Duration.zero);
+    expect(motion.consequenceImpact, Duration.zero);
+    expect(motion.valueImpact, Duration.zero);
+    expect(motion.panelTransition, Duration.zero);
+    expect(motion.turnTransition, Duration.zero);
+    expect(motion.invalidShake, Duration.zero);
     expect(motion.handInteraction, Duration.zero);
     expect(motion.cardTactileResponse, Duration.zero);
     expect(motion.cardDeal, Duration.zero);
@@ -2106,26 +2265,16 @@ void registerBoardTests() {
     expect(motion.rewardFlip, Duration.zero);
   });
 
-  test(
-    'card flights arc above their linear route and settle at full scale',
-    () {
-      const from = Rect.fromLTWH(20, 500, 90, 140);
-      const to = Rect.fromLTWH(620, 140, 120, 180);
+  test('card flights arc without an end scale bounce', () {
+    const from = Rect.fromLTWH(20, 500, 90, 140);
+    const to = Rect.fromLTWH(620, 140, 120, 180);
 
-      expect(cardFlightRectAt(from, to, 0), from);
-      expect(cardFlightRectAt(from, to, 1), to);
-      final midpoint = cardFlightRectAt(from, to, 0.5);
-      final linearMidpoint = Rect.lerp(from, to, 0.5)!;
-      expect(midpoint.center.dy, lessThan(linearMidpoint.center.dy));
-      expect(cardFlightScale(0), 1);
-      expect(cardFlightScale(0.5), greaterThan(1));
-      expect(cardFlightScale(0.82), lessThan(1.055));
-      expect(cardFlightScale(1), closeTo(1, 0.0001));
-      expect(cardFlightRotation('wheat-8', 0), 0);
-      expect(cardFlightRotation('wheat-8', 0.5).abs(), greaterThan(0));
-      expect(cardFlightRotation('wheat-8', 1), closeTo(0, 0.0001));
-    },
-  );
+    expect(cardFlightRectAt(from, to, 0), from);
+    expect(cardFlightRectAt(from, to, 1), to);
+    final midpoint = cardFlightRectAt(from, to, 0.5);
+    final linearMidpoint = Rect.lerp(from, to, 0.5)!;
+    expect(midpoint.center.dy, lessThan(linearMidpoint.center.dy));
+  });
 
   testWidgets('tactile cards lift on hover and compress on press', (
     tester,
@@ -2794,6 +2943,227 @@ void registerBoardTests() {
     await tester.pump();
 
     expect(find.byType(FlyingCard), findsOneWidget);
+  });
+
+  testWidgets(
+    'provisional trick selection flies once and confirm does not replay it',
+    (tester) async {
+      final before = runtimeModel();
+      final viewer = localSeat(before);
+      final card = viewer.hand.single;
+      final selected = runtimeModelWith(
+        phase: phaseTrick,
+        selection: SelectionState.empty.copyWith(handCardID: card.id),
+        jobs: before.table.jobs,
+        seats: before.table.seats,
+        trick: before.table.trick,
+      );
+      final committed = runtimeModelWith(
+        phase: phaseTrick,
+        selection: SelectionState.empty,
+        jobs: before.table.jobs,
+        seats: [
+          seatWithHand(viewer, const []),
+          ...before.table.seats.where((seat) => seat.id != viewer.id),
+        ],
+        trick: Trick(
+          plays: [TrickPlay(seatID: viewer.id, card: card)],
+          winnerSeatID: null,
+        ),
+      );
+
+      var model = before;
+      GamePresentationTransition? transition;
+      late StateSetter setMotionState;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              setMotionState = setState;
+              return SizedBox(
+                width: 420,
+                height: 280,
+                child: CardMotionLayer(
+                  model: model,
+                  tokens: defaultDesignTokens,
+                  speed: GameAnimationSpeed.normal,
+                  transition: transition,
+                  child: _ProvisionalCardMotionTestBoard(model: model),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      setMotionState(() => model = selected);
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(FlyingCard), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 900));
+      expect(find.byType(FlyingCard), findsNothing);
+
+      setMotionState(() {
+        model = committed;
+        transition = GamePresentationTransition(
+          id: 29,
+          before: selected,
+          after: committed,
+          event: EngineTransitionEvent(
+            kind: kcTransitionCardMoved,
+            playerID: viewer.id,
+            card: EngineCardValue(
+              suit: suitCode(card.suit)!,
+              value: card.value,
+            ),
+            fromZone: kcObjectZoneHand,
+            toZone: kcObjectZoneCurrentTrick,
+            fromOwner: viewer.id,
+            toOwner: viewer.id,
+            targetSuit: -1,
+          ),
+        );
+      });
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(FlyingCard), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'forced provisional flight hides its destination and lands at rendered size',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final before = runtimeModel();
+      final viewer = localSeat(before);
+      final card = viewer.hand.single;
+      final selected = runtimeModelWith(
+        phase: phaseTrick,
+        selection: SelectionState.empty.copyWith(handCardID: card.id),
+        jobs: before.table.jobs,
+        seats: before.table.seats,
+        trick: before.table.trick,
+      );
+      var model = before;
+      late StateSetter setBoardState;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              setBoardState = setState;
+              return KolkhozBoard(
+                model: model,
+                tokens: defaultDesignTokens,
+                language: KolkhozLanguage.en,
+                appearance: KolkhozAppearance.dark,
+                animationSpeed: GameAnimationSpeed.normal,
+                onHandCardTap: (_) {},
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      setBoardState(() => model = selected);
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      final flight = tester.widget<FlyingCard>(find.byType(FlyingCard)).flight;
+      final provisionalCard = find.byKey(
+        ValueKey('provisional-trick-card-${card.id}'),
+      );
+      final provisionalRect = tester.getRect(provisionalCard);
+      expect(flight.to.width, closeTo(provisionalRect.width, 0.001));
+      expect(flight.to.height, closeTo(provisionalRect.height, 0.001));
+      expect(
+        tester
+            .widgetList<Opacity>(
+              find.ancestor(
+                of: provisionalCard,
+                matching: find.byType(Opacity),
+              ),
+            )
+            .any((opacity) => opacity.opacity == 0),
+        isTrue,
+      );
+
+      await tester.pump(const Duration(milliseconds: 900));
+
+      expect(find.byType(FlyingCard), findsNothing);
+      expect(
+        tester
+            .widgetList<Opacity>(
+              find.ancestor(
+                of: provisionalCard,
+                matching: find.byType(Opacity),
+              ),
+            )
+            .any((opacity) => opacity.opacity == 0),
+        isFalse,
+      );
+    },
+  );
+
+  testWidgets('accepted trick drags do not replay a scripted card flight', (
+    tester,
+  ) async {
+    final before = runtimeModel();
+    final viewer = localSeat(before);
+    final card = viewer.hand.single;
+    final selected = runtimeModelWith(
+      phase: phaseTrick,
+      selection: SelectionState.empty.copyWith(handCardID: card.id),
+      jobs: before.table.jobs,
+      seats: before.table.seats,
+      trick: before.table.trick,
+    );
+
+    var model = before;
+    String? draggedCardID;
+    late StateSetter setMotionState;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setMotionState = setState;
+            return SizedBox(
+              width: 420,
+              height: 280,
+              child: CardMotionLayer(
+                model: model,
+                tokens: defaultDesignTokens,
+                speed: GameAnimationSpeed.normal,
+                draggedCardID: draggedCardID,
+                child: _ProvisionalCardMotionTestBoard(model: model),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    setMotionState(() {
+      draggedCardID = card.id;
+      model = selected;
+    });
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(FlyingCard), findsNothing);
   });
 
   testWidgets('trick landing shows its winner before the queue advances', (
@@ -3993,7 +4363,7 @@ void registerBoardTests() {
       final card = base.table.seats[0].hand.single;
       final seat = seatWithPlot(
         seatWithHand(base.table.seats[0], const []),
-        PlotState(revealed: [card], hidden: const [], stacks: const []),
+        PlotState(revealed: const [], hidden: [card], stacks: const []),
       );
       final before = runtimeModelWith(
         phase: phaseTrick,
@@ -4056,11 +4426,10 @@ void registerBoardTests() {
       await tester.pump();
 
       expect(find.byType(FlyingCard), findsOneWidget);
+      expect(find.byKey(ValueKey('poster-fan-paint-${card.id}')), findsNothing);
       expect(
-        find.byWidgetPredicate(
-          (widget) => widget is GameCard && widget.card.id == card.id,
-        ),
-        findsOneWidget,
+        find.byKey(const ValueKey('poster-fan-paint-seat-0-cellar-0')),
+        findsNothing,
       );
     },
   );
@@ -4269,6 +4638,11 @@ void registerBoardTests() {
       suit: 'potato',
       value: 9,
     );
+    final opponentPlotCard = testCard(
+      id: 'wheat-opponent-plot',
+      suit: 'wheat',
+      value: 10,
+    );
     final model = runtimeModelWith(
       phase: phaseTrick,
       selection: SelectionState.empty,
@@ -4281,7 +4655,7 @@ void registerBoardTests() {
         seatWithPlot(
           base.table.seats[1],
           PlotState(
-            revealed: const [],
+            revealed: [opponentPlotCard],
             hidden: [opponentCard],
             stacks: const [],
           ),
@@ -4321,6 +4695,15 @@ void registerBoardTests() {
       find.byKey(ValueKey('cellar-back-wedge-${localCard.id}')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(ValueKey('plot-fidget-${opponentCard.id}')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(ValueKey('plot-fidget-${opponentPlotCard.id}')),
+      findsOneWidget,
+    );
+    expect(find.byKey(ValueKey('plot-fidget-${localCard.id}')), findsOneWidget);
 
     await tester.tap(find.byKey(Key('static-hero-card-${localCard.id}')));
     await tester.pump();
@@ -4690,7 +5073,11 @@ void registerBoardTests() {
         expect(find.byKey(ValueKey('cellar-face-${card.id}')), findsOneWidget);
         expect(
           find.byKey(ValueKey('cellar-split-preview-${card.id}')),
-          findsNothing,
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(ValueKey('cellar-back-wedge-${card.id}')),
+          findsOneWidget,
         );
       }
       expect(
@@ -4899,6 +5286,9 @@ void registerBoardTests() {
     final playedTargetSize = tester.getSize(
       find.byKey(const Key('static-hero-trick-target-1')),
     );
+    final playedDropAreaSize = tester.getSize(
+      find.byKey(const Key('static-hero-trick-drop-area-1')),
+    );
     final playedCardAreaSize = tester.getSize(
       find.byKey(const Key('static-hero-trick-card-area-1')),
     );
@@ -4914,6 +5304,11 @@ void registerBoardTests() {
     expect(
       playedTargetSize.height,
       closeTo(playedCardAreaSize.height * 1.2, 0.001),
+    );
+    expect(
+      (playedDropAreaSize.width * playedDropAreaSize.height) /
+          (playedTargetSize.width * playedTargetSize.height),
+      closeTo(2, 0.03),
     );
     expect(playedTargetSize.width, lessThan(900 / 4));
     expect(playedTargetSize.height, lessThan(600 / 2));
@@ -5347,23 +5742,32 @@ void registerBoardTests() {
           frame: 0,
           rootKey: rootKey,
           activeCardIDs: const {},
-          child: JobGauge(
-            job: Job(
-              suit: 'wheat',
-              hours: cards
-                  .where((card) => !card.pending)
-                  .fold(10, (total, card) => total + card.value),
-              requiredHours: jobRequiredHours,
-              claimed: claimed,
-              reward: testCard(id: 'wheat-1', suit: 'wheat', value: 1),
-              assignedCards: cards,
-              validAssignmentTarget: false,
-              highlighted: false,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ClipRect(
+              child: SizedBox(
+                width: 118,
+                height: 38,
+                child: JobGauge(
+                  job: Job(
+                    suit: 'wheat',
+                    hours: cards
+                        .where((card) => !card.pending)
+                        .fold(10, (total, card) => total + card.value),
+                    requiredHours: jobRequiredHours,
+                    claimed: claimed,
+                    reward: testCard(id: 'wheat-1', suit: 'wheat', value: 1),
+                    assignedCards: cards,
+                    validAssignmentTarget: false,
+                    highlighted: false,
+                  ),
+                  highlighted: false,
+                  width: 118,
+                  height: 38,
+                  tokens: defaultDesignTokens,
+                ),
+              ),
             ),
-            highlighted: false,
-            width: 118,
-            height: 38,
-            tokens: defaultDesignTokens,
           ),
         ),
       );
@@ -5386,6 +5790,11 @@ void registerBoardTests() {
 
     expect(findAppText('10/40'), findsWidgets);
     expect(findAppText('+7'), findsNothing);
+    final impactFinder = find.byKey(const ValueKey('job-gauge-impact-wheat'));
+    expect(
+      tester.widget<Transform>(impactFinder).transform.storage[13],
+      closeTo(0, 0.001),
+    );
 
     controller.recordJobCardArrival(
       const JobCardArrival(cardID: 'wheat-7', suit: 'wheat'),
@@ -5393,7 +5802,24 @@ void registerBoardTests() {
     await tester.pump();
     expect(findAppText('17/40'), findsWidgets);
     expect(findAppText('+7'), findsWidgets);
+    await tester.pump(const Duration(milliseconds: 80));
+    final impactTransform = tester.widget<Transform>(impactFinder).transform;
+    expect(impactTransform.storage[0], closeTo(1, 0.001));
+    expect(impactTransform.storage[5], closeTo(1, 0.001));
+    expect(impactTransform.storage[13], closeTo(4, 0.1));
+    await tester.pump(const Duration(milliseconds: 400));
+    final deltaFinder = findAppText('+7');
+    expect(
+      find.ancestor(of: deltaFinder, matching: find.byType(Overlay)),
+      findsWidgets,
+    );
+    expect(
+      tester.getBottomRight(deltaFinder).dy,
+      greaterThan(tester.getBottomRight(impactFinder).dy),
+    );
     await tester.pumpAndSettle();
+    final settledTransform = tester.widget<Transform>(impactFinder).transform;
+    expect(settledTransform.storage[13], closeTo(0, 0.001));
 
     await tester.pumpWidget(gaugeWithCards([pendingWheat7, pendingWheat8]));
     expect(findAppText('17/40'), findsWidgets);
@@ -5730,6 +6156,41 @@ void registerBoardTests() {
     );
   });
 
+  test('brigade job flights angle and disappear into the gauge', () {
+    final card = testCard(id: 'wheat-9', suit: 'wheat', value: 9);
+    final gaugeFlight = CardFlight(
+      id: 1,
+      card: card,
+      from: const Rect.fromLTWH(80, 320, 92, 130),
+      to: const Rect.fromLTWH(240, 20, 42, 60),
+      destinationZone: const MotionZone.job('wheat'),
+      audiencePanel: panelBrigade,
+    );
+    final fieldsFlight = CardFlight(
+      id: 2,
+      card: card,
+      from: gaugeFlight.from,
+      to: gaugeFlight.to,
+      destinationZone: gaugeFlight.destinationZone,
+      audiencePanel: panelJobs,
+    );
+
+    expect(isJobGaugeInsertionFlight(gaugeFlight), isTrue);
+    expect(isJobGaugeInsertionFlight(fieldsFlight), isFalse);
+    expect(jobGaugeInsertionProgress(0.69), 0);
+    expect(jobGaugeInsertionProgress(1), 1);
+    expect(jobGaugeEntryAngle(gaugeFlight, 0), 0);
+    expect(jobGaugeEntryAngle(gaugeFlight, 0.8), lessThan(0));
+    expect(jobGaugeEntryOpacity(0.8), 1);
+    expect(jobGaugeEntryOpacity(1), 0);
+    expect(jobGaugeFlightRectAt(gaugeFlight, 0), gaugeFlight.from);
+    final atSlot = jobGaugeFlightRectAt(gaugeFlight, 0.72);
+    expect(atSlot.top, closeTo(gaugeFlight.to.center.dy, 0.001));
+    expect(atSlot.width, closeTo(gaugeFlight.from.width * 0.82, 0.001));
+    final inserted = jobGaugeFlightRectAt(gaugeFlight, 1);
+    expect(inserted.bottom, closeTo(gaugeFlight.to.center.dy, 0.001));
+  });
+
   test('claimed reward cards fly from their job gauge to the player plot', () {
     const gaugeRect = Rect.fromLTWH(220, 12, 112, 38);
     const plotCardRect = Rect.fromLTWH(96, 320, 74, 104);
@@ -5837,6 +6298,7 @@ void registerBoardTests() {
   test('job assignments produce parallel brigade and fields flights', () {
     const gaugeTarget = Rect.fromLTWH(220, 12, 74, 104);
     const fieldRect = Rect.fromLTWH(16, 220, 240, 160);
+    const assignedCardRect = Rect.fromLTWH(98, 238, 94, 132);
     final card = testCard(id: 'wheat-9', suit: 'wheat', value: 9);
     final plan = addParallelJobPanelFlights(
       plan: CardMotionPlan(
@@ -5858,6 +6320,7 @@ void registerBoardTests() {
       ),
       currentGeometry: MotionGeometry({
         jobFieldMotionTargetKey('wheat'): fieldRect,
+        MotionAnchor.card(card.id): assignedCardRect,
       }),
       tokens: defaultDesignTokens,
     );
@@ -5868,9 +6331,30 @@ void registerBoardTests() {
     expect(flights[0].to, gaugeTarget);
     expect(flights[0].reportsJobArrival, isTrue);
     expect(flights[1].audiencePanel, panelJobs);
-    expect(flights[1].to.center, fieldRect.center);
+    expect(flights[1].to, assignedCardRect);
     expect(flights[1].reportsJobArrival, isFalse);
     expect(plan.nextFlightID, 6);
+  });
+
+  test('job field flights fall back to a small card centered on the field', () {
+    const fieldRect = Rect.fromLTWH(16, 220, 240, 160);
+
+    final target = jobFieldCardMotionTargetRect(
+      cardID: 'wheat-9',
+      suit: 'wheat',
+      currentRects: MotionGeometry({
+        jobFieldMotionTargetKey('wheat'): fieldRect,
+      }),
+      tokens: defaultDesignTokens,
+    );
+
+    expect(target, isNotNull);
+    expect(target!.center, fieldRect.center);
+    expect(target.width, closeTo(defaultDesignTokens.card.small.width, 0.001));
+    expect(
+      target.height,
+      closeTo(defaultDesignTokens.card.small.height, 0.001),
+    );
   });
 
   testWidgets('rejected card drags animate back to their source', (
@@ -6048,6 +6532,8 @@ void registerBoardTests() {
           children: [
             CardDropTarget(
               highlightColor: defaultDesignTokens.colors.green,
+              highlightInsets: const EdgeInsets.all(20),
+              dragFeedbackSize: const Size(30, 45),
               accepts: (data) => data.phase == phaseTrick,
               labelBuilder: (data) => data.actionLabel!,
               onAccepted: (data) => data.onAccepted(),
@@ -6090,8 +6576,20 @@ void registerBoardTests() {
       kind: PointerDeviceKind.mouse,
     );
     await mouse.moveBy(const Offset(0, -20));
-    await tester.pump();
+    await tester.pump(cardDragTargetScaleDuration);
     expect(find.byKey(const Key('card-drop-zone-highlight')), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('card-drop-zone-highlight'))),
+      const Size(60, 60),
+    );
+    final approachingScale = tester.widget<AnimatedScale>(
+      find.ancestor(
+        of: find.byKey(const Key('accepted-feedback')),
+        matching: find.byType(AnimatedScale),
+      ),
+    );
+    expect(approachingScale.scale, lessThan(cardDragFeedbackScale));
+    expect(approachingScale.scale, greaterThan(0.5));
     expect(
       tester
           .widget<DisplayText>(
@@ -6104,11 +6602,21 @@ void registerBoardTests() {
       'Play Card',
     );
     await mouse.moveTo(tester.getCenter(find.byKey(const Key('drag-target'))));
-    await tester.pump();
+    await tester.pump(cardDragTargetScaleDuration);
+    final feedbackScale = tester.widget<AnimatedScale>(
+      find.ancestor(
+        of: find.byKey(const Key('accepted-feedback')),
+        matching: find.byType(AnimatedScale),
+      ),
+    );
+    expect(feedbackScale.scale, closeTo(0.5, 0.001));
     await mouse.up();
+
+    expect(activeCardDrag.value?.cardID, 'wheat-8');
     await tester.pump();
 
     expect(accepted, isTrue);
+    expect(activeCardDrag.value, isNull);
     expect(find.byKey(const Key('accepted-feedback')), findsNothing);
   });
 

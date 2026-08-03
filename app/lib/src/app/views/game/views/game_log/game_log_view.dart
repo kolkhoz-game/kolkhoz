@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/settings/game_motion.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
+import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
@@ -87,7 +88,8 @@ class GameLogPanel extends StatelessWidget {
                       for (var index = 0; index < year.phases.length; index++)
                         _LogExpansion(
                           key: PageStorageKey(
-                            'log-year-${year.year}-${year.phases[index].phase}',
+                            'log-year-${year.year}-'
+                            '${year.phases[index].phase}-$index',
                           ),
                           title: _phaseLabel(
                             year.phases[index].phase,
@@ -157,23 +159,39 @@ class ReactionTray extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 child: Tooltip(
                   message: _reactionLabel(reactionID, language),
-                  child: IconButton(
+                  child: Semantics(
                     key: Key('reaction-$reactionID'),
-                    onPressed: enabled
-                        ? () => onReaction?.call(reactionID)
-                        : null,
-                    icon: Image.asset(
-                      reactionAsset(reactionID).startsWith('assets/')
-                          ? reactionAsset(reactionID)
-                          : 'assets/ui/Icons/${reactionAsset(reactionID)}',
-                      width: 30,
-                      height: 30,
-                      filterQuality:
-                          reactionAsset(
-                            reactionID,
-                          ).startsWith('assets/art/field_plan/')
-                          ? FilterQuality.high
-                          : FilterQuality.none,
+                    button: true,
+                    enabled: enabled,
+                    label: _reactionLabel(reactionID, language),
+                    child: TactileControlSurface(
+                      enabled: enabled,
+                      onPressed: enabled
+                          ? () => onReaction?.call(reactionID)
+                          : null,
+                      pressTravel: 3,
+                      hoverScale: 1.08,
+                      child: Opacity(
+                        opacity: enabled ? 1 : 0.48,
+                        child: SizedBox.square(
+                          dimension: 44,
+                          child: Center(
+                            child: Image.asset(
+                              reactionAsset(reactionID).startsWith('assets/')
+                                  ? reactionAsset(reactionID)
+                                  : 'assets/ui/Icons/${reactionAsset(reactionID)}',
+                              width: 30,
+                              height: 30,
+                              filterQuality:
+                                  reactionAsset(
+                                    reactionID,
+                                  ).startsWith('assets/art/field_plan/')
+                                  ? FilterQuality.high
+                                  : FilterQuality.none,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -240,9 +258,11 @@ class _LogExpansionState extends State<_LogExpansion> {
           label: widget.title,
           onTap: toggle,
           child: ExcludeSemantics(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: toggle,
+            child: TactileControlSurface(
+              onPressed: toggle,
+              pressTravel: 2,
+              hoverLift: -0.5,
+              hoverScale: 1.01,
               child: SizedBox(
                 height: 40,
                 child: Row(

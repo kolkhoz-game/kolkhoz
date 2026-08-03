@@ -112,9 +112,10 @@ class _ProfilePortraitChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onPressed,
+    return MechanicalSelectionSurface(
+      selected: selected,
+      enabled: unlocked && onPressed != null,
+      onPressed: onPressed,
       child: Semantics(
         button: true,
         selected: selected,

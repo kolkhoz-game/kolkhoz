@@ -43,11 +43,19 @@ const tactileCardSheenWidthFraction = 0.46;
 const tactileCardSheenDuration = Duration(milliseconds: 475);
 const cardDragFeedbackScale = 1.06;
 const cardDragSnapBackDuration = Duration(milliseconds: 180);
+const cardDragTargetScaleDuration = Duration(milliseconds: 45);
 const cardFidgetResistance = 0.22;
 const cardFidgetMaximumDistance = 18.0;
 const cardFidgetSnapBackDuration = Duration(milliseconds: 85);
 
 enum CardDragKind { hand, reward, assignment, plot, trick, provisionalTrick }
+
+enum MotionImpactStyle { thump, stamp, stack }
+
+typedef SwapCardDropCallback =
+    void Function(String handCardID, String plotCardID, String plotZone);
+typedef SwapWithCardCallback =
+    void Function(String otherCardID, String plotZone);
 
 class CardDragData {
   const CardDragData({
@@ -57,6 +65,8 @@ class CardDragData {
     required this.onAccepted,
     this.canDrop = true,
     this.actionLabel,
+    this.onSwapWith,
+    this.plotZone,
   });
 
   final String cardID;
@@ -65,10 +75,46 @@ class CardDragData {
   final VoidCallback onAccepted;
   final bool canDrop;
   final String? actionLabel;
+  final SwapWithCardCallback? onSwapWith;
+  final String? plotZone;
 }
 
 final ValueNotifier<CardDragData?> activeCardDrag =
     ValueNotifier<CardDragData?>(null);
+
+class _CardDragScaleTarget {
+  const _CardDragScaleTarget({
+    required this.rect,
+    required this.feedbackSize,
+    required this.accepts,
+  });
+
+  final Rect rect;
+  final Size feedbackSize;
+  final bool Function(CardDragData data) accepts;
+}
+
+final Map<Object, _CardDragScaleTarget> _cardDragScaleTargets = {};
+final ValueNotifier<double> _activeDragFeedbackScale = ValueNotifier(
+  cardDragFeedbackScale,
+);
+
+double _distanceToRect(Offset point, Rect rect) {
+  final dx = point.dx < rect.left
+      ? rect.left - point.dx
+      : point.dx > rect.right
+      ? point.dx - rect.right
+      : 0.0;
+  final dy = point.dy < rect.top
+      ? rect.top - point.dy
+      : point.dy > rect.bottom
+      ? point.dy - rect.bottom
+      : 0.0;
+  return math.sqrt(dx * dx + dy * dy);
+}
+
+String assignmentCardDropLabel(CardDragData data) =>
+    data.actionLabel ?? 'DRAG TO ASSIGN';
 
 /// Gives actionable cards a vertical pick-up gesture while preserving
 /// horizontal hand scrolling. Rejected drops animate back to their source.
@@ -93,6 +139,8 @@ class DraggableCardSurface extends StatefulWidget {
 class _DraggableCardSurfaceState extends State<DraggableCardSurface> {
   final GlobalKey sourceKey = GlobalKey();
   CardDragData? draggingData;
+  Size? dragSourceSize;
+  Offset? dragSourceCenter;
 
   @override
   void dispose() {
@@ -132,6 +180,44 @@ class _DraggableCardSurfaceState extends State<DraggableCardSurface> {
     overlay.insert(entry);
   }
 
+  void _updateFeedbackScale(DragUpdateDetails details) {
+    final sourceSize = dragSourceSize;
+    final sourceCenter = dragSourceCenter;
+    if (sourceSize == null || sourceCenter == null) {
+      return;
+    }
+    var bestProgress = 0.0;
+    var nextScale = cardDragFeedbackScale;
+    for (final target in _cardDragScaleTargets.values) {
+      if (!target.accepts(widget.data)) {
+        continue;
+      }
+      final fullDistance = _distanceToRect(sourceCenter, target.rect);
+      if (fullDistance <= 0) {
+        continue;
+      }
+      final remainingDistance = _distanceToRect(
+        details.globalPosition,
+        target.rect,
+      );
+      final progress = (1 - remainingDistance / fullDistance).clamp(0.0, 1.0);
+      if (progress <= bestProgress) {
+        continue;
+      }
+      bestProgress = progress;
+      final destinationScale = math.min(
+        target.feedbackSize.width / sourceSize.width,
+        target.feedbackSize.height / sourceSize.height,
+      );
+      nextScale = lerpDouble(
+        cardDragFeedbackScale,
+        destinationScale,
+        Curves.easeInOutCubic.transform(progress),
+      )!;
+    }
+    _activeDragFeedbackScale.value = nextScale;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.data.canDrop) {
@@ -150,21 +236,49 @@ class _DraggableCardSurfaceState extends State<DraggableCardSurface> {
           dragAnchorStrategy: childDragAnchorStrategy,
           feedback: Material(
             type: MaterialType.transparency,
-            child: Transform.scale(
-              scale: cardDragFeedbackScale,
+            child: ValueListenableBuilder<double>(
+              valueListenable: _activeDragFeedbackScale,
+              builder: (context, scale, child) {
+                return AnimatedScale(
+                  scale: scale,
+                  duration: GameMotion.of(
+                    context,
+                  ).duration(cardDragTargetScaleDuration),
+                  curve: Curves.easeOutCubic,
+                  child: child,
+                );
+              },
               child: widget.feedback,
             ),
           ),
           childWhenDragging: Opacity(opacity: 0, child: widget.child),
           onDragStarted: () {
+            final sourceBox =
+                sourceKey.currentContext?.findRenderObject() as RenderBox?;
+            dragSourceSize = sourceBox?.size;
+            dragSourceCenter = sourceBox?.localToGlobal(
+              sourceBox.size.center(Offset.zero),
+            );
+            _activeDragFeedbackScale.value = cardDragFeedbackScale;
             draggingData = widget.data;
             activeCardDrag.value = draggingData;
           },
+          onDragUpdate: _updateFeedbackScale,
           onDragEnd: (details) {
-            if (identical(activeCardDrag.value, draggingData)) {
+            final endedDrag = draggingData;
+            if (details.wasAccepted) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (identical(activeCardDrag.value, endedDrag)) {
+                  activeCardDrag.value = null;
+                }
+              });
+            } else if (identical(activeCardDrag.value, endedDrag)) {
               activeCardDrag.value = null;
             }
             draggingData = null;
+            dragSourceSize = null;
+            dragSourceCenter = null;
+            _activeDragFeedbackScale.value = cardDragFeedbackScale;
             if (!details.wasAccepted) {
               _showSnapBack(details);
             }
@@ -307,7 +421,7 @@ class _CardSnapBackOverlayState extends State<_CardSnapBackOverlay>
   }
 }
 
-class CardDropTarget extends StatelessWidget {
+class CardDropTarget extends StatefulWidget {
   const CardDropTarget({
     required this.accepts,
     required this.onAccepted,
@@ -315,6 +429,8 @@ class CardDropTarget extends StatelessWidget {
     required this.highlightColor,
     this.labelBuilder,
     this.borderRadius = cardViewCornerRadius,
+    this.highlightInsets = EdgeInsets.zero,
+    this.dragFeedbackSize,
     super.key,
   });
 
@@ -324,80 +440,132 @@ class CardDropTarget extends StatelessWidget {
   final Color highlightColor;
   final String Function(CardDragData data)? labelBuilder;
   final double borderRadius;
+  final EdgeInsets highlightInsets;
+  final Size? dragFeedbackSize;
+
+  @override
+  State<CardDropTarget> createState() => _CardDropTargetState();
+}
+
+class _CardDropTargetState extends State<CardDropTarget> {
+  final GlobalKey targetKey = GlobalKey();
+  final Object scaleTargetOwner = Object();
+
+  void _recordScaleTarget() {
+    final feedbackSize = widget.dragFeedbackSize;
+    final box = targetKey.currentContext?.findRenderObject() as RenderBox?;
+    if (feedbackSize == null || box == null || !box.hasSize) {
+      _cardDragScaleTargets.remove(scaleTargetOwner);
+      return;
+    }
+    _cardDragScaleTargets[scaleTargetOwner] = _CardDragScaleTarget(
+      rect: box.localToGlobal(Offset.zero) & box.size,
+      feedbackSize: feedbackSize,
+      accepts: widget.accepts,
+    );
+  }
+
+  @override
+  void dispose() {
+    _cardDragScaleTargets.remove(scaleTargetOwner);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _recordScaleTarget();
+      }
+    });
     return ValueListenableBuilder<CardDragData?>(
       valueListenable: activeCardDrag,
-      builder: (context, activeDrag, _) => DragTarget<CardDragData>(
-        onWillAcceptWithDetails: (details) => accepts(details.data),
-        onAcceptWithDetails: (details) => onAccepted(details.data),
-        builder: (context, candidates, rejected) {
-          final hovered = candidates.any(
-            (data) => data != null && accepts(data),
-          );
-          final eligible = activeDrag != null && accepts(activeDrag);
-          final label = eligible ? labelBuilder?.call(activeDrag) : null;
-          return Stack(
-            fit: StackFit.passthrough,
-            children: [
-              child,
-              if (eligible)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      key: const Key('card-drop-zone-highlight'),
-                      decoration: BoxDecoration(
-                        color: highlightColor.withValues(
-                          alpha: hovered ? 0.14 : 0.06,
-                        ),
-                        borderRadius: BorderRadius.circular(borderRadius),
-                        border: Border.all(
-                          color: highlightColor.withValues(
-                            alpha: hovered ? 1 : 0.72,
-                          ),
-                          width: hovered ? 3 : 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: highlightColor.withValues(
-                              alpha: hovered ? 0.42 : 0.2,
+      builder: (context, activeDrag, _) {
+        return KeyedSubtree(
+          key: targetKey,
+          child: DragTarget<CardDragData>(
+            onWillAcceptWithDetails: (details) => widget.accepts(details.data),
+            onAcceptWithDetails: (details) {
+              widget.onAccepted(details.data);
+            },
+            builder: (context, candidates, rejected) {
+              final hovered = candidates.any(
+                (data) => data != null && widget.accepts(data),
+              );
+              final eligible = activeDrag != null && widget.accepts(activeDrag);
+              final label = eligible
+                  ? widget.labelBuilder?.call(activeDrag)
+                  : null;
+              return Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  widget.child,
+                  if (eligible)
+                    Positioned(
+                      left: widget.highlightInsets.left,
+                      top: widget.highlightInsets.top,
+                      right: widget.highlightInsets.right,
+                      bottom: widget.highlightInsets.bottom,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          key: const Key('card-drop-zone-highlight'),
+                          decoration: BoxDecoration(
+                            color: widget.highlightColor.withValues(
+                              alpha: hovered ? 0.14 : 0.06,
                             ),
-                            blurRadius: hovered ? 12 : 8,
-                            spreadRadius: hovered ? 2 : 0,
-                          ),
-                        ],
-                      ),
-                      child: label == null
-                          ? null
-                          : Center(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.72),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 5,
-                                  ),
-                                  child: DisplayText(
-                                    label,
-                                    size: DisplayTextSize.xSmall,
-                                    variant: DisplayTextWeight.bold,
-                                    color: highlightColor,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
+                            borderRadius: BorderRadius.circular(
+                              widget.borderRadius,
+                            ),
+                            border: Border.all(
+                              color: widget.highlightColor.withValues(
+                                alpha: hovered ? 1 : 0.72,
                               ),
+                              width: hovered ? 3 : 2,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: widget.highlightColor.withValues(
+                                  alpha: hovered ? 0.42 : 0.2,
+                                ),
+                                blurRadius: hovered ? 12 : 8,
+                                spreadRadius: hovered ? 2 : 0,
+                              ),
+                            ],
+                          ),
+                          child: label == null
+                              ? null
+                              : Center(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.72,
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 5,
+                                      ),
+                                      child: DisplayText(
+                                        label,
+                                        size: DisplayTextSize.xSmall,
+                                        variant: DisplayTextWeight.bold,
+                                        color: widget.highlightColor,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -434,6 +602,149 @@ class TactileCardSurface extends StatefulWidget {
 
   @override
   State<TactileCardSurface> createState() => _TactileCardSurfaceState();
+}
+
+/// Makes a rendered destination absorb the weight of a card landing there.
+///
+/// The flight layer publishes the exact landing frame. Receivers choose which
+/// semantic destinations they own, keeping model updates and visual impacts
+/// synchronized without moving game rules into widgets.
+class MotionImpactSurface extends StatefulWidget {
+  const MotionImpactSurface({
+    required this.matches,
+    required this.child,
+    this.style = MotionImpactStyle.thump,
+    this.glowColor,
+    this.impactKey,
+    super.key,
+  });
+
+  final bool Function(CardLandingImpact impact) matches;
+  final Widget child;
+  final MotionImpactStyle style;
+  final Color? glowColor;
+  final String? impactKey;
+
+  @override
+  State<MotionImpactSurface> createState() => _MotionImpactSurfaceState();
+}
+
+class _MotionImpactSurfaceState extends State<MotionImpactSurface>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController controller;
+  CardMotionController? motionController;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 460),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = CardMotionScope.maybeOf(context)?.controller;
+    if (identical(next, motionController)) {
+      return;
+    }
+    motionController?.cardLandingImpact.removeListener(_handleImpact);
+    motionController = next;
+    motionController?.cardLandingImpact.addListener(_handleImpact);
+  }
+
+  void _handleImpact() {
+    final impact = motionController?.cardLandingImpact.value;
+    if (!mounted || impact == null || !widget.matches(impact)) {
+      return;
+    }
+    final motion = GameMotion.of(context);
+    if (!motion.enabled) {
+      return;
+    }
+    controller
+      ..duration = motion.consequenceImpact
+      ..forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    motionController?.cardLandingImpact.removeListener(_handleImpact);
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      child: widget.child,
+      builder: (context, child) {
+        final rawGlow =
+            math.sin(math.pi * controller.value).clamp(0.0, 1.0) * 0.34;
+        final glowOpacity = rawGlow < 0.001 ? 0.0 : rawGlow;
+        return DecoratedBox(
+          key: widget.impactKey == null
+              ? null
+              : Key('motion-impact-${widget.impactKey}'),
+          decoration: BoxDecoration(
+            boxShadow: widget.glowColor == null || glowOpacity == 0
+                ? const []
+                : [
+                    BoxShadow(
+                      color: widget.glowColor!.withValues(alpha: glowOpacity),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+          ),
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+/// Gives changed values a quick punch while preserving their layout.
+class ValueImpactSurface<T> extends StatelessWidget {
+  const ValueImpactSurface({
+    required this.value,
+    required this.child,
+    this.alignment = Alignment.center,
+    this.impactKey,
+    super.key,
+  });
+
+  final T value;
+  final Widget child;
+  final Alignment alignment;
+  final String? impactKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final motion = GameMotion.of(context);
+    return TweenAnimationBuilder<double>(
+      key: ValueKey((impactKey, value)),
+      tween: Tween(begin: 0, end: 1),
+      duration: motion.valueImpact,
+      curve: Curves.easeOutCubic,
+      builder: (context, progress, child) {
+        final punch = math.sin(progress * math.pi) * (1 - progress);
+        return Transform.scale(
+          key: impactKey == null ? null : Key('value-impact-$impactKey'),
+          alignment: alignment,
+          scale: 1 + punch * 0.18,
+          child: Transform.translate(
+            offset: Offset(0, -punch * 2),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
 }
 
 class _TactileCardSurfaceState extends State<TactileCardSurface> {

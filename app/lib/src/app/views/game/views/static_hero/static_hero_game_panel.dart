@@ -41,6 +41,7 @@ const _fieldJobBottomRowHeight = 1 - _fieldJobBottomRowTop - _fieldJobBottom;
 const _fieldJobCounterBaseWidth = 64.0;
 const _fieldJobCounterBaseHeight = 18.0;
 const _fieldJobRewardBaseWidth = 64.0;
+const _trickDropHitLinearScale = 1.41421356237;
 
 int provisionalTrickWinnerSeatID({
   required List<TrickPlay> plays,
@@ -148,6 +149,7 @@ class StaticHeroGamePanel extends StatelessWidget {
     this.onAction,
     this.onHandCardTap,
     this.onPlotCardTap,
+    this.onSwapCardDrop,
     super.key,
   });
 
@@ -163,6 +165,7 @@ class StaticHeroGamePanel extends StatelessWidget {
   final ValueChanged<LegalAction>? onAction;
   final ValueChanged<String>? onHandCardTap;
   final void Function(String cardID, String zone)? onPlotCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
 
   @override
   Widget build(BuildContext context) {
@@ -240,6 +243,7 @@ class StaticHeroGamePanel extends StatelessWidget {
                             onPlanningTrumpActionSelected,
                         onHandCardTap: onHandCardTap,
                         onPlotCardTap: onPlotCardTap,
+                        onSwapCardDrop: onSwapCardDrop,
                       ),
                     ),
                   ),
@@ -274,6 +278,7 @@ class _BrigadePosterContent extends StatefulWidget {
     this.onPlanningTrumpActionSelected,
     this.onHandCardTap,
     this.onPlotCardTap,
+    this.onSwapCardDrop,
   });
 
   final TableViewModel model;
@@ -286,6 +291,7 @@ class _BrigadePosterContent extends StatefulWidget {
   final ValueChanged<LegalAction>? onPlanningTrumpActionSelected;
   final ValueChanged<String>? onHandCardTap;
   final void Function(String cardID, String zone)? onPlotCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
 
   @override
   State<_BrigadePosterContent> createState() => _BrigadePosterContentState();
@@ -355,6 +361,7 @@ class _BrigadePosterContentState extends State<_BrigadePosterContent> {
                     tokens: widget.tokens,
                     inspecting: inspectedSeatID == seat.id,
                     onPlotCardTap: widget.onPlotCardTap,
+                    onSwapCardDrop: widget.onSwapCardDrop,
                   );
                 },
               ),
@@ -545,24 +552,31 @@ class _PosterTrickGrid extends StatelessWidget {
                   );
                   final trickCard = MotionTrackedRegion(
                     motionKey: trickCardMotionTargetKey(entry.key),
-                    child: displayedCard == null
-                        ? const SizedBox.expand()
-                        : SizedBox(
-                            key: Key(
-                              'static-hero-trick-card-${displayedCard.id}',
+                    child: MotionImpactSurface(
+                      impactKey: 'trick-${seat.id}',
+                      style: MotionImpactStyle.thump,
+                      glowColor: tokens.colors.redBright,
+                      matches: (impact) =>
+                          impact.destination == MotionZone.trick(seat.id),
+                      child: displayedCard == null
+                          ? const SizedBox.expand()
+                          : SizedBox(
+                              key: Key(
+                                'static-hero-trick-card-${displayedCard.id}',
+                              ),
+                              child: _SinglePosterCard(
+                                card: displayedCard,
+                                tokens: tokens,
+                                trump: trump,
+                                provisional: provisional,
+                                onProvisionalReturned:
+                                    provisional && onHandCardTap != null
+                                    ? () => onHandCardTap!(displayedCard.id)
+                                    : null,
+                                winningTrick: seat.id == displayedWinnerSeatID,
+                              ),
                             ),
-                            child: _SinglePosterCard(
-                              card: displayedCard,
-                              tokens: tokens,
-                              trump: trump,
-                              provisional: provisional,
-                              onProvisionalReturned:
-                                  provisional && onHandCardTap != null
-                                  ? () => onHandCardTap!(displayedCard.id)
-                                  : null,
-                              winningTrick: seat.id == displayedWinnerSeatID,
-                            ),
-                          ),
+                    ),
                   );
                   final actualCardArea = SizedBox(
                     key: Key('static-hero-trick-card-area-${seat.id}'),
@@ -572,22 +586,43 @@ class _PosterTrickGrid extends StatelessWidget {
                   );
                   final targetWidth = renderedCardSize.width * 1.2;
                   final targetHeight = renderedCardSize.height * 1.2;
+                  final dropWidth = math.min(
+                    slotWidth,
+                    targetWidth * _trickDropHitLinearScale,
+                  );
+                  final dropHeight = math.min(
+                    slotHeight,
+                    targetHeight * _trickDropHitLinearScale,
+                  );
                   final cardCenterX = slotWidth / 2;
                   final cardCenterY =
                       trickPadding.top + availableCardHeight / 2;
-                  final targetLeft = (cardCenterX - targetWidth / 2)
-                      .clamp(0.0, math.max(0.0, slotWidth - targetWidth))
+                  final targetLeft = (cardCenterX - dropWidth / 2)
+                      .clamp(0.0, math.max(0.0, slotWidth - dropWidth))
                       .toDouble();
-                  final targetTop = (cardCenterY - targetHeight / 2)
-                      .clamp(0.0, math.max(0.0, slotHeight - targetHeight))
+                  final targetTop = (cardCenterY - dropHeight / 2)
+                      .clamp(0.0, math.max(0.0, slotHeight - dropHeight))
                       .toDouble();
                   final cardLeft =
                       cardCenterX - targetLeft - renderedCardSize.width / 2;
                   final cardTop =
                       cardCenterY - targetTop - renderedCardSize.height / 2;
+                  final highlightHorizontalInset =
+                      (dropWidth - targetWidth) / 2;
+                  final highlightVerticalInset =
+                      (dropHeight - targetHeight) / 2;
                   final positionedCardArea = Stack(
                     clipBehavior: Clip.none,
                     children: [
+                      Positioned(
+                        left: highlightHorizontalInset,
+                        top: highlightVerticalInset,
+                        width: targetWidth,
+                        height: targetHeight,
+                        child: SizedBox(
+                          key: Key('static-hero-trick-target-${seat.id}'),
+                        ),
+                      ),
                       Positioned(
                         left: cardLeft,
                         top: cardTop,
@@ -602,6 +637,10 @@ class _PosterTrickGrid extends StatelessWidget {
                           play == null
                       ? CardDropTarget(
                           highlightColor: tokens.colors.green,
+                          highlightInsets: EdgeInsets.symmetric(
+                            horizontal: highlightHorizontalInset,
+                            vertical: highlightVerticalInset,
+                          ),
                           accepts: (data) =>
                               data.canDrop &&
                               data.kind == CardDragKind.hand &&
@@ -618,10 +657,10 @@ class _PosterTrickGrid extends StatelessWidget {
                       Positioned(
                         left: targetLeft,
                         top: targetTop,
-                        width: targetWidth,
-                        height: targetHeight,
+                        width: dropWidth,
+                        height: dropHeight,
                         child: SizedBox(
-                          key: Key('static-hero-trick-target-${seat.id}'),
+                          key: Key('static-hero-trick-drop-area-${seat.id}'),
                           child: trickDropTarget,
                         ),
                       ),
@@ -673,24 +712,34 @@ class _PosterTrickGrid extends StatelessWidget {
                               height: _trickProfileHeight,
                               child: MotionTrackedRegion(
                                 motionKey: playerCardMotionSourceKey(seat.id),
-                                child: GestureDetector(
-                                  key: Key(
-                                    'player-portrait-${seat.id}-inspect',
-                                  ),
-                                  behavior: HitTestBehavior.opaque,
+                                child: Semantics(
+                                  button: true,
+                                  label: seat.name,
                                   onTap: () => onInspectSeat(seat.id),
-                                  child: _TrickPlayerProfile(
-                                    seat: seat,
-                                    model: model,
-                                    tokens: tokens,
-                                    maxTricks: maxTricks,
-                                    winning: displayedWinnerSeatID == seat.id,
-                                    portraitOnRight: isLeftColumn,
-                                    heroWithinReach:
-                                        heroOfSovietUnion &&
-                                        seat.medals == maxTricks - 1 &&
-                                        (phase == phaseTrick ||
-                                            phase == phaseAssignment),
+                                  child: ExcludeSemantics(
+                                    child: TactileControlSurface(
+                                      key: Key(
+                                        'player-portrait-${seat.id}-inspect',
+                                      ),
+                                      onPressed: () => onInspectSeat(seat.id),
+                                      pressTravel: 2,
+                                      hoverLift: -1,
+                                      hoverScale: 1.025,
+                                      child: _TrickPlayerProfile(
+                                        seat: seat,
+                                        model: model,
+                                        tokens: tokens,
+                                        maxTricks: maxTricks,
+                                        winning:
+                                            displayedWinnerSeatID == seat.id,
+                                        portraitOnRight: isLeftColumn,
+                                        heroWithinReach:
+                                            heroOfSovietUnion &&
+                                            seat.medals == maxTricks - 1 &&
+                                            (phase == phaseTrick ||
+                                                phase == phaseAssignment),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -828,17 +877,36 @@ String _trickProfileName(Seat seat) {
       : seat.name;
 }
 
-int _trickProfileCellarCount(Seat seat) {
-  return seat.plot.effectiveHiddenCardCount +
+int _trickProfileCellarCount(
+  Seat seat, {
+  Set<String> hiddenExiledCardIDs = const {},
+}) {
+  int visibleCount(List<TableCard> cards, int? redactedCount) {
+    final count = redactedCount ?? cards.length;
+    if (redactedCount != null || hiddenExiledCardIDs.isEmpty) {
+      return count;
+    }
+    return math.max(
+      0,
+      count -
+          cards.where((card) => hiddenExiledCardIDs.contains(card.id)).length,
+    );
+  }
+
+  return visibleCount(seat.plot.hidden, seat.plot.hiddenCardCount) +
       seat.plot.stacks.fold<int>(
         0,
-        (total, stack) => total + stack.effectiveHiddenCardCount,
+        (total, stack) =>
+            total + visibleCount(stack.hidden, stack.hiddenCardCount),
       );
 }
 
 int _trickProfileCellarStatValue(Seat seat, TableViewModel model) {
   if (!seat.isViewer) {
-    return _trickProfileCellarCount(seat);
+    return _trickProfileCellarCount(
+      seat,
+      hiddenExiledCardIDs: hiddenExiledPlotCardIDs(model),
+    );
   }
   final exiledCardIDs = hiddenExiledPlotCardIDs(model);
   return [
@@ -924,6 +992,7 @@ class _BrigadePlotZone extends StatelessWidget {
     required this.tokens,
     required this.inspecting,
     this.onPlotCardTap,
+    this.onSwapCardDrop,
   });
 
   final Seat seat;
@@ -935,6 +1004,7 @@ class _BrigadePlotZone extends StatelessWidget {
   final DesignTokens tokens;
   final bool inspecting;
   final void Function(String cardID, String zone)? onPlotCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
 
   @override
   Widget build(BuildContext context) {
@@ -946,8 +1016,11 @@ class _BrigadePlotZone extends StatelessWidget {
       ))
         _PosterCardEntry(
           card: selectedPlotCard(card, model.selection.plotCardID),
+          fidget: true,
           onTap: _plotTap(card, plotZoneRevealed),
           onDrop: _plotDrop(card, plotZoneRevealed),
+          onSwapWith: _plotSwapWith(card, plotZoneRevealed),
+          plotZone: plotZoneRevealed,
         ),
       for (final stack in visiblePlotStacks(
         seat.plot.stacks,
@@ -956,6 +1029,7 @@ class _BrigadePlotZone extends StatelessWidget {
         for (final card in stack.revealed)
           _PosterCardEntry(
             card: selectedPlotCard(card, model.selection.plotCardID),
+            fidget: true,
           ),
     ];
     final visibleCellarCards = [
@@ -970,27 +1044,33 @@ class _BrigadePlotZone extends StatelessWidget {
       ))
         ...stack.hidden,
     ];
-    final cellarCardCount = _trickProfileCellarCount(seat);
+    final cellarCardCount = _trickProfileCellarCount(
+      seat,
+      hiddenExiledCardIDs: hiddenExiledCardIDs,
+    );
     final cellarEntries = <_PosterCardEntry>[
       for (final card in visibleCellarCards)
         _PosterCardEntry(
           card: selectedPlotCard(card, model.selection.plotCardID),
           hidden: true,
           revealable: seat.isViewer,
-          splitPreview:
-              seat.isViewer &&
-              model.table.phase != phaseRequisition &&
-              model.table.phase != phaseGameOver,
+          splitPreview: seat.isViewer && model.table.phase != phaseGameOver,
           forceReveal: seat.isViewer,
+          fidget: true,
           onTap: _plotTap(card, plotZoneHidden),
           onDrop: _plotDrop(card, plotZoneHidden),
+          onSwapWith: _plotSwapWith(card, plotZoneHidden),
+          plotZone: plotZoneHidden,
         ),
       for (
         var index = visibleCellarCards.length;
         index < cellarCardCount;
         index += 1
       )
-        _PosterCardEntry.redacted(id: 'seat-${seat.id}-cellar-$index'),
+        _PosterCardEntry.redacted(
+          id: 'seat-${seat.id}-cellar-$index',
+          fidget: true,
+        ),
     ];
     final entries = isLeftColumn
         ? [...revealedEntries.reversed, ...cellarEntries]
@@ -1000,29 +1080,38 @@ class _BrigadePlotZone extends StatelessWidget {
       child: MotionTrackedRegion(
         key: Key('static-hero-plot-zone-${seat.id}'),
         motionKey: plotCardMotionSourceKey(seat.id),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Padding(
-                padding: EdgeInsets.all(_staticHeroPlotPadding * contentScale),
-                child: _PosterCardFan(
-                  cards: entries,
-                  tokens: tokens,
-                  trump: model.table.trump,
-                  maxPerRow: entries.length,
-                  growToAvailableWidth: true,
-                  maxScale: double.infinity,
-                  reversePaintOrder: isLeftColumn,
-                  alignment: Alignment(
-                    isLeftColumn ? 1 : -1,
-                    isTopRow ? 1 : -1,
+        child: MotionImpactSurface(
+          impactKey: 'plot-${seat.id}',
+          style: MotionImpactStyle.stack,
+          glowColor: tokens.colors.gold,
+          matches: (impact) =>
+              impact.destination.isPlot && impact.destination.seatID == seat.id,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.all(
+                    _staticHeroPlotPadding * contentScale,
+                  ),
+                  child: _PosterCardFan(
+                    cards: entries,
+                    tokens: tokens,
+                    trump: model.table.trump,
+                    maxPerRow: entries.length,
+                    growToAvailableWidth: true,
+                    maxScale: double.infinity,
+                    reversePaintOrder: isLeftColumn,
+                    alignment: Alignment(
+                      isLeftColumn ? 1 : -1,
+                      isTopRow ? 1 : -1,
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (inspecting)
-              Positioned.fill(child: _PosterPlayerInfo(seat: seat)),
-          ],
+              if (inspecting)
+                Positioned.fill(child: _PosterPlayerInfo(seat: seat)),
+            ],
+          ),
         ),
       ),
     );
@@ -1045,6 +1134,14 @@ class _BrigadePlotZone extends StatelessWidget {
       data.onAccepted();
       tap();
     };
+  }
+
+  SwapWithCardCallback? _plotSwapWith(TableCard card, String zone) {
+    final handler = onSwapCardDrop;
+    if (_plotTap(card, zone) == null || handler == null) {
+      return null;
+    }
+    return (handCardID, _) => handler(handCardID, card.id, zone);
   }
 }
 
@@ -1128,69 +1225,76 @@ class _JobPosterZone extends StatelessWidget {
     final zone = Semantics(
       key: Key('static-hero-job-${job.suit}'),
       button: handler != null,
+      enabled: handler != null,
       label: '${job.suit}, $hours of ${job.requiredHours} hours',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: handler,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: isLeftColumn ? 0 : assignmentMarkerClearance,
-              right: isLeftColumn ? assignmentMarkerClearance : 0,
-              top: 0,
-              bottom: 0,
-              child: DecoratedBox(
-                key: Key('static-hero-job-assignment-${job.suit}'),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: handler == null
-                        ? Colors.transparent
-                        : const Color(0xffffdc65),
-                    width: handler == null ? 0 : 3 * contentScale,
+      onTap: handler,
+      child: ExcludeSemantics(
+        child: TactileControlSurface(
+          enabled: handler != null,
+          onPressed: handler,
+          pressTravel: 3,
+          hoverLift: -1.5,
+          hoverScale: 1.018,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: isLeftColumn ? 0 : assignmentMarkerClearance,
+                right: isLeftColumn ? assignmentMarkerClearance : 0,
+                top: 0,
+                bottom: 0,
+                child: DecoratedBox(
+                  key: Key('static-hero-job-assignment-${job.suit}'),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: handler == null
+                          ? Colors.transparent
+                          : const Color(0xffffdc65),
+                      width: handler == null ? 0 : 3 * contentScale,
+                    ),
                   ),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(8 * contentScale),
-                  child: _PosterCardFan(
-                    cards: [
-                      for (final card in job.assignedCards)
-                        _PosterCardEntry(card: card),
-                    ],
-                    tokens: tokens,
-                    trump: model.table.trump,
-                    maxPerRow: 6,
-                    maxScale: double.infinity,
+                  child: Padding(
+                    padding: EdgeInsets.all(8 * contentScale),
+                    child: _PosterCardFan(
+                      cards: [
+                        for (final card in job.assignedCards)
+                          _PosterCardEntry(card: card),
+                      ],
+                      tokens: tokens,
+                      trump: model.table.trump,
+                      maxPerRow: 6,
+                      maxScale: double.infinity,
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              left: isLeftColumn ? null : markerHorizontalInset,
-              right: isLeftColumn ? markerHorizontalInset : null,
-              top: isTopRow ? null : markerVerticalInset,
-              bottom: isTopRow ? markerVerticalInset : null,
-              child: _FieldJobMarker(
-                suit: job.suit,
-                reward: job.reward,
-                rewardAbove: isTopRow,
-                gap: 6 * contentScale,
-                tokens: tokens,
-                trump: model.table.trump,
-                counterWidth: counterWidth,
-                counterHeight: counterHeight,
-                rewardWidth: rewardWidth,
-                counter: _PosterPlacard(
-                  key: Key('static-hero-job-counter-${job.suit}'),
-                  text: counterText,
-                  iconAsset: fieldPlanGameCropIconPath(job.suit),
-                  active: handler != null,
-                  complete: hours >= job.requiredHours,
-                  scale: counterScale,
+              Positioned(
+                left: isLeftColumn ? null : markerHorizontalInset,
+                right: isLeftColumn ? markerHorizontalInset : null,
+                top: isTopRow ? null : markerVerticalInset,
+                bottom: isTopRow ? markerVerticalInset : null,
+                child: _FieldJobMarker(
+                  suit: job.suit,
+                  reward: job.reward,
+                  rewardAbove: isTopRow,
+                  gap: 6 * contentScale,
+                  tokens: tokens,
+                  trump: model.table.trump,
+                  counterWidth: counterWidth,
+                  counterHeight: counterHeight,
+                  rewardWidth: rewardWidth,
+                  counter: _PosterPlacard(
+                    key: Key('static-hero-job-counter-${job.suit}'),
+                    text: counterText,
+                    iconAsset: fieldPlanGameCropIconPath(job.suit),
+                    active: handler != null,
+                    complete: hours >= job.requiredHours,
+                    scale: counterScale,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1199,6 +1303,7 @@ class _JobPosterZone extends StatelessWidget {
         : CardDropTarget(
             highlightColor: tokens.colors.green,
             borderRadius: 8 * contentScale,
+            labelBuilder: assignmentCardDropLabel,
             accepts: (data) =>
                 data.kind == CardDragKind.assignment &&
                 data.phase == phaseAssignment &&
@@ -1508,13 +1613,26 @@ class _PosterCardFan extends StatelessWidget {
                     width: cardSize.width,
                     height: cardSize.height,
                     child: entry.card == null
-                        ? SizedBox.expand(
-                            key: ValueKey('poster-fan-paint-${entry.id}'),
-                            child: ScaledCardBack(
-                              tokens: tokens,
-                              size: cardSize,
-                            ),
-                          )
+                        ? entry.fidget
+                              ? TetheredCardSurface(
+                                  key: ValueKey('plot-fidget-${entry.id}'),
+                                  child: SizedBox.expand(
+                                    key: ValueKey(
+                                      'poster-fan-paint-${entry.id}',
+                                    ),
+                                    child: ScaledCardBack(
+                                      tokens: tokens,
+                                      size: cardSize,
+                                    ),
+                                  ),
+                                )
+                              : SizedBox.expand(
+                                  key: ValueKey('poster-fan-paint-${entry.id}'),
+                                  child: ScaledCardBack(
+                                    tokens: tokens,
+                                    size: cardSize,
+                                  ),
+                                )
                         : _PosterFanCard(
                             entry: entry,
                             cardSize: cardSize,
@@ -1630,17 +1748,48 @@ class _PosterFanCard extends StatelessWidget {
     );
     final onDrop = entry.onDrop;
     if (onDrop == null) {
-      return cardSurface;
+      return entry.fidget
+          ? TetheredCardSurface(
+              key: ValueKey('plot-fidget-${entry.id}'),
+              child: cardSurface,
+            )
+          : cardSurface;
     }
+    final draggableCard = DraggableCardSurface(
+      data: CardDragData(
+        cardID: card.id,
+        kind: CardDragKind.plot,
+        phase: phaseSwap,
+        plotZone: entry.plotZone,
+        onSwapWith: entry.onSwapWith,
+        onAccepted: entry.onTap!,
+      ),
+      feedback: GameCard(
+        card: card,
+        tokens: tokens,
+        trump: trump,
+        sizeOverride: cardSize,
+        motionTracked: false,
+      ),
+      child: cardSurface,
+    );
     return CardDropTarget(
       highlightColor: tokens.colors.green,
       borderRadius: tokens.radius.card,
+      dragFeedbackSize: Size(cardSize.width, cardSize.height),
       accepts: (data) =>
           data.canDrop &&
           data.kind == CardDragKind.hand &&
           data.phase == phaseSwap,
-      onAccepted: onDrop,
-      child: cardSurface,
+      onAccepted: (data) {
+        final commitSwap = data.onSwapWith;
+        if (commitSwap != null) {
+          commitSwap(card.id, entry.plotZone!);
+          return;
+        }
+        onDrop(data);
+      },
+      child: draggableCard,
     );
   }
 }
@@ -1715,10 +1864,15 @@ class _SinglePosterCard extends StatelessWidget {
           key: ValueKey('provisional-trick-card-${card.id}'),
           child: cardPaint,
         );
+        final trackedProvisionalPaint = MotionTrackedCard(
+          card: card,
+          compositeWhenVisible: false,
+          child: provisionalPaint,
+        );
         return Center(
           child: provisional
               ? onProvisionalReturned == null
-                    ? provisionalPaint
+                    ? trackedProvisionalPaint
                     : DraggableCardSurface(
                         data: CardDragData(
                           cardID: card.id,
@@ -1735,7 +1889,7 @@ class _SinglePosterCard extends StatelessWidget {
                           motionTracked: false,
                           winningTrick: winningTrick,
                         ),
-                        child: provisionalPaint,
+                        child: trackedProvisionalPaint,
                       )
               : DraggableCardSurface(
                   data: CardDragData(
@@ -2110,11 +2264,14 @@ class _PosterCardEntry {
     this.revealable = false,
     this.forceReveal = false,
     this.splitPreview = false,
+    this.fidget = false,
     this.onTap,
     this.onDrop,
+    this.onSwapWith,
+    this.plotZone,
   }) : redactedID = null;
 
-  const _PosterCardEntry.redacted({required String id})
+  const _PosterCardEntry.redacted({required String id, this.fidget = false})
     : card = null,
       hidden = true,
       revealable = false,
@@ -2122,6 +2279,8 @@ class _PosterCardEntry {
       splitPreview = false,
       onTap = null,
       onDrop = null,
+      onSwapWith = null,
+      plotZone = null,
       redactedID = id;
 
   final TableCard? card;
@@ -2129,8 +2288,11 @@ class _PosterCardEntry {
   final bool revealable;
   final bool forceReveal;
   final bool splitPreview;
+  final bool fidget;
   final VoidCallback? onTap;
   final ValueChanged<CardDragData>? onDrop;
+  final SwapWithCardCallback? onSwapWith;
+  final String? plotZone;
   final String? redactedID;
 
   String get id => card?.id ?? redactedID!;

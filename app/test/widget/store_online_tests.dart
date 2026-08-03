@@ -751,6 +751,12 @@ void registerStoreAndOnlineTests() {
       phase: phaseRequisition,
       selection: SelectionState.empty,
       jobs: base.table.jobs,
+      legalActions: [
+        testLegalAction(
+          kind: actionContinueAfterRequisition,
+          label: 'Continue',
+        ),
+      ],
       seats: [base.table.seats[0], remoteSeat, ...base.table.seats.skip(2)],
       requisitionEvents: [
         RequisitionEvent(
@@ -769,6 +775,10 @@ void registerStoreAndOnlineTests() {
     final adjusted = withRequisitionAdjustedHiddenCounts(model);
 
     expect(adjusted.table.seats[1].plot.effectiveHiddenCardCount, 2);
+    expect(
+      adjusted.legalActions.map((action) => action.kind),
+      contains(actionContinueAfterRequisition),
+    );
   });
 
   test('presentation batch uses the leader recorded after each trick play', () {
@@ -914,6 +924,82 @@ void registerStoreAndOnlineTests() {
       targetSuit: 0,
     );
     expect(assignmentTargetRunEnd(mixedSuitEvents, 0), 0);
+  });
+
+  test('complementary swap moves form one presentation run', () {
+    const handToCellar = EngineTransitionEvent(
+      kind: kcTransitionCardMoved,
+      playerID: 0,
+      card: EngineCardValue(suit: 0, value: 9),
+      fromZone: kcObjectZoneHand,
+      toZone: kcObjectZonePlotHidden,
+      fromOwner: 0,
+      toOwner: 0,
+      targetSuit: -1,
+    );
+    const cellarToHand = EngineTransitionEvent(
+      kind: kcTransitionCardMoved,
+      playerID: 0,
+      card: EngineCardValue(suit: 3, value: 8),
+      fromZone: kcObjectZonePlotHidden,
+      toZone: kcObjectZoneHand,
+      fromOwner: 0,
+      toOwner: 0,
+      targetSuit: -1,
+    );
+
+    expect(swapMoveRunEnd([handToCellar, cellarToHand], 0), 1);
+    expect(swapMoveRunEnd([cellarToHand, handToCellar], 0), 1);
+    expect(swapMoveRunEnd([handToCellar], 0), 0);
+  });
+
+  test('dragged swaps resolve only the exact legal card pair and zone', () {
+    final swapAction = testLegalAction(
+      kind: actionSwap,
+      label: 'Swap',
+      engineAction: const EngineAction(
+        kind: actionSwap,
+        playerID: 0,
+        handCard: EngineCard(suit: 'wheat', value: 7),
+        plotCard: EngineCard(suit: 'beet', value: 9),
+        plotZone: plotZoneHidden,
+      ),
+    );
+    final base = runtimeModel();
+    final model = runtimeModelWith(
+      phase: phaseSwap,
+      selection: base.selection,
+      jobs: base.table.jobs,
+      legalActions: [swapAction],
+    );
+
+    expect(
+      swapActionForDrag(
+        model,
+        handCardID: 'wheat-7',
+        plotCardID: 'beet-9',
+        plotZone: plotZoneHidden,
+      ),
+      same(swapAction),
+    );
+    expect(
+      swapActionForDrag(
+        model,
+        handCardID: 'wheat-7',
+        plotCardID: 'beet-9',
+        plotZone: plotZoneRevealed,
+      ),
+      isNull,
+    );
+    expect(
+      swapActionForDrag(
+        model,
+        handCardID: 'wheat-8',
+        plotCardID: 'beet-9',
+        plotZone: plotZoneHidden,
+      ),
+      isNull,
+    );
   });
 
   test('online snapshots preserve authoritative engine transitions', () {
@@ -1185,6 +1271,45 @@ void registerStoreAndOnlineTests() {
     expect(viewer.name, 'Nadezhda');
     expect(viewer.portraitAsset, 'worker4');
     expect(viewer.profileUserID, 'profile-1');
+  });
+
+  test('local game over preserves the viewer profile display name', () {
+    final store = GameController(autosaveEnabled: false);
+    addTearDown(store.dispose);
+    const profile = PlayerProfile(
+      seatID: 0,
+      userID: 'profile-1',
+      displayName: 'Nadezhda',
+      avatarURL: 'worker4',
+    );
+    store.configureLobby(
+      variants: KolkhozGameVariants.demoKolkhoz,
+      controllers: const [
+        KolkhozPlayerController.human,
+        KolkhozPlayerController.heuristicAI,
+        KolkhozPlayerController.heuristicAI,
+        KolkhozPlayerController.heuristicAI,
+      ],
+      localProfile: profile,
+    );
+    store.startGame(persist: false);
+    final projected = store.model!;
+    final seats = projected.table.seats.toList(growable: false);
+    seats[0] = seats[0].withProfile(
+      name: 'Player 1',
+      portraitAsset: 'worker1',
+      profileStats: defaultProfileStats,
+      profileUserID: null,
+    );
+    final terminalProjection = projected.withTable(
+      projected.table.withSeats(seats),
+    );
+
+    final corrected = withLocalTerminalProfile(terminalProjection, profile);
+
+    expect(corrected.table.seats[0].name, 'Nadezhda');
+    expect(corrected.table.seats[0].portraitAsset, 'worker4');
+    expect(corrected.table.seats[0].profileUserID, 'profile-1');
   });
 
   test('game controller gates local actions while a transition is active', () {
@@ -1609,6 +1734,64 @@ void registerStoreAndOnlineTests() {
     expect(selected.selection.handCardID, 'wheat-9');
   });
 
+  test(
+    'forced trick selection waits for the current card flight to finish',
+    () {
+      final before = runtimeModel();
+      final viewer = localSeat(before);
+      final forcedCard = viewer.hand.single;
+      final opponent = before.table.seats.firstWhere(
+        (seat) => seat.id != viewer.id,
+      );
+      final opponentCard = testCard(
+        id: 'sunflower-8',
+        suit: 'sunflower',
+        value: 8,
+      );
+      final after = runtimeModelWith(
+        phase: phaseTrick,
+        selection: SelectionState.empty.copyWith(handCardID: forcedCard.id),
+        jobs: before.table.jobs,
+        seats: before.table.seats,
+        trick: Trick(
+          plays: [TrickPlay(seatID: opponent.id, card: opponentCard)],
+          winnerSeatID: null,
+        ),
+      );
+
+      final states = projectPresentationBatch(
+        before: before,
+        after: after,
+        events: [
+          EngineTransitionEvent(
+            kind: kcTransitionCardMoved,
+            playerID: opponent.id,
+            card: EngineCardValue(
+              suit: suitCode(opponentCard.suit)!,
+              value: opponentCard.value,
+            ),
+            fromZone: kcObjectZoneHand,
+            toZone: kcObjectZoneCurrentTrick,
+            fromOwner: opponent.id,
+            toOwner: opponent.id,
+            targetSuit: -1,
+          ),
+        ],
+      );
+
+      expect(states.single.selection.handCardID, isNull);
+      expect(
+        cardMotionZones(states.single)[forcedCard.id],
+        MotionZone.hand(viewer.id),
+      );
+      expect(
+        cardMotionZones(after)[forcedCard.id],
+        MotionZone.trick(viewer.id),
+      );
+      expect(needsFinalPresentationBoundary(states.single, after), isTrue);
+    },
+  );
+
   test('store auto-selects the top remaining assignment card', () {
     final wheat9 = testCard(id: 'wheat-9', suit: 'wheat', value: 9);
     final beet10 = testCard(id: 'beet-10', suit: 'beet', value: 10);
@@ -1895,6 +2078,31 @@ void registerStoreAndOnlineTests() {
     );
   });
 
+  test(
+    'legacy Kolkhoz setup migrates without changing custom Passing games',
+    () {
+      final legacyKolkhoz = KolkhozGameVariants.kolkhoz.copyWith(
+        passCards: true,
+      );
+      final customPassing = legacyKolkhoz.copyWith(maxYears: 4);
+
+      expect(
+        sameVariants(
+          migrateLegacyKolkhozVariants(legacyKolkhoz),
+          KolkhozGameVariants.kolkhoz,
+        ),
+        isTrue,
+      );
+      expect(
+        sameVariants(
+          migrateLegacyKolkhozVariants(customPassing),
+          customPassing,
+        ),
+        isTrue,
+      );
+    },
+  );
+
   test('online failure status keeps auth failures actionable', () {
     expect(
       onlineFailureStatusMessage(
@@ -2153,7 +2361,12 @@ void registerStoreAndOnlineTests() {
     expect(dialog.backgroundColor, lightDesignTokens.colors.panel);
     expect(dialog.titleTextStyle?.color, lightDesignTokens.colors.gold);
     expect(dialog.contentTextStyle?.color, lightDesignTokens.colors.cream);
-    await tester.tap(findAppText('Main menu'));
+    await tester.tap(
+      find.ancestor(
+        of: findAppText('Main menu'),
+        matching: find.byType(TactileTextButton),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(confirmed, isTrue);
@@ -4597,6 +4810,17 @@ void registerStoreAndOnlineTests() {
         playerID: 0,
         card: OnlineEngineCard(suit: 1, value: 10),
       ).toJson(),
+      const OnlineEngineAction(
+        kind: kcActionAssign,
+        playerID: 0,
+        card: OnlineEngineCard(suit: 2, value: 11),
+        targetSuit: 2,
+      ).toJson(),
+      const OnlineEngineAction(
+        kind: kcActionPlayCard,
+        playerID: 0,
+        card: OnlineEngineCard(suit: 1, value: 10),
+      ).toJson(),
     ];
     json['playerProfiles'] = [
       {'playerID': 0, 'displayName': 'Mira Petrov', 'avatarURL': 'worker3'},
@@ -4639,6 +4863,8 @@ void registerStoreAndOnlineTests() {
 
     expect(findAppText('Year 1'), findsOneWidget);
     expect(findAppText('Planning'), findsOneWidget);
+    expect(findAppText('Tricks'), findsNWidgets(2));
+    expect(findAppText('Job assignment'), findsOneWidget);
     expect(findAssetImage(fieldPlanYearIconPath(1)), findsOneWidget);
     expect(
       findAssetImage('assets/ui/Icons/icon-crop-seal.png'),
@@ -4731,6 +4957,44 @@ void registerStoreAndOnlineTests() {
       ),
       hasLength(2),
     );
+
+    LegalAction? continueAction;
+    for (var guard = 0; guard < 512; guard += 1) {
+      while (store.currentTransition != null) {
+        store.completeTransition(store.currentTransition!.id);
+      }
+      final continueActions = store.model!.legalActions.where(
+        (action) => action.kind == actionContinueAfterRequisition,
+      );
+      if (continueActions.isNotEmpty) {
+        continueAction = continueActions.first;
+        break;
+      }
+      await tester.pump(
+        GameAnimationSpeed.normal.automaticStepDelay +
+            const Duration(milliseconds: 1),
+      );
+    }
+
+    expect(
+      continueAction,
+      isNotNull,
+      reason:
+          'events=${store.model!.table.requisitionEvents.length} '
+          'legal=${store.model!.legalActions.map((action) => action.kind).toList()} '
+          'transition=${store.currentTransition?.id}',
+    );
+    await tester.pump(GameAnimationSpeed.normal.automaticStepDelay * 2);
+    expect(
+      store.model!.legalActions.map((action) => action.kind),
+      contains(actionContinueAfterRequisition),
+    );
+
+    store.applyLegalAction(continueAction!);
+    while (store.currentTransition != null) {
+      store.completeTransition(store.currentTransition!.id);
+    }
+    expect(store.model!.table.phase, isNot(phaseRequisition));
     store.dispose();
   });
 

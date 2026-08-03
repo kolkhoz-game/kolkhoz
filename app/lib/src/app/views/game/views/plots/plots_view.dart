@@ -18,12 +18,14 @@ class PlotPanel extends StatelessWidget {
     required this.model,
     required this.tokens,
     this.onPlotCardTap,
+    this.onSwapCardDrop,
     super.key,
   });
 
   final TableViewModel model;
   final DesignTokens tokens;
   final void Function(String cardID, String zone)? onPlotCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +40,7 @@ class PlotPanel extends StatelessWidget {
             metrics: metrics,
             tokens: tokens,
             onPlotCardTap: onPlotCardTap,
+            onSwapCardDrop: onSwapCardDrop,
           ),
         );
       },
@@ -51,6 +54,7 @@ class PlotOverviewView extends StatelessWidget {
     required this.metrics,
     required this.tokens,
     this.onPlotCardTap,
+    this.onSwapCardDrop,
     super.key,
   });
 
@@ -58,6 +62,7 @@ class PlotOverviewView extends StatelessWidget {
   final PlotPanelMetrics metrics;
   final DesignTokens tokens;
   final void Function(String cardID, String zone)? onPlotCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
 
   @override
   Widget build(BuildContext context) {
@@ -143,52 +148,61 @@ class PlotOverviewView extends StatelessWidget {
               ),
             MotionTrackedRegion(
               motionKey: plotCardMotionSourceKey(viewer.id),
-              child: SizedBox(
-                height: localHeight,
-                child: Row(
-                  spacing: metrics.spacing,
-                  children: [
-                    Expanded(
-                      child: LocalPlotColumn(
-                        title: 'Cellar',
-                        iconPath: fieldPlanCellarIconPath,
-                        cards: viewerHiddenCards,
-                        value: viewerHiddenCards.length,
-                        hidden: true,
-                        revealHiddenCards: revealViewerCellar,
-                        splitHiddenCardFront:
-                            model.table.phase != phaseRequisition &&
-                            model.table.phase != phaseGameOver,
-                        selectable: selectable,
-                        selectedCardID: model.selection.plotCardID,
-                        exiledCardIDs: exiledCardIDs,
-                        metrics: metrics,
-                        tokens: tokens,
-                        onCardTap: (cardID) =>
-                            onPlotCardTap?.call(cardID, plotZoneHidden),
-                      ),
-                    ),
-                    Expanded(
-                      child: LocalPlotColumn(
-                        title: 'Plot',
-                        iconPath: fieldPlanPlotIconPath,
-                        cards: viewerRevealedCards,
-                        stacks: viewerStacks,
-                        value: plotSectionValue(
-                          viewerRevealedCards,
-                          viewerStacks,
+              child: MotionImpactSurface(
+                impactKey: 'plot-overview-${viewer.id}',
+                style: MotionImpactStyle.stack,
+                glowColor: tokens.colors.gold,
+                matches: (impact) =>
+                    impact.destination.isPlot &&
+                    impact.destination.seatID == viewer.id,
+                child: SizedBox(
+                  height: localHeight,
+                  child: Row(
+                    spacing: metrics.spacing,
+                    children: [
+                      Expanded(
+                        child: LocalPlotColumn(
+                          title: 'Cellar',
+                          iconPath: fieldPlanCellarIconPath,
+                          cards: viewerHiddenCards,
+                          value: viewerHiddenCards.length,
+                          hidden: true,
+                          revealHiddenCards: revealViewerCellar,
+                          splitHiddenCardFront:
+                              model.table.phase != phaseGameOver,
+                          selectable: selectable,
+                          selectedCardID: model.selection.plotCardID,
+                          exiledCardIDs: exiledCardIDs,
+                          metrics: metrics,
+                          tokens: tokens,
+                          onSwapCardDrop: onSwapCardDrop,
+                          onCardTap: (cardID) =>
+                              onPlotCardTap?.call(cardID, plotZoneHidden),
                         ),
-                        hidden: false,
-                        selectable: selectable,
-                        selectedCardID: model.selection.plotCardID,
-                        exiledCardIDs: exiledCardIDs,
-                        metrics: metrics,
-                        tokens: tokens,
-                        onCardTap: (cardID) =>
-                            onPlotCardTap?.call(cardID, plotZoneRevealed),
                       ),
-                    ),
-                  ],
+                      Expanded(
+                        child: LocalPlotColumn(
+                          title: 'Plot',
+                          iconPath: fieldPlanPlotIconPath,
+                          cards: viewerRevealedCards,
+                          stacks: viewerStacks,
+                          value: plotSectionValue(
+                            viewerRevealedCards,
+                            viewerStacks,
+                          ),
+                          hidden: false,
+                          selectable: selectable,
+                          selectedCardID: model.selection.plotCardID,
+                          exiledCardIDs: exiledCardIDs,
+                          metrics: metrics,
+                          tokens: tokens,
+                          onSwapCardDrop: onSwapCardDrop,
+                          onCardTap: (cardID) =>
+                              onPlotCardTap?.call(cardID, plotZoneRevealed),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -212,6 +226,7 @@ List<Widget> plotOverviewCardItems({
   required Set<String> exiledCardIDs,
   required DesignTokens tokens,
   required void Function(String cardID, String zone)? onPlotCardTap,
+  SwapCardDropCallback? onSwapCardDrop,
 }) {
   return [
     for (final card in cards)
@@ -285,20 +300,49 @@ List<Widget> plotOverviewCardItems({
             ),
           );
           if (!selectable || onPlotCardTap == null) {
-            return cardControl;
+            return TetheredCardSurface(
+              key: ValueKey('viewer-plot-fidget-${card.id}'),
+              child: cardControl,
+            );
           }
+          final draggableCard = DraggableCardSurface(
+            data: CardDragData(
+              cardID: card.id,
+              kind: CardDragKind.plot,
+              phase: phaseSwap,
+              plotZone: zone,
+              onSwapWith: onSwapCardDrop == null
+                  ? null
+                  : (handCardID, _) =>
+                        onSwapCardDrop(handCardID, card.id, zone),
+              onAccepted: () => onPlotCardTap(card.id, zone),
+            ),
+            feedback: GameCard(
+              card: selectedPlotCard(card, selectedCardID),
+              tokens: tokens,
+              sizeOverride: cardSize,
+              motionTracked: false,
+            ),
+            child: cardControl,
+          );
           return CardDropTarget(
             highlightColor: tokens.colors.green,
             borderRadius: tokens.radius.card,
+            dragFeedbackSize: Size(cardSize.width, cardSize.height),
             accepts: (data) =>
                 data.canDrop &&
                 data.kind == CardDragKind.hand &&
                 data.phase == phaseSwap,
             onAccepted: (data) {
+              final commitSwap = data.onSwapWith;
+              if (commitSwap != null) {
+                commitSwap(card.id, zone);
+                return;
+              }
               data.onAccepted();
               onPlotCardTap(card.id, zone);
             },
-            child: cardControl,
+            child: draggableCard,
           );
         },
       ),
@@ -790,97 +834,109 @@ class OpponentPlotPanel extends StatelessWidget {
     final vulnerable = hasExiledPlotCard;
     return MotionTrackedRegion(
       motionKey: plotCardMotionSourceKey(seat.id),
-      child: Container(
-        padding: EdgeInsets.all(metrics.panelPadding),
-        decoration: BoxDecoration(
-          color: tokens.colors.black.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(tokens.radius.sm),
-          border: Border.all(color: tokens.colors.steel.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: metrics.spacing * 0.75,
-          children: [
-            SizedBox(
-              width: metrics.portraitSize + 12,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                spacing: 3,
-                children: [
-                  SizedBox(
-                    width: metrics.portraitSize,
-                    height: metrics.portraitSize,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        PortraitFrame(
-                          seat: seat,
-                          tokens: tokens,
-                          width: metrics.portraitSize,
-                          height: metrics.portraitSize,
-                        ),
-                        if (vulnerable)
-                          Positioned(
-                            top: -3,
-                            right: -4,
-                            child: Image.asset(
-                              'assets/art/field_plan/shared/pictograms/'
-                              'status-vulnerable.png',
-                              width: 14,
-                              height: 14,
-                              filterQuality: FilterQuality.high,
-                              isAntiAlias: true,
-                            ),
+      child: MotionImpactSurface(
+        impactKey: 'opponent-plot-${seat.id}',
+        style: MotionImpactStyle.stack,
+        glowColor: tokens.colors.gold,
+        matches: (impact) =>
+            impact.destination.isPlot && impact.destination.seatID == seat.id,
+        child: Container(
+          padding: EdgeInsets.all(metrics.panelPadding),
+          decoration: BoxDecoration(
+            color: tokens.colors.black.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(tokens.radius.sm),
+            border: Border.all(
+              color: tokens.colors.steel.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: metrics.spacing * 0.75,
+            children: [
+              SizedBox(
+                width: metrics.portraitSize + 12,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  spacing: 3,
+                  children: [
+                    SizedBox(
+                      width: metrics.portraitSize,
+                      height: metrics.portraitSize,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          PortraitFrame(
+                            seat: seat,
+                            tokens: tokens,
+                            width: metrics.portraitSize,
+                            height: metrics.portraitSize,
                           ),
-                      ],
+                          if (vulnerable)
+                            Positioned(
+                              top: -3,
+                              right: -4,
+                              child: Image.asset(
+                                'assets/art/field_plan/shared/pictograms/'
+                                'status-vulnerable.png',
+                                width: 14,
+                                height: 14,
+                                filterQuality: FilterQuality.high,
+                                isAntiAlias: true,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  DisplayText(
-                    seat.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    size: DisplayTextSize.caption2,
-                    variant: DisplayTextWeight.bold,
-                    color: tokens.colors.cream,
-                  ),
-                ],
+                    DisplayText(
+                      seat.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      size: DisplayTextSize.caption2,
+                      variant: DisplayTextWeight.bold,
+                      color: tokens.colors.cream,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: metrics.spacing * 0.5,
-                children: [
-                  Expanded(
-                    child: OpponentPlotMiniSection(
-                      iconPath: fieldPlanCellarIconPath,
-                      value: revealCellarCards
-                          ? '${plotCardsValue([...visibleHiddenCards, ...stackedHiddenCards])}'
-                          : '$cellarCardCount',
-                      cards: [...visibleHiddenCards, ...stackedHiddenCards],
-                      cardCount: cellarCardCount,
-                      hidden: !revealCellarCards,
-                      metrics: metrics,
-                      tokens: tokens,
-                      exiledCardIDs: exiledCardIDs,
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: metrics.spacing * 0.5,
+                  children: [
+                    Expanded(
+                      child: OpponentPlotMiniSection(
+                        iconPath: fieldPlanCellarIconPath,
+                        value: revealCellarCards
+                            ? '${plotCardsValue([...visibleHiddenCards, ...stackedHiddenCards])}'
+                            : '$cellarCardCount',
+                        cards: [...visibleHiddenCards, ...stackedHiddenCards],
+                        cardCount: cellarCardCount,
+                        hidden: !revealCellarCards,
+                        metrics: metrics,
+                        tokens: tokens,
+                        exiledCardIDs: exiledCardIDs,
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: OpponentPlotMiniSection(
-                      iconPath: fieldPlanPlotIconPath,
-                      value: '${visiblePlotScore(seat, hiddenExiledCardIDs)}',
-                      cards: [...visibleRevealedCards, ...stackedRevealedCards],
-                      hidden: false,
-                      metrics: metrics,
-                      tokens: tokens,
-                      exiledCardIDs: exiledCardIDs,
+                    Expanded(
+                      child: OpponentPlotMiniSection(
+                        iconPath: fieldPlanPlotIconPath,
+                        value: '${visiblePlotScore(seat, hiddenExiledCardIDs)}',
+                        cards: [
+                          ...visibleRevealedCards,
+                          ...stackedRevealedCards,
+                        ],
+                        hidden: false,
+                        metrics: metrics,
+                        tokens: tokens,
+                        exiledCardIDs: exiledCardIDs,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -940,12 +996,15 @@ class OpponentPlotMiniSection extends StatelessWidget {
               exiled: exiledCardIDs.contains(card.id),
               radius: opponentPlotMiniExileRadius,
               tokens: tokens,
-              child: hidden
-                  ? MotionTrackedCard(
-                      card: card,
-                      child: CardBackMini(tokens: tokens),
-                    )
-                  : GameCard(card: card, tokens: tokens, small: true),
+              child: TetheredCardSurface(
+                key: ValueKey('opponent-mini-fidget-${card.id}'),
+                child: hidden
+                    ? MotionTrackedCard(
+                        card: card,
+                        child: CardBackMini(tokens: tokens),
+                      )
+                    : GameCard(card: card, tokens: tokens, small: true),
+              ),
             ),
           ),
         ),
@@ -963,7 +1022,10 @@ class OpponentPlotMiniSection extends StatelessWidget {
           child: Transform.scale(
             alignment: Alignment.topLeft,
             scale: metrics.opponentCardScale,
-            child: CardBackMini(tokens: tokens),
+            child: TetheredCardSurface(
+              key: ValueKey('opponent-mini-fidget-redacted-$index'),
+              child: CardBackMini(tokens: tokens),
+            ),
           ),
         ),
       if (displayCardCount == 0)
@@ -1045,6 +1107,7 @@ class LocalPlotColumn extends StatelessWidget {
     required this.metrics,
     required this.tokens,
     this.onCardTap,
+    this.onSwapCardDrop,
     super.key,
   }) : hiddenCards = hiddenCards ?? hidden;
 
@@ -1063,6 +1126,7 @@ class LocalPlotColumn extends StatelessWidget {
   final PlotPanelMetrics metrics;
   final DesignTokens tokens;
   final ValueChanged<String>? onCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
 
   @override
   Widget build(BuildContext context) {
@@ -1127,6 +1191,7 @@ class LocalPlotColumn extends StatelessWidget {
                   zone: hidden ? plotZoneHidden : plotZoneRevealed,
                   exiledCardIDs: exiledCardIDs,
                   tokens: tokens,
+                  onSwapCardDrop: onSwapCardDrop,
                   onPlotCardTap: (cardID, _) => onCardTap?.call(cardID),
                 );
                 final children = cardWidgets.isEmpty

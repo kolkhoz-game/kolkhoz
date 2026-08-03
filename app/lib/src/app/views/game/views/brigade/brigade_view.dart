@@ -355,7 +355,13 @@ class _BrigadePanelState extends State<BrigadePanel> {
                       transformHitTests: false,
                       child: MotionTrackedRegion(
                         motionKey: trickCardMotionTargetKey(seat.id),
-                        child: child,
+                        child: MotionImpactSurface(
+                          impactKey: 'field-trick-${seat.id}',
+                          glowColor: tokens.colors.redBright,
+                          matches: (impact) =>
+                              impact.destination == MotionZone.trick(seat.id),
+                          child: child,
+                        ),
                       ),
                     ),
                   );
@@ -683,36 +689,44 @@ class FieldsJobPile extends StatelessWidget {
     final assignmentAction = assignmentActionForJob(model, job);
     final actionHandler = onAction;
     final canAssign = assignmentAction != null && actionHandler != null;
+    final handler = canAssign
+        ? () => actionHandler(assignmentAction)
+        : onInspect;
     final pile = Semantics(
-      button: canAssign,
+      button: handler != null,
+      enabled: handler != null,
       label: language.suitName(job.suit),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: assignmentAction != null && actionHandler != null
-            ? () => actionHandler(assignmentAction)
-            : onInspect,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: canAssign
-                ? tokens.colors.cream.withValues(alpha: 0.08)
-                : Colors.transparent,
-            border: Border.all(
+      onTap: handler,
+      child: ExcludeSemantics(
+        child: TactileControlSurface(
+          enabled: handler != null,
+          onPressed: handler,
+          pressTravel: 3,
+          hoverLift: -1.5,
+          hoverScale: 1.018,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
               color: canAssign
-                  ? tokens.colors.gold.withValues(alpha: 0.55)
+                  ? tokens.colors.cream.withValues(alpha: 0.08)
                   : Colors.transparent,
-              width: 2,
+              border: Border.all(
+                color: canAssign
+                    ? tokens.colors.gold.withValues(alpha: 0.55)
+                    : Colors.transparent,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
             ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: job.assignedCards.isEmpty
-                ? const SizedBox.expand()
-                : AssignedJobCardStack(
-                    cards: job.assignedCards,
-                    tokens: tokens,
-                    trump: model.table.trump,
-                  ),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: job.assignedCards.isEmpty
+                  ? const SizedBox.expand()
+                  : AssignedJobCardStack(
+                      cards: job.assignedCards,
+                      tokens: tokens,
+                      trump: model.table.trump,
+                    ),
+            ),
           ),
         ),
       ),
@@ -723,6 +737,7 @@ class FieldsJobPile extends StatelessWidget {
     return CardDropTarget(
       highlightColor: tokens.colors.green,
       borderRadius: 8,
+      labelBuilder: assignmentCardDropLabel,
       accepts: (data) =>
           data.kind == CardDragKind.assignment &&
           data.phase == phaseAssignment &&
@@ -979,44 +994,49 @@ class FarmsteadPlayerPortrait extends StatelessWidget {
       child: Semantics(
         button: true,
         label: seat.name,
-        child: GestureDetector(
-          key: Key('player-portrait-${seat.id}-inspect'),
-          behavior: HitTestBehavior.opaque,
-          onTap: onInspect,
-          child: LayoutBuilder(
-            builder: (context, constraints) => Stack(
-              fit: StackFit.expand,
-              children: [
-                PlayerPortrait(
-                  seat: seat,
-                  tokens: tokens,
-                  width: constraints.maxWidth,
-                  height: constraints.maxHeight,
-                  badgeVisible: false,
-                ),
-                if (reactionIcon != null)
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: tokens.colors.black.withValues(alpha: 0.62),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Image.asset(
-                        reactionIcon.startsWith('assets/')
-                            ? reactionIcon
-                            : 'assets/ui/Icons/$reactionIcon',
-                        filterQuality:
-                            reactionIcon.startsWith('assets/art/field_plan/')
-                            ? FilterQuality.high
-                            : FilterQuality.none,
-                        isAntiAlias: reactionIcon.startsWith(
-                          'assets/art/field_plan/',
+        onTap: onInspect,
+        child: ExcludeSemantics(
+          child: TactileControlSurface(
+            key: Key('player-portrait-${seat.id}-inspect'),
+            onPressed: onInspect,
+            pressTravel: 2,
+            hoverLift: -1,
+            hoverScale: 1.025,
+            child: LayoutBuilder(
+              builder: (context, constraints) => Stack(
+                fit: StackFit.expand,
+                children: [
+                  PlayerPortrait(
+                    seat: seat,
+                    tokens: tokens,
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    badgeVisible: false,
+                  ),
+                  if (reactionIcon != null)
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: tokens.colors.black.withValues(alpha: 0.62),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Image.asset(
+                          reactionIcon.startsWith('assets/')
+                              ? reactionIcon
+                              : 'assets/ui/Icons/$reactionIcon',
+                          filterQuality:
+                              reactionIcon.startsWith('assets/art/field_plan/')
+                              ? FilterQuality.high
+                              : FilterQuality.none,
+                          isAntiAlias: reactionIcon.startsWith(
+                            'assets/art/field_plan/',
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1268,7 +1288,12 @@ class FarmsteadTrickCard extends StatelessWidget {
     }
     final trackedCard = MotionTrackedRegion(
       motionKey: trickCardMotionTargetKey(seat.id),
-      child: child,
+      child: MotionImpactSurface(
+        impactKey: 'farmstead-trick-${seat.id}',
+        glowColor: tokens.colors.redBright,
+        matches: (impact) => impact.destination == MotionZone.trick(seat.id),
+        child: child,
+      ),
     );
     if (!active || !seat.isViewer) {
       return trackedCard;
@@ -1497,7 +1522,14 @@ class BrigadePlayerColumn extends StatelessWidget {
                               ? presentedPlayAreaChild
                               : MotionTrackedRegion(
                                   motionKey: trickCardMotionTargetKey(seat.id),
-                                  child: presentedPlayAreaChild,
+                                  child: MotionImpactSurface(
+                                    impactKey: 'brigade-trick-${seat.id}',
+                                    glowColor: tokens.colors.redBright,
+                                    matches: (impact) =>
+                                        impact.destination ==
+                                        MotionZone.trick(seat.id),
+                                    child: presentedPlayAreaChild,
+                                  ),
                                 ),
                         ),
                       ),
@@ -2062,17 +2094,21 @@ class PendingTrickPreview extends StatelessWidget {
             child: FractionallySizedBox(
               widthFactor: pendingTrickPreviewScale,
               heightFactor: pendingTrickPreviewScale,
-              child: Opacity(
-                key: const Key('pending-trick-card-preview'),
-                opacity: pendingTrickPreviewOpacity,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: GameCard(
-                    card: card,
-                    tokens: tokens,
-                    trump: trump,
-                    sizeOverride: tokens.card.large,
-                    motionTracked: false,
+              child: MotionTrackedCard(
+                card: card,
+                compositeWhenVisible: false,
+                child: Opacity(
+                  key: const Key('pending-trick-card-preview'),
+                  opacity: pendingTrickPreviewOpacity,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    child: GameCard(
+                      card: card,
+                      tokens: tokens,
+                      trump: trump,
+                      sizeOverride: tokens.card.large,
+                      motionTracked: false,
+                    ),
                   ),
                 ),
               ),
@@ -2114,63 +2150,92 @@ class PlayerBadge extends StatelessWidget {
   final VoidCallback? onInspect;
 
   @override
-  Widget build(BuildContext context) => _buildFieldPlanBadge();
+  Widget build(BuildContext context) => _buildFieldPlanBadge(context);
 
-  Widget _buildFieldPlanBadge() {
+  Widget _buildFieldPlanBadge(BuildContext context) {
     final human = seat.isViewer;
     final ink = const Color(0xff24251d);
     final accent = active ? const Color(0xffa33a28) : const Color(0xff4c5940);
+    final motion = GameMotion.of(context);
     return MotionTrackedRegion(
       motionKey: playerCardMotionSourceKey(seat.id),
       child: Semantics(
         button: true,
         label: displayName,
-        child: GestureDetector(
-          key: Key('player-portrait-${seat.id}-inspect'),
-          behavior: HitTestBehavior.opaque,
-          onTap: onInspect,
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: FieldPlanSign(
-              borderColor: human ? const Color(0xffa33a28) : accent,
-              borderWidth: active ? 2 : 1,
-              child: Row(
-                children: [
-                  SizedBox.square(
-                    dimension: height,
-                    child: PlayerPortrait(
-                      seat: seat,
-                      tokens: tokens,
-                      width: height,
-                      height: height,
-                      badgeVisible: false,
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        onTap: onInspect,
+        child: ExcludeSemantics(
+          child: TactileControlSurface(
+            key: Key('player-portrait-${seat.id}-inspect'),
+            onPressed: onInspect,
+            pressTravel: 2,
+            hoverLift: -1,
+            hoverScale: 1.025,
+            child: SizedBox(
+              width: width,
+              height: height,
+              child: AnimatedSlide(
+                offset: active ? const Offset(0, -0.025) : Offset.zero,
+                duration: motion.turnTransition,
+                curve: Curves.easeOutBack,
+                child: AnimatedScale(
+                  scale: active ? 1.025 : 1,
+                  duration: motion.turnTransition,
+                  curve: Curves.easeOutBack,
+                  child: MotionImpactSurface(
+                    impactKey: 'player-${seat.id}',
+                    style: MotionImpactStyle.stamp,
+                    glowColor: accent,
+                    matches: (impact) =>
+                        impact.destination == MotionZone.trick(seat.id),
+                    child: FieldPlanSign(
+                      borderColor: human ? const Color(0xffa33a28) : accent,
+                      borderWidth: active ? 2 : 1,
+                      child: Row(
                         children: [
-                          Text(
-                            displayName.toUpperCase(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: fieldPlanDisplayTextStyle.copyWith(
-                              color: ink,
-                              fontSize: math.max(10, height * 0.24),
+                          SizedBox.square(
+                            dimension: height,
+                            child: PlayerPortrait(
+                              seat: seat,
+                              tokens: tokens,
+                              width: height,
+                              height: height,
+                              badgeVisible: false,
                             ),
                           ),
-                          HeroMedalPulse(
-                            active: heroWithinReach,
-                            child: Text(
-                              '${seat.visibleScore}  •  ${seat.medals}/$maxTricks',
-                              maxLines: 1,
-                              style: fieldPlanBodyStrongTextStyle.copyWith(
-                                color: accent,
-                                fontSize: math.max(8, height * 0.18),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    displayName.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: fieldPlanDisplayTextStyle.copyWith(
+                                      color: ink,
+                                      fontSize: math.max(10, height * 0.24),
+                                    ),
+                                  ),
+                                  HeroMedalPulse(
+                                    active: heroWithinReach,
+                                    child: Text(
+                                      '${seat.visibleScore}  •  ${seat.medals}/$maxTricks',
+                                      maxLines: 1,
+                                      style: fieldPlanBodyStrongTextStyle
+                                          .copyWith(
+                                            color: accent,
+                                            fontSize: math.max(
+                                              8,
+                                              height * 0.18,
+                                            ),
+                                          ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -2178,7 +2243,7 @@ class PlayerBadge extends StatelessWidget {
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -2362,19 +2427,28 @@ class ExpandedPlayerInfoPanel extends StatelessWidget {
           : null,
       footer: onClose == null
           ? null
-          : GestureDetector(
-              behavior: HitTestBehavior.opaque,
+          : Semantics(
+              button: true,
+              label: language.strings.kolkhozappCancel,
               onTap: onClose,
-              child: SizedBox(
-                height: 26,
-                child: Center(
-                  child: DisplayText(
-                    language.strings.kolkhozappCancel,
-                    size: DisplayTextSize.xSmall,
-                    variant: DisplayTextWeight.bold,
-                    color: tokens.colors.gold,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+              child: ExcludeSemantics(
+                child: TactileControlSurface(
+                  onPressed: onClose,
+                  pressTravel: 2,
+                  hoverLift: -0.5,
+                  hoverScale: 1.015,
+                  child: SizedBox(
+                    height: 26,
+                    child: Center(
+                      child: DisplayText(
+                        language.strings.kolkhozappCancel,
+                        size: DisplayTextSize.xSmall,
+                        variant: DisplayTextWeight.bold,
+                        color: tokens.colors.gold,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -2479,55 +2553,65 @@ class PlayerPlotScoreStat extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconSize = 16 * scale;
     if (width < iconSize + 12 * scale) {
-      return SizedBox(
-        width: width,
-        height: 18 * scale,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerRight,
-          child: DisplayText(
-            '$score',
-            size: DisplayTextSize.headline,
-            variant: DisplayTextWeight.bold,
-            color: tokens.colors.smoke,
+      return ValueImpactSurface<int>(
+        value: score,
+        impactKey: 'player-score',
+        alignment: Alignment.centerRight,
+        child: SizedBox(
+          width: width,
+          height: 18 * scale,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: DisplayText(
+              '$score',
+              size: DisplayTextSize.headline,
+              variant: DisplayTextWeight.bold,
+              color: tokens.colors.smoke,
+            ),
           ),
         ),
       );
     }
     final textWidth = math.max(0.0, width - iconSize - 2 * scale);
-    return SizedBox(
-      width: width,
-      height: 18 * scale,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        spacing: 2 * scale,
-        children: [
-          SizedBox(
-            width: iconSize,
-            height: iconSize,
-            child: Image.asset(
-              fieldPlanPlotIconPath,
+    return ValueImpactSurface<int>(
+      value: score,
+      impactKey: 'player-score',
+      alignment: Alignment.centerLeft,
+      child: SizedBox(
+        width: width,
+        height: 18 * scale,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          spacing: 2 * scale,
+          children: [
+            SizedBox(
               width: iconSize,
               height: iconSize,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              isAntiAlias: true,
-            ),
-          ),
-          SizedBox(
-            width: textWidth,
-            child: Transform.scale(
-              scale: scale,
-              alignment: Alignment.centerLeft,
-              child: DisplayText(
-                '$score',
-                size: DisplayTextSize.headline,
-                variant: DisplayTextWeight.bold,
-                color: tokens.colors.smoke,
+              child: Image.asset(
+                fieldPlanPlotIconPath,
+                width: iconSize,
+                height: iconSize,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                isAntiAlias: true,
               ),
             ),
-          ),
-        ],
+            SizedBox(
+              width: textWidth,
+              child: Transform.scale(
+                scale: scale,
+                alignment: Alignment.centerLeft,
+                child: DisplayText(
+                  '$score',
+                  size: DisplayTextSize.headline,
+                  variant: DisplayTextWeight.bold,
+                  color: tokens.colors.smoke,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2681,46 +2765,51 @@ class PlayerCellarStat extends StatelessWidget {
     final cardWidth = playerPanelCardBackWidth * scale;
     final cardHeight = playerPanelCardBackHeight * scale;
     final cardsWidth = math.max(0.0, width - iconSize - 2 * scale);
-    return SizedBox(
-      width: width,
-      height: 16 * scale,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        spacing: 2 * scale,
-        children: [
-          SizedBox(
-            width: iconSize,
-            height: iconSize,
-            child: Image.asset(
-              fieldPlanCellarIconPath,
+    return ValueImpactSurface<int>(
+      value: count,
+      impactKey: 'player-cellar',
+      alignment: Alignment.centerLeft,
+      child: SizedBox(
+        width: width,
+        height: 16 * scale,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          spacing: 2 * scale,
+          children: [
+            SizedBox(
               width: iconSize,
               height: iconSize,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              isAntiAlias: true,
-            ),
-          ),
-          SizedBox(
-            width: cardsWidth,
-            height: cardHeight,
-            child: ClipRect(
-              child: Stack(
-                clipBehavior: Clip.hardEdge,
-                children: [
-                  for (var index = 0; index < count; index++)
-                    Positioned(
-                      left: index * (cardWidth + cardSpacing),
-                      top: 0,
-                      child: PlayerCardBackThumbnail(
-                        tokens: tokens,
-                        scale: scale,
-                      ),
-                    ),
-                ],
+              child: Image.asset(
+                fieldPlanCellarIconPath,
+                width: iconSize,
+                height: iconSize,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                isAntiAlias: true,
               ),
             ),
-          ),
-        ],
+            SizedBox(
+              width: cardsWidth,
+              height: cardHeight,
+              child: ClipRect(
+                child: Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: [
+                    for (var index = 0; index < count; index++)
+                      Positioned(
+                        left: index * (cardWidth + cardSpacing),
+                        top: 0,
+                        child: PlayerCardBackThumbnail(
+                          tokens: tokens,
+                          scale: scale,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

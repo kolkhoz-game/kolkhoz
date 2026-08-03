@@ -311,26 +311,30 @@ class OptionsMenuContent extends StatelessWidget {
           selectedTab: selectedTab,
           onTabSelected: onTabSelected,
         ),
-        OptionsMenuTabBody(
-          tokens: tokens,
-          language: language,
-          appearance: appearance,
-          cardBack: cardBack,
-          selectedTab: selectedTab,
-          onNewGame: onNewGame,
-          onReturnToLobby: onReturnToLobby,
-          onTutorial: onTutorial,
-          animationSpeed: animationSpeed,
-          onAnimationSpeedChanged: onAnimationSpeedChanged,
-          confirmNewGame: confirmNewGame,
-          onConfirmNewGameChanged: onConfirmNewGameChanged,
-          confirmMainMenu: confirmMainMenu,
-          onConfirmMainMenuChanged: onConfirmMainMenuChanged,
-          showInvalidTapHints: showInvalidTapHints,
-          onShowInvalidTapHintsChanged: onShowInvalidTapHintsChanged,
-          onLanguageToggle: onLanguageToggle,
-          onAppearanceToggle: onAppearanceToggle,
-          onCardBackChanged: onCardBackChanged,
+        MechanicalPanelSwitcher(
+          panelKey: selectedTab,
+          expand: false,
+          child: OptionsMenuTabBody(
+            tokens: tokens,
+            language: language,
+            appearance: appearance,
+            cardBack: cardBack,
+            selectedTab: selectedTab,
+            onNewGame: onNewGame,
+            onReturnToLobby: onReturnToLobby,
+            onTutorial: onTutorial,
+            animationSpeed: animationSpeed,
+            onAnimationSpeedChanged: onAnimationSpeedChanged,
+            confirmNewGame: confirmNewGame,
+            onConfirmNewGameChanged: onConfirmNewGameChanged,
+            confirmMainMenu: confirmMainMenu,
+            onConfirmMainMenuChanged: onConfirmMainMenuChanged,
+            showInvalidTapHints: showInvalidTapHints,
+            onShowInvalidTapHintsChanged: onShowInvalidTapHintsChanged,
+            onLanguageToggle: onLanguageToggle,
+            onAppearanceToggle: onAppearanceToggle,
+            onCardBackChanged: onCardBackChanged,
+          ),
         ),
       ],
     );
@@ -957,9 +961,10 @@ class OptionsCardBackButton extends StatelessWidget {
       child: ExcludeSemantics(
         child: Tooltip(
           message: label,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onPressed,
+          child: MechanicalSelectionSurface(
+            selected: selected,
+            enabled: onPressed != null,
+            onPressed: onPressed,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: tokens.colors.black.withValues(alpha: 0.18),
@@ -1038,9 +1043,10 @@ class OptionsSettingToggle extends StatelessWidget {
       toggled: value,
       label: label,
       child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? () => onChanged!(!value) : null,
+        child: MechanicalSelectionSurface(
+          selected: value,
+          enabled: enabled,
+          onPressed: enabled ? () => onChanged!(!value) : null,
           child: Container(
             padding: optionsMenuSettingPadding,
             decoration: BoxDecoration(
@@ -1159,9 +1165,11 @@ class OptionsChromeToggle extends StatelessWidget {
     final fieldPlanIcon = iconPath.startsWith('assets/art/field_plan/');
     return Tooltip(
       message: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
+      child: TactileControlSurface(
+        enabled: onPressed != null,
+        onPressed: onPressed,
+        pressTravel: 3,
+        hoverScale: 1.06,
         child: SizedBox(
           width: optionsChromeToggleSize,
           height: optionsChromeToggleSize,
@@ -1263,29 +1271,39 @@ class AnimationSpeedSegment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? tokens.colors.gold : tokens.colors.creamDim;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: optionsAnimationSpeedSegmentHeight,
-        decoration: BoxDecoration(
-          color: selected
-              ? tokens.colors.gold.withValues(alpha: 0.18)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-            color: selected
-                ? tokens.colors.gold
-                : tokens.colors.steel.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Center(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: ChromePixelLabel(
-              animationSpeedLabel(speed, language),
-              size: DisplayTextSize.caption2,
-              color: color,
+    final label = animationSpeedLabel(speed, language).toUpperCase();
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: onTap != null,
+      label: label,
+      child: ExcludeSemantics(
+        child: MechanicalSelectionSurface(
+          selected: selected,
+          enabled: onTap != null,
+          onPressed: onTap,
+          child: Container(
+            height: optionsAnimationSpeedSegmentHeight,
+            decoration: BoxDecoration(
+              color: selected
+                  ? tokens.colors.gold.withValues(alpha: 0.18)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: selected
+                    ? tokens.colors.gold
+                    : tokens.colors.steel.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: ChromePixelLabel(
+                  label,
+                  size: DisplayTextSize.caption2,
+                  color: color,
+                ),
+              ),
             ),
           ),
         ),

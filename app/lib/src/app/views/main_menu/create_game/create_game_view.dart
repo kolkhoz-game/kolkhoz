@@ -691,11 +691,13 @@ class _VariantPanelState extends State<CreateGameView> {
               child: ExcludeSemantics(
                 child: Tooltip(
                   message: widget.language.strings.kolkhozappCopyCode,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => unawaited(
+                  child: TactileControlSurface(
+                    onPressed: () => unawaited(
                       copyHostedInviteCode(widget.hostedInviteCode!),
                     ),
+                    pressTravel: 3,
+                    hoverLift: -1,
+                    hoverScale: 1.025,
                     child: SizedBox(
                       height: height,
                       child: Stack(
@@ -1080,6 +1082,8 @@ class _VariantHeaderIconChip extends StatelessWidget {
     final iconSize = showLabel
         ? (compact ? 25.0 : 29.0)
         : (compact ? 28.0 : 33.0);
+    final tooltipKey = GlobalKey<TooltipState>();
+    void showTooltip() => tooltipKey.currentState?.ensureTooltipVisible();
     final tooltipText = TextSpan(
       style: kolkhozFontStyle.copyWith(
         color: tokens.colors.cardInk,
@@ -1098,66 +1102,76 @@ class _VariantHeaderIconChip extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
+      onTap: showTooltip,
       child: ExcludeSemantics(
-        child: Tooltip(
-          richMessage: tooltipText,
-          triggerMode: TooltipTriggerMode.tap,
-          waitDuration: const Duration(milliseconds: 250),
-          showDuration: const Duration(seconds: 8),
-          exitDuration: const Duration(milliseconds: 150),
-          preferBelow: true,
-          constraints: const BoxConstraints(maxWidth: 320),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          decoration: BoxDecoration(
-            color: tokens.colors.cardFill,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: tokens.colors.gold.withValues(alpha: 0.82),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: tokens.colors.black.withValues(alpha: 0.35),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+        child: TactileControlSurface(
+          onPressed: showTooltip,
+          pressTravel: 2,
+          hoverLift: -1,
+          hoverScale: 1.04,
+          child: Tooltip(
+            key: tooltipKey,
+            richMessage: tooltipText,
+            triggerMode: TooltipTriggerMode.manual,
+            waitDuration: const Duration(milliseconds: 250),
+            showDuration: const Duration(seconds: 8),
+            exitDuration: const Duration(milliseconds: 150),
+            preferBelow: true,
+            constraints: const BoxConstraints(maxWidth: 320),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: tokens.colors.cardFill,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: tokens.colors.gold.withValues(alpha: 0.82),
+                width: 1.5,
               ),
-            ],
-          ),
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                const Positioned.fill(
-                  child: ChromeButtonBackground(
-                    asset: chromeButtonPrimaryAsset,
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: tokens.colors.black.withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                if (showLabel)
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      spacing: compact ? 5 : 7,
-                      children: [
-                        VariantIcon(iconAsset, size: iconSize),
-                        Expanded(
-                          child: ChromeScaledLabel(
-                            label,
-                            color: tokens.colors.onAccent,
-                            size: compact
-                                ? DisplayTextSize.caption2
-                                : DisplayTextSize.caption,
-                            uppercase: false,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  VariantIcon(iconAsset, size: iconSize),
               ],
+            ),
+            child: SizedBox(
+              width: width,
+              height: height,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Positioned.fill(
+                    child: ChromeButtonBackground(
+                      asset: chromeButtonPrimaryAsset,
+                    ),
+                  ),
+                  if (showLabel)
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: compact ? 8 : 10,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        spacing: compact ? 5 : 7,
+                        children: [
+                          VariantIcon(iconAsset, size: iconSize),
+                          Expanded(
+                            child: ChromeScaledLabel(
+                              label,
+                              color: tokens.colors.onAccent,
+                              size: compact
+                                  ? DisplayTextSize.caption2
+                                  : DisplayTextSize.caption,
+                              uppercase: false,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    VariantIcon(iconAsset, size: iconSize),
+                ],
+              ),
             ),
           ),
         ),
@@ -1210,9 +1224,11 @@ class _FieldPlanPresetSelector extends StatelessWidget {
                   button: true,
                   selected: selectedPreset == preset,
                   label: presetTitle(preset, language),
-                  child: InkWell(
+                  child: MechanicalSelectionSurface(
                     key: Key('field-plan-preset-${preset.name}'),
-                    onTap: onPresetChanged == null
+                    selected: selectedPreset == preset,
+                    enabled: onPresetChanged != null,
+                    onPressed: onPresetChanged == null
                         ? null
                         : () => onPresetChanged!(preset),
                     child: PrintedUnderlay(
@@ -1525,9 +1541,10 @@ class _SeatLobbyColumn extends StatelessWidget {
       child: ExcludeSemantics(
         child: Tooltip(
           message: semanticLabel,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onPressed,
+          child: MechanicalSelectionSurface(
+            selected: selected,
+            enabled: onPressed != null,
+            onPressed: onPressed,
             child: card,
           ),
         ),
@@ -1801,6 +1818,31 @@ class _SeatSelectorWheelState extends State<_SeatSelectorWheel> {
     }
   }
 
+  void _adjustSemantics(int delta) {
+    if (mechanicallyAnimating || snappingToWell || slots.isEmpty) {
+      return;
+    }
+    final page = currentPage ?? controller.initialPage.toDouble();
+    final currentIndex = _indexForChoice(widget.choice, nearPage: page);
+    final targetIndex = currentIndex + delta;
+    if (targetIndex < 0 || targetIndex >= slots.length) {
+      return;
+    }
+    final option = slots[targetIndex];
+    if (option != widget.choice) {
+      widget.onChanged(option);
+    }
+    if (controller.hasClients) {
+      unawaited(
+        controller.animateToPage(
+          targetIndex,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     controller.removeListener(_handleControllerTick);
@@ -1843,6 +1885,20 @@ class _SeatSelectorWheelState extends State<_SeatSelectorWheel> {
         // A compact, finite pitch keeps the wells grouped like a telephone
         // dial while the blank end stops make its open range apparent.
         const angleStep = math.pi / 6.5;
+        final semanticPage = currentPage ?? controller.initialPage.toDouble();
+        final semanticIndex = _indexForChoice(
+          widget.choice,
+          nearPage: semanticPage,
+        );
+        final previousOption = semanticIndex > 0
+            ? slots[semanticIndex - 1]
+            : null;
+        final nextOption = semanticIndex < slots.length - 1
+            ? slots[semanticIndex + 1]
+            : null;
+        final semanticLabel = widget.language == KolkhozLanguage.en
+            ? '$playerLabel controller'
+            : '$playerLabel контроллер';
         return SizedBox(
           height: trayHeight,
           child: ClipRect(
@@ -1912,38 +1968,39 @@ class _SeatSelectorWheelState extends State<_SeatSelectorWheel> {
                   ),
                 ),
                 Positioned.fill(
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: _handleScrollNotification,
-                    child: PageView.builder(
-                      key: ValueKey(
-                        'seat-selector-wheel-${widget.playerID + 1}',
+                  child: Semantics(
+                    key: ValueKey(
+                      'seat-selector-accessibility-${widget.playerID + 1}',
+                    ),
+                    container: true,
+                    label: semanticLabel,
+                    value: slots[semanticIndex].shortTitle(widget.language),
+                    decreasedValue: previousOption?.shortTitle(widget.language),
+                    increasedValue: nextOption?.shortTitle(widget.language),
+                    onDecrease: previousOption == null
+                        ? null
+                        : () => _adjustSemantics(-1),
+                    onIncrease: nextOption == null
+                        ? null
+                        : () => _adjustSemantics(1),
+                    child: ExcludeSemantics(
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: _handleScrollNotification,
+                        child: PageView.builder(
+                          key: ValueKey(
+                            'seat-selector-wheel-${widget.playerID + 1}',
+                          ),
+                          controller: controller,
+                          padEnds: true,
+                          pageSnapping: false,
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          itemCount: slots.length,
+                          itemBuilder: (context, index) =>
+                              const SizedBox.expand(),
+                        ),
                       ),
-                      controller: controller,
-                      padEnds: true,
-                      pageSnapping: false,
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      itemCount: slots.length,
-                      itemBuilder: (context, index) {
-                        final option = slots[index];
-                        final label = option.shortTitle(widget.language);
-                        return Semantics(
-                          button: true,
-                          selected:
-                              index ==
-                              _indexForChoice(
-                                widget.choice,
-                                nearPage:
-                                    currentPage ??
-                                    (controller.hasClients
-                                        ? controller.initialPage.toDouble()
-                                        : null),
-                              ),
-                          label: 'Set $playerLabel $label',
-                          child: const SizedBox.expand(),
-                        );
-                      },
                     ),
                   ),
                 ),
@@ -2131,14 +2188,17 @@ class _HostedComradeInviteStrip extends StatelessWidget {
                             message: semanticLabel,
                             child: Opacity(
                               opacity: enabled ? 1 : 0.64,
-                              child: GestureDetector(
+                              child: TactileControlSurface(
                                 key: ValueKey(
                                   'hosted-comrade-invite-${comrade.userID}',
                                 ),
-                                behavior: HitTestBehavior.opaque,
-                                onTap: enabled
+                                enabled: enabled,
+                                onPressed: enabled
                                     ? () => unawaited(onInvite!(comrade.userID))
                                     : null,
+                                pressTravel: 3,
+                                hoverLift: -1,
+                                hoverScale: 1.025,
                                 child: SizedBox(
                                   width: compact ? 132 : 154,
                                   child: VariantRowBackground(
@@ -2235,9 +2295,10 @@ class _OnlineGameOptionToggle extends StatelessWidget {
           message: label,
           child: Opacity(
             opacity: enabled ? 1 : 0.58,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: enabled ? onTap : null,
+            child: MechanicalSelectionSurface(
+              selected: selected,
+              enabled: enabled,
+              onPressed: enabled ? onTap : null,
               child: SizedBox(
                 width: 138,
                 height: 62,

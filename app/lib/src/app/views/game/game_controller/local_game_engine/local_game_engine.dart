@@ -154,7 +154,7 @@ class LocalGameEngine implements GameEngine {
     final phase = engine.phase;
     final legalActions = engine.legalActions;
     if (_centralPlannerAction(legalActions) != null ||
-        phase == kcPhaseRequisition ||
+        (phase == kcPhaseRequisition && legalActions.isEmpty) ||
         (phase == kcPhasePlanning && engine.isFamine && legalActions.isEmpty)) {
       return true;
     }
@@ -184,7 +184,7 @@ class LocalGameEngine implements GameEngine {
         source: GameActionSource.centralPlanner,
       );
     }
-    if (engine.phase == kcPhaseRequisition ||
+    if ((engine.phase == kcPhaseRequisition && legalActions.isEmpty) ||
         (engine.phase == kcPhasePlanning &&
             engine.isFamine &&
             legalActions.isEmpty)) {

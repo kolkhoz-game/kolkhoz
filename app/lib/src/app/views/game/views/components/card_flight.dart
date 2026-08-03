@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:kolkhoz_app/src/app/settings/animation_speed.dart';
 import 'package:kolkhoz_app/src/app/settings/game_motion.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:simple_animations/simple_animations.dart';
 import 'board_widgets.dart'
@@ -61,9 +62,10 @@ class FlyingCard extends StatelessWidget {
         final flightProgress = GameMotion.cardFlightCurve.transform(
           rawFlightProgress,
         );
-        final rect = cardFlightRectAt(flight.from, flight.to, flightProgress);
-        final rotation = cardFlightRotation(flight.card.id, rawFlightProgress);
-        final scale = cardFlightScale(rawFlightProgress);
+        final entersJobGauge = isJobGaugeInsertionFlight(flight);
+        final rect = entersJobGauge
+            ? jobGaugeFlightRectAt(flight, rawFlightProgress)
+            : cardFlightRectAt(flight.from, flight.to, flightProgress);
         final card = _flyingCardFace(
           faceDown:
               flight.faceDown ||
@@ -76,29 +78,41 @@ class FlyingCard extends StatelessWidget {
                   math.pi * GameMotion.rewardFlipCurve.transform(flipProgress),
                 ))
             : null;
+        Widget presentedCard = flipTransform == null
+            ? card
+            : Transform(
+                alignment: Alignment.center,
+                transform: flipTransform,
+                child: flipProgress >= 0.5
+                    ? Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.rotationY(math.pi),
+                        child: card,
+                      )
+                    : card,
+              );
+        final insertionProgress = entersJobGauge
+            ? jobGaugeInsertionProgress(rawFlightProgress)
+            : 0.0;
+        if (entersJobGauge) {
+          presentedCard = ClipRect(
+            key: ValueKey('job-gauge-insertion-card-${flight.card.id}'),
+            clipper: _JobGaugeInsertionClipper(insertionProgress),
+            child: Transform.rotate(
+              angle: jobGaugeEntryAngle(flight, rawFlightProgress),
+              alignment: Alignment.center,
+              child: presentedCard,
+            ),
+          );
+        }
+        final routeOpacity = entersJobGauge
+            ? jobGaugeEntryOpacity(rawFlightProgress)
+            : 1.0;
         return Positioned.fromRect(
           rect: rect,
           child: Opacity(
-            opacity: visible ? 1 : 0,
-            child: Transform.rotate(
-              angle: rotation,
-              child: Transform.scale(
-                scale: scale,
-                child: flipTransform == null
-                    ? card
-                    : Transform(
-                        alignment: Alignment.center,
-                        transform: flipTransform,
-                        child: flipProgress >= 0.5
-                            ? Transform(
-                                alignment: Alignment.center,
-                                transform: Matrix4.rotationY(math.pi),
-                                child: card,
-                              )
-                            : card,
-                      ),
-              ),
-            ),
+            opacity: visible ? routeOpacity : 0,
+            child: presentedCard,
           ),
         );
       },
@@ -139,6 +153,91 @@ class FlyingCard extends StatelessWidget {
   }
 }
 
+bool isJobGaugeInsertionFlight(CardFlight flight) =>
+    flight.destinationZone.kind == MotionZoneKind.job &&
+    flight.audiencePanel == panelBrigade;
+
+double jobGaugeInsertionProgress(double rawFlightProgress) {
+  if (rawFlightProgress >= 1) {
+    return 1;
+  }
+  final normalized = ((rawFlightProgress - 0.72) / 0.28).clamp(0.0, 1.0);
+  return Curves.easeInOutCubic.transform(normalized);
+}
+
+double jobGaugeEntryAngle(CardFlight flight, double rawFlightProgress) {
+  final horizontalDirection =
+      (flight.to.center.dx - flight.from.center.dx).sign;
+  final resolvedDirection = horizontalDirection == 0
+      ? 1.0
+      : horizontalDirection;
+  final turnProgress = Curves.easeInOutCubic.transform(
+    ((rawFlightProgress - 0.18) / 0.54).clamp(0.0, 1.0),
+  );
+  return -resolvedDirection * 0.16 * turnProgress;
+}
+
+double jobGaugeEntryOpacity(double rawFlightProgress) =>
+    rawFlightProgress >= 1 ? 0 : 1;
+
+Rect jobGaugeFlightRectAt(CardFlight flight, double rawFlightProgress) {
+  const approachEnd = 0.72;
+  const insertionScale = 0.82;
+  final raw = rawFlightProgress.clamp(0.0, 1.0);
+  final approachProgress = GameMotion.cardFlightCurve.transform(
+    (raw / approachEnd).clamp(0.0, 1.0),
+  );
+  final insertionSize = Size(
+    math.max(flight.to.width, flight.from.width * insertionScale),
+    math.max(flight.to.height, flight.from.height * insertionScale),
+  );
+  final size = Size(
+    lerpDouble(flight.from.width, insertionSize.width, approachProgress)!,
+    lerpDouble(flight.from.height, insertionSize.height, approachProgress)!,
+  );
+  final slot = flight.to.center;
+  if (raw >= approachEnd) {
+    final insertion = jobGaugeInsertionProgress(raw);
+    return Rect.fromCenter(
+      center: slot.translate(0, insertionSize.height * (0.5 - insertion)),
+      width: insertionSize.width,
+      height: insertionSize.height,
+    );
+  }
+  final approachCenter = slot.translate(0, insertionSize.height / 2);
+  final linearCenter = Offset.lerp(
+    flight.from.center,
+    approachCenter,
+    approachProgress,
+  )!;
+  final distance = (approachCenter - flight.from.center).distance;
+  final arcHeight = math.min(64.0, distance * 0.11);
+  final arcOffset = -4 * arcHeight * approachProgress * (1 - approachProgress);
+  return Rect.fromCenter(
+    center: linearCenter.translate(0, arcOffset),
+    width: size.width,
+    height: size.height,
+  );
+}
+
+class _JobGaugeInsertionClipper extends CustomClipper<Rect> {
+  const _JobGaugeInsertionClipper(this.progress);
+
+  final double progress;
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(
+    0,
+    size.height * progress.clamp(0.0, 1.0),
+    size.width,
+    size.height,
+  );
+
+  @override
+  bool shouldReclip(_JobGaugeInsertionClipper oldClipper) =>
+      oldClipper.progress != progress;
+}
+
 Rect cardFlightRectAt(Rect from, Rect to, double progress) {
   final clamped = progress.clamp(0.0, 1.0);
   final width = lerpDouble(from.width, to.width, clamped)!;
@@ -152,37 +251,6 @@ Rect cardFlightRectAt(Rect from, Rect to, double progress) {
     width: width,
     height: height,
   );
-}
-
-double cardFlightRotation(String cardID, double progress) {
-  final direction =
-      cardID.codeUnits.fold<int>(0, (total, unit) => total + unit).isEven
-      ? 1.0
-      : -1.0;
-  return direction * math.sin(math.pi * progress.clamp(0.0, 1.0)) * 0.038;
-}
-
-double cardFlightScale(double progress) {
-  final clamped = progress.clamp(0.0, 1.0);
-  if (clamped < 0.68) {
-    return lerpDouble(
-      1.0,
-      1.055,
-      Curves.easeOutCubic.transform(clamped / 0.68),
-    )!;
-  }
-  if (clamped < 0.88) {
-    return lerpDouble(
-      1.055,
-      0.972,
-      Curves.easeInCubic.transform((clamped - 0.68) / 0.2),
-    )!;
-  }
-  return lerpDouble(
-    0.972,
-    1.0,
-    Curves.easeOutBack.transform((clamped - 0.88) / 0.12),
-  )!;
 }
 
 class _FlyingCardBack extends StatelessWidget {

@@ -115,10 +115,13 @@ class _RulesViewState extends State<RulesView> {
                   tokens: widget.tokens,
                   color: colors.panel,
                   textureOpacity: 0.08,
-                  child: switch (selectedTab) {
-                    _RulesViewTab.howToPlay => const _HowToPlayPage(),
-                    _RulesViewTab.rules => const _CompleteRulesPage(),
-                  },
+                  child: MechanicalPanelSwitcher(
+                    panelKey: selectedTab,
+                    child: switch (selectedTab) {
+                      _RulesViewTab.howToPlay => const _HowToPlayPage(),
+                      _RulesViewTab.rules => const _CompleteRulesPage(),
+                    },
+                  ),
                 ),
               ),
             ),
@@ -191,10 +194,11 @@ class _RulesTabButton extends StatelessWidget {
       button: true,
       selected: selected,
       label: label,
-      child: Material(
-        color: selected ? tokens.colors.red : tokens.colors.iron,
-        child: InkWell(
-          onTap: onPressed,
+      child: MechanicalSelectionSurface(
+        selected: selected,
+        onPressed: onPressed,
+        child: Material(
+          color: selected ? tokens.colors.red : tokens.colors.iron,
           child: Container(
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 14),

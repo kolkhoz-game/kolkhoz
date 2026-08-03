@@ -37,9 +37,13 @@ class CardMotionScope extends InheritedWidget {
 /// Frame-scoped geometry registry shared by motion-tracked widgets.
 class CardMotionController {
   int _frame = 0;
+  int _impactSerial = 0;
   Map<MotionAnchor, Rect> _previousRects = {};
   final Map<MotionAnchor, CardMotionRect> _currentRects = {};
   final ValueNotifier<JobCardArrival?> jobCardArrival = ValueNotifier(null);
+  final ValueNotifier<CardLandingImpact?> cardLandingImpact = ValueNotifier(
+    null,
+  );
 
   Map<MotionAnchor, Rect> get previousRects => _previousRects;
 
@@ -54,6 +58,17 @@ class CardMotionController {
 
   void recordJobCardArrival(JobCardArrival arrival) {
     jobCardArrival.value = arrival;
+  }
+
+  void recordCardLanding({
+    required String cardID,
+    required MotionZone destination,
+  }) {
+    cardLandingImpact.value = CardLandingImpact(
+      serial: _impactSerial++,
+      cardID: cardID,
+      destination: destination,
+    );
   }
 
   void record({
@@ -72,7 +87,21 @@ class CardMotionController {
 
   void dispose() {
     jobCardArrival.dispose();
+    cardLandingImpact.dispose();
   }
+}
+
+@immutable
+class CardLandingImpact {
+  const CardLandingImpact({
+    required this.serial,
+    required this.cardID,
+    required this.destination,
+  });
+
+  final int serial;
+  final String cardID;
+  final MotionZone destination;
 }
 
 class CardMotionRect {

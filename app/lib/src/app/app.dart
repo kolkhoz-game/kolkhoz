@@ -153,7 +153,7 @@ Future<bool> showGameControlConfirmation({
         title: Text(title),
         content: Text(message),
         actions: [
-          TextButton(
+          TactileTextButton(
             style: TextButton.styleFrom(
               foregroundColor: tokens.colors.creamDim,
               textStyle: actionTextStyle,
@@ -161,7 +161,7 @@ Future<bool> showGameControlConfirmation({
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(language.strings.kolkhozappCancel),
           ),
-          TextButton(
+          TactileTextButton(
             style: TextButton.styleFrom(
               foregroundColor: tokens.colors.goldBright,
               textStyle: actionTextStyle,
@@ -210,7 +210,7 @@ Future<bool> showPushNotificationOffer({
         'private game state.',
       ),
       actions: [
-        TextButton(
+        TactileTextButton(
           style: TextButton.styleFrom(
             foregroundColor: tokens.colors.creamDim,
             textStyle: actionTextStyle,
@@ -218,7 +218,7 @@ Future<bool> showPushNotificationOffer({
           onPressed: () => Navigator.of(context).pop(false),
           child: const Text('Not now'),
         ),
-        TextButton(
+        TactileTextButton(
           style: TextButton.styleFrom(
             foregroundColor: tokens.colors.goldBright,
             textStyle: actionTextStyle,
@@ -376,10 +376,23 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
       settingsStore.save(settings);
     }
     gameSounds.enabled = settings.soundEnabled;
-    final lastStartedSetup = settings.lastStartedSetup;
+    var lastStartedSetup = settings.lastStartedSetup;
     if (lastStartedSetup != null) {
-      selectedPreset = presetForVariants(lastStartedSetup.variants);
-      customVariants = lastStartedSetup.variants;
+      final migratedVariants = migrateLegacyKolkhozVariants(
+        lastStartedSetup.variants,
+      );
+      if (!sameVariants(migratedVariants, lastStartedSetup.variants)) {
+        lastStartedSetup = KolkhozFavoriteSetup(
+          variants: migratedVariants,
+          controllers: lastStartedSetup.controllers,
+          lobbySeats: lastStartedSetup.lobbySeats,
+          browserJoinable: lastStartedSetup.browserJoinable,
+        );
+        settings = settings.copyWith(lastStartedSetup: lastStartedSetup);
+        settingsStore.save(settings);
+      }
+      selectedPreset = presetForVariants(migratedVariants);
+      customVariants = migratedVariants;
       playerControllers = KolkhozPlayerController.normalized(
         lastStartedSetup.controllers,
       );
@@ -831,6 +844,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
                   onAppearanceToggle: toggleAppearance,
                   onCardBackChanged: setCardBack,
                   onSwapHandCardTap: store.selectSwapHandCard,
+                  onSwapCardDrop: store.commitSwapDrag,
                   onHandCardTap: store.selectHandCard,
                   onPlotCardTap: store.selectPlotCard,
                   onAssignmentCardTap: store.selectAssignmentCard,
@@ -995,11 +1009,11 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
           'account, link it now to keep your profile and progress together.',
         ),
         actions: [
-          TextButton(
+          TactileTextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('CONTINUE AS GUEST'),
           ),
-          TextButton(
+          TactileTextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('LINK ACCOUNT'),
           ),
@@ -1063,12 +1077,12 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
           ),
           actions: [
             if (!commerce.fullGameUnlocked)
-              TextButton(
+              TactileTextButton(
                 onPressed: commerce.busy ? null : commerce.restore,
                 child: const Text('RESTORE PURCHASE'),
               ),
             if (!commerce.fullGameUnlocked)
-              TextButton(
+              TactileTextButton(
                 onPressed: commerce.busy ? null : commerce.purchase,
                 child: Text(
                   commerce.busy
@@ -1078,7 +1092,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
                       : 'PURCHASE • ${commerce.price}',
                 ),
               ),
-            TextButton(
+            TactileTextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('CLOSE'),
             ),
@@ -1190,8 +1204,8 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
       }
     }
     store.startGame(
-      variants: store.currentVariants,
-      controllers: store.controllers,
+      variants: activeVariants,
+      controllers: activePlayerControllers,
     );
     onlineSessionCreatedByLocalPlayer = false;
   }
@@ -1403,7 +1417,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
           ),
         ),
         actions: [
-          TextButton(
+          TactileTextButton(
             style: TextButton.styleFrom(
               foregroundColor: settings.appearance.tokens.colors.creamDim,
               textStyle: kolkhozFontStyle.copyWith(
@@ -1414,7 +1428,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(settings.language.strings.kolkhozappDecline),
           ),
-          TextButton(
+          TactileTextButton(
             style: TextButton.styleFrom(
               foregroundColor: settings.appearance.tokens.colors.goldBright,
               textStyle: kolkhozFontStyle.copyWith(
@@ -2014,22 +2028,41 @@ class ActiveSessionSyncOverlay extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: FilledButton.icon(
-                    onPressed: busy ? null : onSync,
-                    icon: busy
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.sync),
-                    label: Text(busy ? 'SYNCING…' : 'SYNC VIEW'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: tokens.colors.gold,
-                      foregroundColor: tokens.colors.black,
-                      textStyle: kolkhozFontStyle.copyWith(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
+                  child: Semantics(
+                    button: true,
+                    enabled: !busy,
+                    label: busy ? 'Syncing view' : 'Sync view',
+                    onTap: busy ? null : onSync,
+                    child: ExcludeSemantics(
+                      child: TactileControlSurface(
+                        enabled: !busy,
+                        onPressed: busy ? null : onSync,
+                        pressTravel: 3,
+                        hoverLift: -1.5,
+                        hoverScale: 1.02,
+                        child: IgnorePointer(
+                          child: FilledButton.icon(
+                            onPressed: busy ? null : () {},
+                            icon: busy
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.sync),
+                            label: Text(busy ? 'SYNCING…' : 'SYNC VIEW'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: tokens.colors.gold,
+                              foregroundColor: tokens.colors.black,
+                              textStyle: kolkhozFontStyle.copyWith(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

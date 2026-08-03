@@ -535,6 +535,7 @@ class HandTray extends StatelessWidget {
     this.leadingInset = 0,
     this.onAction,
     this.onSwapHandCardTap,
+    this.onSwapCardDrop,
     this.onHandCardTap,
     this.onAssignmentCardTap,
     this.onInvalidHandCardTap,
@@ -555,6 +556,7 @@ class HandTray extends StatelessWidget {
   final double leadingInset;
   final ValueChanged<LegalAction>? onAction;
   final ValueChanged<String>? onSwapHandCardTap;
+  final SwapCardDropCallback? onSwapCardDrop;
   final ValueChanged<String>? onHandCardTap;
   final ValueChanged<String>? onAssignmentCardTap;
   final VoidCallback? onInvalidHandCardTap;
@@ -728,182 +730,204 @@ class HandTray extends StatelessWidget {
                                 cards: hand,
                                 cardStride: cardStride,
                                 duration: GameMotion.of(context).cardReflow,
-                                cardBuilder:
-                                    (
-                                      context,
-                                      index,
+                                cardBuilder: (context, index, card, onEmphasisChanged) => Builder(
+                                  builder: (context) {
+                                    final playAction = handCardPlayAction(
+                                      model,
                                       card,
-                                      onEmphasisChanged,
-                                    ) => Builder(
-                                      builder: (context) {
-                                        final playAction = handCardPlayAction(
-                                          model,
-                                          card,
-                                        );
-                                        final passAction = handCardPassAction(
-                                          model,
-                                          card,
-                                        );
-                                        final onTap =
-                                            !actionsEnabled ||
-                                                trickSelectionLocked
-                                            ? null
-                                            : switch (model.table.phase) {
-                                                phaseTrick =>
-                                                  playAction != null &&
-                                                          onHandCardTap != null
-                                                      ? () => onHandCardTap!(
-                                                          card.id,
-                                                        )
-                                                      : handCardCanShowInvalidHint(
-                                                          model,
-                                                          card,
-                                                        )
-                                                      ? onInvalidHandCardTap
-                                                      : null,
-                                                phaseSwap =>
-                                                  onSwapHandCardTap == null
-                                                      ? null
-                                                      : () =>
-                                                            onSwapHandCardTap!(
-                                                              card.id,
-                                                            ),
-                                                phasePass =>
-                                                  passAction == null ||
-                                                          onHandCardTap == null
-                                                      ? null
-                                                      : () => onHandCardTap!(
-                                                          card.id,
-                                                        ),
-                                                _ => null,
-                                              };
-                                        final displayCard = handTrayCard(
-                                          model,
-                                          card,
-                                          planningTrumpFocusedSuit:
-                                              planningTrumpFocusedSuit,
-                                        );
-                                        final presentedCard =
-                                            trickSelectionLocked
-                                            ? cardWithSelection(
-                                                displayCard,
-                                                highlighted: false,
-                                              )
-                                            : displayCard;
-                                        final playable =
-                                            actionsEnabled &&
-                                            (switch (model.table.phase) {
-                                              phaseTrick =>
-                                                !trickSelectionLocked &&
-                                                    playAction != null,
-                                              phaseSwap => card.highlighted,
-                                              phasePass => passAction != null,
-                                              _ => displayCard.highlighted,
-                                            });
-                                        final invalid =
-                                            actionsEnabled &&
-                                            playAction == null &&
-                                            handCardCanShowInvalidHint(
-                                              model,
-                                              card,
-                                            );
-                                        final actionable =
-                                            actionsEnabled &&
-                                            (switch (model.table.phase) {
-                                              phaseTrick =>
-                                                playAction != null || invalid,
-                                              phaseSwap => card.highlighted,
-                                              phasePass => passAction != null,
-                                              _ => false,
-                                            });
-                                        final trumpPreviewed =
-                                            handCardMatchesPlanningTrumpFocus(
-                                              model,
-                                              card,
-                                              planningTrumpFocusedSuit,
-                                            );
-                                        final dragEligible =
-                                            actionsEnabled &&
-                                            onTap != null &&
-                                            switch (model.table.phase) {
-                                              phaseTrick => playAction != null,
-                                              phaseSwap => card.highlighted,
-                                              phasePass => passAction != null,
-                                              _ => false,
-                                            };
-                                        final dragData = CardDragData(
-                                          cardID: card.id,
-                                          kind: CardDragKind.hand,
-                                          phase: model.table.phase,
-                                          canDrop: dragEligible,
-                                          actionLabel:
-                                              model.table.phase == phaseTrick &&
-                                                  playAction != null
-                                              ? (language == KolkhozLanguage.en
-                                                    ? '${playAction.label} Card'
-                                                    : 'СЫГРАТЬ КАРТУ')
-                                              : null,
-                                          onAccepted: onTap ?? () {},
-                                        );
-                                        return NaturalSizeViewport(
-                                          width: largeCardSize.width,
-                                          height: visibleTrayHeight,
-                                          naturalWidth: largeCardSize.width,
-                                          naturalHeight: largeCardSize.height,
-                                          clipBehavior: Clip.none,
-                                          child: Transform.translate(
-                                            offset: const Offset(
-                                              0,
-                                              handTrayCardYOffset,
-                                            ),
-                                            child: HandCardControl(
-                                              key: ValueKey(
-                                                'hand-card-control-${card.id}',
-                                              ),
-                                              card: presentedCard,
-                                              tokens: tokens,
-                                              language: language,
-                                              trump: trumpPreviewed
-                                                  ? planningTrumpFocusedSuit
-                                                  : model.table.trump,
-                                              size: largeCardSize,
-                                              playable: playable,
-                                              unavailable: invalid,
-                                              lifted: trumpPreviewed,
-                                              dragData: dragData,
-                                              dealIndex: index,
-                                              onEmphasisChanged:
-                                                  onEmphasisChanged,
-                                              onTap: actionable ? onTap : null,
-                                              highlightColor:
-                                                  trickSelectionLocked
-                                                  ? null
-                                                  : handTrayHighlightColor(
+                                    );
+                                    final passAction = handCardPassAction(
+                                      model,
+                                      card,
+                                    );
+                                    final onTap =
+                                        !actionsEnabled || trickSelectionLocked
+                                        ? null
+                                        : switch (model.table.phase) {
+                                            phaseTrick =>
+                                              playAction != null &&
+                                                      onHandCardTap != null
+                                                  ? () =>
+                                                        onHandCardTap!(card.id)
+                                                  : handCardCanShowInvalidHint(
                                                       model,
                                                       card,
-                                                      planningTrumpFocusedSuit:
-                                                          planningTrumpFocusedSuit,
-                                                      swapHighlightColor:
-                                                          tokens.colors.red,
-                                                      playableHighlightColor:
-                                                          tokens.colors.green,
+                                                    )
+                                                  ? onInvalidHandCardTap
+                                                  : null,
+                                            phaseSwap =>
+                                              onSwapHandCardTap == null
+                                                  ? null
+                                                  : () => onSwapHandCardTap!(
+                                                      card.id,
                                                     ),
-                                              highlightGlowEnabled:
-                                                  model.table.phase !=
-                                                  phaseSwap,
-                                              highlightedStrokeWidth:
-                                                  model.table.phase == phaseSwap
-                                                  ? handTraySwapHighlightStrokeWidth
-                                                  : null,
-                                              highlightedBorderRadius:
-                                                  model.table.phase == phaseSwap
-                                                  ? handTraySwapHighlightCornerRadius
-                                                  : null,
-                                            ),
-                                          ),
+                                            phasePass =>
+                                              passAction == null ||
+                                                      onHandCardTap == null
+                                                  ? null
+                                                  : () =>
+                                                        onHandCardTap!(card.id),
+                                            _ => null,
+                                          };
+                                    final displayCard = handTrayCard(
+                                      model,
+                                      card,
+                                      planningTrumpFocusedSuit:
+                                          planningTrumpFocusedSuit,
+                                    );
+                                    final presentedCard = trickSelectionLocked
+                                        ? cardWithSelection(
+                                            displayCard,
+                                            highlighted: false,
+                                          )
+                                        : displayCard;
+                                    final playable =
+                                        actionsEnabled &&
+                                        (switch (model.table.phase) {
+                                          phaseTrick =>
+                                            !trickSelectionLocked &&
+                                                playAction != null,
+                                          phaseSwap => card.highlighted,
+                                          phasePass => passAction != null,
+                                          _ => displayCard.highlighted,
+                                        });
+                                    final invalid =
+                                        actionsEnabled &&
+                                        playAction == null &&
+                                        handCardCanShowInvalidHint(model, card);
+                                    final actionable =
+                                        actionsEnabled &&
+                                        (switch (model.table.phase) {
+                                          phaseTrick =>
+                                            playAction != null || invalid,
+                                          phaseSwap => card.highlighted,
+                                          phasePass => passAction != null,
+                                          _ => false,
+                                        });
+                                    final trumpPreviewed =
+                                        handCardMatchesPlanningTrumpFocus(
+                                          model,
+                                          card,
+                                          planningTrumpFocusedSuit,
                                         );
+                                    final dragEligible =
+                                        actionsEnabled &&
+                                        onTap != null &&
+                                        switch (model.table.phase) {
+                                          phaseTrick => playAction != null,
+                                          phaseSwap => card.highlighted,
+                                          phasePass => passAction != null,
+                                          _ => false,
+                                        };
+                                    final dragData = CardDragData(
+                                      cardID: card.id,
+                                      kind: CardDragKind.hand,
+                                      phase: model.table.phase,
+                                      canDrop: dragEligible,
+                                      actionLabel:
+                                          model.table.phase == phaseTrick &&
+                                              playAction != null
+                                          ? (language == KolkhozLanguage.en
+                                                ? '${playAction.label} Card'
+                                                : 'СЫГРАТЬ КАРТУ')
+                                          : null,
+                                      onSwapWith:
+                                          model.table.phase == phaseSwap &&
+                                              onSwapCardDrop != null
+                                          ? (plotCardID, plotZone) =>
+                                                onSwapCardDrop!(
+                                                  card.id,
+                                                  plotCardID,
+                                                  plotZone,
+                                                )
+                                          : null,
+                                      onAccepted: onTap ?? () {},
+                                    );
+                                    final handCardControl = NaturalSizeViewport(
+                                      width: largeCardSize.width,
+                                      height: visibleTrayHeight,
+                                      naturalWidth: largeCardSize.width,
+                                      naturalHeight: largeCardSize.height,
+                                      clipBehavior: Clip.none,
+                                      child: Transform.translate(
+                                        offset: const Offset(
+                                          0,
+                                          handTrayCardYOffset,
+                                        ),
+                                        child: HandCardControl(
+                                          key: ValueKey(
+                                            'hand-card-control-${card.id}',
+                                          ),
+                                          card: presentedCard,
+                                          tokens: tokens,
+                                          language: language,
+                                          trump: trumpPreviewed
+                                              ? planningTrumpFocusedSuit
+                                              : model.table.trump,
+                                          size: largeCardSize,
+                                          playable: playable,
+                                          unavailable: invalid,
+                                          lifted: trumpPreviewed,
+                                          dragData: dragData,
+                                          dealIndex: index,
+                                          onEmphasisChanged: onEmphasisChanged,
+                                          onTap: actionable ? onTap : null,
+                                          highlightColor: trickSelectionLocked
+                                              ? null
+                                              : handTrayHighlightColor(
+                                                  model,
+                                                  card,
+                                                  planningTrumpFocusedSuit:
+                                                      planningTrumpFocusedSuit,
+                                                  swapHighlightColor:
+                                                      tokens.colors.red,
+                                                  playableHighlightColor:
+                                                      tokens.colors.green,
+                                                ),
+                                          highlightGlowEnabled:
+                                              model.table.phase != phaseSwap,
+                                          highlightedStrokeWidth:
+                                              model.table.phase == phaseSwap
+                                              ? handTraySwapHighlightStrokeWidth
+                                              : null,
+                                          highlightedBorderRadius:
+                                              model.table.phase == phaseSwap
+                                              ? handTraySwapHighlightCornerRadius
+                                              : null,
+                                        ),
+                                      ),
+                                    );
+                                    if (model.table.phase != phaseSwap ||
+                                        !card.highlighted ||
+                                        onSwapHandCardTap == null) {
+                                      return handCardControl;
+                                    }
+                                    return CardDropTarget(
+                                      highlightColor: tokens.colors.green,
+                                      borderRadius: tokens.radius.card,
+                                      dragFeedbackSize: Size(
+                                        largeCardSize.width,
+                                        largeCardSize.height,
+                                      ),
+                                      accepts: (data) =>
+                                          data.canDrop &&
+                                          data.kind == CardDragKind.plot &&
+                                          data.phase == phaseSwap,
+                                      onAccepted: (data) {
+                                        final commitSwap = data.onSwapWith;
+                                        final plotZone = data.plotZone;
+                                        if (commitSwap != null &&
+                                            plotZone != null) {
+                                          commitSwap(card.id, plotZone);
+                                          return;
+                                        }
+                                        data.onAccepted();
+                                        onSwapHandCardTap!(card.id);
                                       },
-                                    ),
+                                      child: handCardControl,
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           ),
@@ -1068,8 +1092,34 @@ class HandCardControl extends StatefulWidget {
   State<HandCardControl> createState() => _HandCardControlState();
 }
 
-class _HandCardControlState extends State<HandCardControl> {
+class _HandCardControlState extends State<HandCardControl>
+    with SingleTickerProviderStateMixin {
   bool focused = false;
+  late final AnimationController invalidController;
+
+  @override
+  void initState() {
+    super.initState();
+    invalidController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  void _handleTap() {
+    if (widget.unavailable && GameMotion.of(context).enabled) {
+      invalidController
+        ..duration = GameMotion.of(context).invalidShake
+        ..forward(from: 0);
+    }
+    widget.onTap?.call();
+  }
+
+  @override
+  void dispose() {
+    invalidController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1082,35 +1132,49 @@ class _HandCardControlState extends State<HandCardControl> {
       selected: widget.card.selected,
       unavailable: widget.unavailable,
     );
-    final card = AnimatedSlide(
-      key: ValueKey('hand-card-selection-slide-${widget.card.id}'),
-      offset: widget.card.selected
-          ? const Offset(0, -handTrayCardSelectedLiftFraction)
-          : Offset.zero,
-      duration: motion.handInteraction,
-      curve: GameMotion.handInteractionCurve,
-      child: TactileCardSurface(
-        tokens: widget.tokens,
-        size: widget.size,
-        pressEnabled: actionable || widget.dragData != null,
-        focused: focused || widget.lifted,
-        onHoverChanged: widget.onEmphasisChanged,
-        child: AnimatedOpacity(
-          opacity: widget.unavailable ? 0.58 : 1,
-          duration: motion.handInteraction,
-          child: GameCard(
-            card: widget.card,
-            tokens: widget.tokens,
-            trump: widget.trump,
-            sizeOverride: widget.size,
-            highlightColorOverride: widget.card.selected
-                ? widget.tokens.colors.goldBright
-                : widget.highlightColor,
-            highlightGlowEnabled: widget.highlightGlowEnabled,
-            highlightedStrokeWidthOverride: widget.highlightedStrokeWidth,
-            highlightedBorderRadiusOverride: widget.highlightedBorderRadius,
-            selectedColorOverride: widget.tokens.colors.goldBright,
-            selectedStrokeWidthOverride: widget.tokens.stroke.active,
+    final card = AnimatedBuilder(
+      animation: invalidController,
+      builder: (context, child) {
+        final progress = invalidController.value;
+        return Transform.translate(
+          key: ValueKey('hand-card-invalid-shake-${widget.card.id}'),
+          offset: Offset(
+            math.sin(progress * math.pi * 6) * (1 - progress) * 7,
+            0,
+          ),
+          child: child,
+        );
+      },
+      child: AnimatedSlide(
+        key: ValueKey('hand-card-selection-slide-${widget.card.id}'),
+        offset: widget.card.selected
+            ? const Offset(0, -handTrayCardSelectedLiftFraction)
+            : Offset.zero,
+        duration: motion.handInteraction,
+        curve: GameMotion.handInteractionCurve,
+        child: TactileCardSurface(
+          tokens: widget.tokens,
+          size: widget.size,
+          pressEnabled: actionable || widget.dragData != null,
+          focused: focused || widget.lifted,
+          onHoverChanged: widget.onEmphasisChanged,
+          child: AnimatedOpacity(
+            opacity: widget.unavailable ? 0.58 : 1,
+            duration: motion.handInteraction,
+            child: GameCard(
+              card: widget.card,
+              tokens: widget.tokens,
+              trump: widget.trump,
+              sizeOverride: widget.size,
+              highlightColorOverride: widget.card.selected
+                  ? widget.tokens.colors.goldBright
+                  : widget.highlightColor,
+              highlightGlowEnabled: widget.highlightGlowEnabled,
+              highlightedStrokeWidthOverride: widget.highlightedStrokeWidth,
+              highlightedBorderRadiusOverride: widget.highlightedBorderRadius,
+              selectedColorOverride: widget.tokens.colors.goldBright,
+              selectedStrokeWidthOverride: widget.tokens.stroke.active,
+            ),
           ),
         ),
       ),
@@ -1133,7 +1197,7 @@ class _HandCardControlState extends State<HandCardControl> {
         enabled: actionable,
         selected: widget.card.selected,
         label: label,
-        onTap: widget.onTap,
+        onTap: actionable ? _handleTap : null,
         child: ExcludeSemantics(
           child: FocusableActionDetector(
             enabled: actionable,
@@ -1144,14 +1208,14 @@ class _HandCardControlState extends State<HandCardControl> {
             actions: {
               ActivateIntent: CallbackAction<ActivateIntent>(
                 onInvoke: (_) {
-                  widget.onTap?.call();
+                  _handleTap();
                   return null;
                 },
               ),
             },
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: widget.onTap,
+              onTap: actionable ? _handleTap : null,
               child: TweenAnimationBuilder<double>(
                 key: ValueKey('hand-card-deal-${widget.card.id}'),
                 tween: Tween(begin: 0, end: 1),
@@ -1211,90 +1275,108 @@ class HandConsole extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = visibleTrayHeight < handConsoleCompactHeightBreakpoint;
+    final motion = GameMotion.of(context);
+    final ready = primary.onPressed != null;
     final buttonScale = handConsoleButtonScale(visibleTrayHeight);
     final statusHeight = compact
         ? handConsoleCompactStatusHeight
         : handConsoleStatusHeight;
-    return SizedBox(
-      key: const Key('hand-console'),
-      width: handConsoleWidth,
-      height: visibleTrayHeight,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: handConsoleRowSpacing,
-        children: [
-          Semantics(
-            liveRegion: true,
-            label: status,
-            child: ExcludeSemantics(
-              child: Container(
-                key: const Key('hand-console-status'),
-                width: double.infinity,
-                height: statusHeight,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(tokens.radius.xs),
-                  border: Border.all(
-                    color: tokens.colors.gold.withValues(alpha: 0.54),
-                  ),
-                ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: DisplayText(
-                    status,
-                    size: compact
-                        ? DisplayTextSize.caption2
-                        : DisplayTextSize.caption,
-                    variant: DisplayTextWeight.bold,
-                    color: tokens.colors.cream,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            spacing: handTrayActionSpacing,
+    return AnimatedSlide(
+      offset: ready ? const Offset(0, -0.015) : Offset.zero,
+      duration: motion.turnTransition,
+      curve: Curves.easeOutBack,
+      child: AnimatedScale(
+        scale: ready ? 1.015 : 1,
+        duration: motion.turnTransition,
+        curve: Curves.easeOutBack,
+        child: SizedBox(
+          key: const Key('hand-console'),
+          width: handConsoleWidth,
+          height: visibleTrayHeight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: handConsoleRowSpacing,
             children: [
-              ActionIconButton(
-                key: const Key('hand-console-primary'),
-                label: primary.label,
-                iconAsset: primary.iconAsset,
-                tokens: tokens,
-                prominent: primary.prominent,
-                flipHorizontally: primary.flipHorizontally,
-                scale: buttonScale,
-                onPressed: primary.onPressed,
-              ),
-              if (secondary.motionKey case final motionKey?)
-                MotionTrackedRegion(
-                  motionKey: motionKey,
-                  child: ActionIconButton(
-                    key: const Key('hand-console-secondary'),
-                    label: secondary.label,
-                    iconAsset: secondary.iconAsset,
-                    tokens: tokens,
-                    prominent: secondary.prominent,
-                    flipHorizontally: secondary.flipHorizontally,
-                    scale: buttonScale,
-                    onPressed: secondary.onPressed,
+              Semantics(
+                liveRegion: true,
+                label: status,
+                child: ExcludeSemantics(
+                  child: Container(
+                    key: const Key('hand-console-status'),
+                    width: double.infinity,
+                    height: statusHeight,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(tokens.radius.xs),
+                      border: Border.all(
+                        color: tokens.colors.gold.withValues(alpha: 0.54),
+                      ),
+                    ),
+                    child: MechanicalPanelSwitcher(
+                      panelKey: status,
+                      duration: const Duration(milliseconds: 220),
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: DisplayText(
+                            status,
+                            size: compact
+                                ? DisplayTextSize.caption2
+                                : DisplayTextSize.caption,
+                            variant: DisplayTextWeight.bold,
+                            color: tokens.colors.cream,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                )
-              else
-                ActionIconButton(
-                  key: const Key('hand-console-secondary'),
-                  label: secondary.label,
-                  iconAsset: secondary.iconAsset,
-                  tokens: tokens,
-                  prominent: secondary.prominent,
-                  flipHorizontally: secondary.flipHorizontally,
-                  scale: buttonScale,
-                  onPressed: secondary.onPressed,
                 ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                spacing: handTrayActionSpacing,
+                children: [
+                  ActionIconButton(
+                    key: const Key('hand-console-primary'),
+                    label: primary.label,
+                    iconAsset: primary.iconAsset,
+                    tokens: tokens,
+                    prominent: primary.prominent,
+                    flipHorizontally: primary.flipHorizontally,
+                    scale: buttonScale,
+                    onPressed: primary.onPressed,
+                  ),
+                  if (secondary.motionKey case final motionKey?)
+                    MotionTrackedRegion(
+                      motionKey: motionKey,
+                      child: ActionIconButton(
+                        key: const Key('hand-console-secondary'),
+                        label: secondary.label,
+                        iconAsset: secondary.iconAsset,
+                        tokens: tokens,
+                        prominent: secondary.prominent,
+                        flipHorizontally: secondary.flipHorizontally,
+                        scale: buttonScale,
+                        onPressed: secondary.onPressed,
+                      ),
+                    )
+                  else
+                    ActionIconButton(
+                      key: const Key('hand-console-secondary'),
+                      label: secondary.label,
+                      iconAsset: secondary.iconAsset,
+                      tokens: tokens,
+                      prominent: secondary.prominent,
+                      flipHorizontally: secondary.flipHorizontally,
+                      scale: buttonScale,
+                      onPressed: secondary.onPressed,
+                    ),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1533,6 +1615,9 @@ class AssignmentCommandCard extends StatelessWidget {
         cardID: card.id,
         kind: CardDragKind.assignment,
         phase: phaseAssignment,
+        actionLabel: language == KolkhozLanguage.en
+            ? 'DRAG TO ASSIGN'
+            : 'ПЕРЕТАЩИТЕ ДЛЯ НАЗНАЧЕНИЯ',
         onAccepted: onTap!,
       ),
       feedback: GameCard(
@@ -1628,36 +1713,25 @@ class ActionIconButton extends StatelessWidget {
         label: label,
         onTap: onPressed,
         child: ExcludeSemantics(
-          child: FocusableActionDetector(
+          child: TactileControlSurface(
             enabled: enabled,
-            mouseCursor: enabled
-                ? SystemMouseCursors.click
-                : SystemMouseCursors.basic,
-            actions: {
-              ActivateIntent: CallbackAction<ActivateIntent>(
-                onInvoke: (_) {
-                  onPressed?.call();
-                  return null;
-                },
-              ),
-            },
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onPressed,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: tokens.colors.black.withValues(
-                        alpha: prominent ? 0.28 : 0.18,
-                      ),
-                      blurRadius: (prominent ? 5 : 3) * scale,
-                      offset: Offset(0, 2 * scale),
+            onPressed: onPressed,
+            pressTravel: 3 * scale,
+            hoverLift: -1.5 * scale,
+            hoverScale: 1.055,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: tokens.colors.black.withValues(
+                      alpha: prominent ? 0.28 : 0.18,
                     ),
-                  ],
-                ),
-                child: child,
+                    blurRadius: (prominent ? 5 : 3) * scale,
+                    offset: Offset(0, 2 * scale),
+                  ),
+                ],
               ),
+              child: child,
             ),
           ),
         ),

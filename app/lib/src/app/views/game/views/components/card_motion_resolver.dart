@@ -105,10 +105,30 @@ class CardMotionEntry {
   final MotionZone zone;
 }
 
+MotionZone? provisionalTrickCardMotionZone(
+  TableViewModel model,
+  String cardID,
+) {
+  if (model.table.phase != phaseTrick || model.selection.handCardID != cardID) {
+    return null;
+  }
+  for (final seat in model.table.seats) {
+    if (seat.isViewer && seat.hand.any((card) => card.id == cardID)) {
+      return MotionZone.trick(seat.id);
+    }
+  }
+  return null;
+}
+
 Iterable<CardMotionEntry> cardMotionEntries(TableViewModel model) sync* {
   for (final seat in model.table.seats) {
     for (final card in seat.hand) {
-      yield CardMotionEntry(card: card, zone: MotionZone.hand(seat.id));
+      yield CardMotionEntry(
+        card: card,
+        zone:
+            provisionalTrickCardMotionZone(model, card.id) ??
+            MotionZone.hand(seat.id),
+      );
     }
     for (final card in seat.plot.hidden) {
       yield CardMotionEntry(card: card, zone: MotionZone.plotHidden(seat.id));
@@ -254,7 +274,6 @@ Rect? cardFlightDestinationRect({
         trickCardMotionTargetRect(
           seatID: nextZone.seatID!,
           currentRects: currentRects,
-          tokens: tokens,
         ) ??
         currentRects[trickCardMotionSourceKey(cardID)];
   }
@@ -275,10 +294,13 @@ Rect? jobGaugeCardMotionTargetRect({
 }) => _cardSizedRect(currentRects[jobGaugeMotionTargetKey(suit)], tokens);
 
 Rect? jobFieldCardMotionTargetRect({
+  required String cardID,
   required String suit,
   required MotionGeometry currentRects,
   required DesignTokens tokens,
-}) => _cardSizedRect(currentRects[jobFieldMotionTargetKey(suit)], tokens);
+}) =>
+    currentRects[MotionAnchor.card(cardID)] ??
+    _cardSizedRect(currentRects[jobFieldMotionTargetKey(suit)], tokens);
 
 CardMotionPlan addParallelJobPanelFlights({
   required CardMotionPlan plan,
@@ -309,6 +331,7 @@ CardMotionPlan addParallelJobPanelFlights({
               flight,
             if (flight.destinationZone.kind == MotionZoneKind.job)
               if (jobFieldCardMotionTargetRect(
+                    cardID: flight.card.id,
                     suit: flight.destinationZone.suit!,
                     currentRects: currentGeometry,
                     tokens: tokens,
@@ -417,8 +440,7 @@ Rect? handCardMotionSourceRect({
 Rect? trickCardMotionTargetRect({
   required int seatID,
   required MotionGeometry currentRects,
-  required DesignTokens tokens,
-}) => _cardSizedRect(currentRects[trickCardMotionTargetKey(seatID)], tokens);
+}) => currentRects[trickCardMotionTargetKey(seatID)];
 
 Rect? _cardSizedRect(Rect? anchor, DesignTokens tokens) {
   if (anchor == null) {

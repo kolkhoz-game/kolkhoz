@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
+import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/app.dart';
 
 void main() {
@@ -27,7 +28,12 @@ void main() {
 
     expect(find.text('GAME ACTIVE ON ANOTHER DEVICE'), findsOneWidget);
     expect(find.text('SYNC VIEW'), findsOneWidget);
-    await tester.tap(find.text('SYNC VIEW'));
+    final syncButton = find.ancestor(
+      of: find.text('SYNC VIEW'),
+      matching: find.byType(TactileControlSurface),
+    );
+    expect(syncButton, findsOneWidget);
+    await tester.tap(syncButton);
     expect(synced, isTrue);
   });
 
@@ -51,5 +57,13 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('SYNCING…'), findsOneWidget);
+    final syncButton = tester.widget<TactileControlSurface>(
+      find.ancestor(
+        of: find.text('SYNCING…'),
+        matching: find.byType(TactileControlSurface),
+      ),
+    );
+    expect(syncButton.enabled, isFalse);
+    expect(syncButton.onPressed, isNull);
   });
 }

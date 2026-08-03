@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 
 const fieldPlanWorldEditorDefine = 'KOLKHOZ_FIELD_PLAN_EDITOR';
@@ -466,11 +467,26 @@ class _FieldPlanWorldSceneState extends State<FieldPlanWorldScene> {
                     top: 12,
                     right: 12,
                     child: SafeArea(
-                      child: IconButton.filledTonal(
-                        key: const Key('field-plan-surface-dismiss'),
-                        tooltip: 'Return to overview',
-                        onPressed: () => widget.onFocusSurface(null),
-                        icon: const Icon(Icons.close),
+                      child: Semantics(
+                        button: true,
+                        label: 'Return to overview',
+                        onTap: () => widget.onFocusSurface(null),
+                        child: ExcludeSemantics(
+                          child: TactileControlSurface(
+                            onPressed: () => widget.onFocusSurface(null),
+                            pressTravel: 2,
+                            hoverLift: -1,
+                            hoverScale: 1.05,
+                            child: IgnorePointer(
+                              child: IconButton.filledTonal(
+                                key: const Key('field-plan-surface-dismiss'),
+                                tooltip: 'Return to overview',
+                                onPressed: () {},
+                                icon: const Icon(Icons.close),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

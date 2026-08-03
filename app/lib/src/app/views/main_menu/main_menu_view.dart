@@ -61,6 +61,13 @@ bool sameVariants(KolkhozGameVariants left, KolkhozGameVariants right) {
       left.lottoRewards == right.lottoRewards;
 }
 
+KolkhozGameVariants migrateLegacyKolkhozVariants(KolkhozGameVariants variants) {
+  final legacyKolkhoz = KolkhozGameVariants.kolkhoz.copyWith(passCards: true);
+  return sameVariants(variants, legacyKolkhoz)
+      ? KolkhozGameVariants.kolkhoz
+      : variants;
+}
+
 String gameResultShareText({
   required TableViewModel model,
   required int seed,
@@ -851,45 +858,42 @@ class _FieldPlanMenuButton extends StatelessWidget {
       clipper: clipper,
       child: Material(
         color: fill,
-        child: InkWell(
-          onTap: enabled ? onPressed : null,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              height * 0.27,
-              height * 0.12,
-              selected ? height * 0.55 : height * 0.28,
-              height * 0.12,
-            ),
-            child: Row(
-              children: [
-                Image.asset(
-                  pictogram,
-                  width: height * 0.56,
-                  height: height * 0.56,
-                  color: ink,
-                  colorBlendMode: BlendMode.srcIn,
-                  filterQuality: FilterQuality.medium,
-                  errorBuilder: (_, _, _) =>
-                      Icon(Icons.star, size: height * 0.48, color: ink),
-                ),
-                SizedBox(width: height * 0.2),
-                Expanded(
-                  child: FittedBox(
-                    alignment: Alignment.centerLeft,
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label.toUpperCase(),
-                      maxLines: 1,
-                      style: fieldPlanDisplayTextStyle.copyWith(
-                        color: ink,
-                        fontSize: height * 0.48,
-                        letterSpacing: 1.2,
-                      ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            height * 0.27,
+            height * 0.12,
+            selected ? height * 0.55 : height * 0.28,
+            height * 0.12,
+          ),
+          child: Row(
+            children: [
+              Image.asset(
+                pictogram,
+                width: height * 0.56,
+                height: height * 0.56,
+                color: ink,
+                colorBlendMode: BlendMode.srcIn,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (_, _, _) =>
+                    Icon(Icons.star, size: height * 0.48, color: ink),
+              ),
+              SizedBox(width: height * 0.2),
+              Expanded(
+                child: FittedBox(
+                  alignment: Alignment.centerLeft,
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label.toUpperCase(),
+                    maxLines: 1,
+                    style: fieldPlanDisplayTextStyle.copyWith(
+                      color: ink,
+                      fontSize: height * 0.48,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -901,14 +905,21 @@ class _FieldPlanMenuButton extends StatelessWidget {
       label: label,
       child: Opacity(
         opacity: enabled ? 1 : 0.5,
-        child: SizedBox(
-          height: height,
-          child: CustomPaint(
-            painter: _FieldPlanButtonBorderPainter(
-              pointed: selected,
-              shadow: true,
+        child: TactileControlSurface(
+          enabled: enabled,
+          onPressed: onPressed,
+          pressTravel: 4,
+          hoverLift: -2,
+          hoverScale: 1.012,
+          child: SizedBox(
+            height: height,
+            child: CustomPaint(
+              painter: _FieldPlanButtonBorderPainter(
+                pointed: selected,
+                shadow: true,
+              ),
+              child: content,
             ),
-            child: content,
           ),
         ),
       ),
@@ -1094,8 +1105,12 @@ class _FieldPlanCompactUtilityButton extends StatelessWidget {
         enabled: onPressed != null,
         label: label,
         child: ExcludeSemantics(
-          child: InkWell(
-            onTap: onPressed,
+          child: TactileControlSurface(
+            enabled: onPressed != null,
+            onPressed: onPressed,
+            pressTravel: 2.5,
+            hoverLift: -1,
+            hoverScale: 1.08,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
               child: Stack(
@@ -1144,8 +1159,12 @@ class _FieldPlanUtilityButton extends StatelessWidget {
       enabled: onPressed != null,
       label: label,
       child: ExcludeSemantics(
-        child: InkWell(
-          onTap: onPressed,
+        child: TactileControlSurface(
+          enabled: onPressed != null,
+          onPressed: onPressed,
+          pressTravel: 2.5,
+          hoverLift: -1,
+          hoverScale: 1.025,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1205,8 +1224,11 @@ class _FieldPlanUtilityIconButton extends StatelessWidget {
       child: Semantics(
         button: true,
         label: label,
-        child: InkWell(
-          onTap: onPressed,
+        child: TactileControlSurface(
+          onPressed: onPressed,
+          pressTravel: 2.5,
+          hoverLift: -1,
+          hoverScale: 1.08,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 7),
             child: Image.asset(
@@ -1290,9 +1312,13 @@ class _FieldPlanProfilePlaque extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
+        child: TactileControlSurface(
           key: const Key('field-plan-profile-plaque'),
-          onTap: onPressed,
+          enabled: onPressed != null,
+          onPressed: onPressed,
+          pressTravel: 4,
+          hoverLift: -2,
+          hoverScale: 1.012,
           child: Container(
             width: 340,
             height: 76,
@@ -1676,10 +1702,10 @@ class _LobbyPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final creatingGame = !showingProfile && !showingOnline && !showingRules;
     final variants = demoMode
         ? KolkhozGameVariants.demoKolkhoz
         : selectedPreset.variants ?? customVariants;
+    final creatingGame = !showingProfile && !showingOnline && !showingRules;
     final variantPanel = CreateGameView(
       tokens: tokens,
       language: language,
@@ -1714,6 +1740,88 @@ class _LobbyPanel extends StatelessWidget {
       onSaveFavoriteSetup: onSaveFavoriteSetup,
       onUseFavoriteSetup: onUseFavoriteSetup,
     );
+    final secondaryPanelKind = showingProfile
+        ? 'profile-$initialSettingsTab'
+        : showingOnline
+        ? 'online'
+        : showingRules
+        ? 'rules'
+        : 'none';
+    final secondaryPanel = showingProfile
+        ? SettingsPanel(
+            tokens: tokens,
+            language: language,
+            appearance: appearance,
+            cardBack: cardBack,
+            animationSpeed: animationSpeed,
+            confirmNewGame: confirmNewGame,
+            confirmMainMenu: confirmMainMenu,
+            showInvalidTapHints: showInvalidTapHints,
+            soundEnabled: soundEnabled,
+            displayName: displayName,
+            portraitAsset: portraitAsset,
+            profileStats: profileStats,
+            progression: progression,
+            unlockedCardBacks: unlockedCardBacks,
+            comradesSummary: comradesSummary,
+            cloudConfigured: cloudConfigured,
+            cloudReady: cloudReady,
+            cloudSignedIn: cloudSignedIn,
+            cloudEmail: cloudEmail,
+            cloudAuthBusy: cloudAuthBusy,
+            cloudAuthMessage: cloudAuthMessage,
+            cloudAuthIsError: cloudAuthIsError,
+            initialTab: initialSettingsTab,
+            profileFeaturesEnabled: profileFeaturesEnabled,
+            onStart: onStart,
+            onTutorialPressed: onTutorialPressed,
+            onAnimationSpeedChanged: onAnimationSpeedChanged,
+            onConfirmNewGameChanged: onConfirmNewGameChanged,
+            onConfirmMainMenuChanged: onConfirmMainMenuChanged,
+            onShowInvalidTapHintsChanged: onShowInvalidTapHintsChanged,
+            onSoundEnabledChanged: onSoundEnabledChanged,
+            onLanguageToggle: onLanguageToggle,
+            onAppearanceToggle: onAppearanceToggle,
+            onCardBackChanged: onCardBackChanged,
+            onDisplayNameChanged: onDisplayNameChanged,
+            onPortraitChanged: onPortraitChanged,
+            onCloudSignIn: onCloudSignIn,
+            onCloudSignUp: onCloudSignUp,
+            onCloudResetPassword: onCloudResetPassword,
+            onCloudDeleteAccount: onCloudDeleteAccount,
+            menuRemoteConnection: menuRemoteConnection,
+            profileController: profileController,
+            onStartDailyChallenge: onStartDailyChallenge,
+          )
+        : showingOnline
+        ? JoinGameView(
+            tokens: tokens,
+            language: language,
+            hostedInviteCode: hostedInviteCode,
+            onlineSessionUpdate: onlineSessionUpdate,
+            gameLobby: gameLobby,
+            showHostedInviteCode: showHostedInviteCode,
+            onJoinOnline: onJoinOnline,
+            onWatchOnline: onWatchOnline,
+            onMatchmakeOnline: onMatchmakeOnline,
+            onKickOnlinePlayer: onKickOnlinePlayer,
+            onEnterOnlineGame: onEnterOnlineGame,
+            onSyncActiveSession: onSyncActiveSession,
+            onCancelOnlineGame: onCancelOnlineGame,
+            comradesSummary: comradesSummary,
+            onComradeRequestToUser: onComradeRequestToUser,
+            mainMenuController: mainMenuController,
+            profileController: profileController,
+          )
+        : showingRules
+        ? RulesView(
+            tokens: tokens,
+            language: language,
+            onTutorialPressed: onTutorialPressed,
+            hasTutorialProgress: hasTutorialProgress,
+            onRestartTutorialPressed: onRestartTutorialPressed,
+          )
+        : const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1732,79 +1840,10 @@ class _LobbyPanel extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Offstage(offstage: !creatingGame, child: variantPanel),
-          if (showingProfile)
-            SettingsPanel(
-              tokens: tokens,
-              language: language,
-              appearance: appearance,
-              cardBack: cardBack,
-              animationSpeed: animationSpeed,
-              confirmNewGame: confirmNewGame,
-              confirmMainMenu: confirmMainMenu,
-              showInvalidTapHints: showInvalidTapHints,
-              soundEnabled: soundEnabled,
-              displayName: displayName,
-              portraitAsset: portraitAsset,
-              profileStats: profileStats,
-              progression: progression,
-              unlockedCardBacks: unlockedCardBacks,
-              comradesSummary: comradesSummary,
-              cloudConfigured: cloudConfigured,
-              cloudReady: cloudReady,
-              cloudSignedIn: cloudSignedIn,
-              cloudEmail: cloudEmail,
-              cloudAuthBusy: cloudAuthBusy,
-              cloudAuthMessage: cloudAuthMessage,
-              cloudAuthIsError: cloudAuthIsError,
-              initialTab: initialSettingsTab,
-              profileFeaturesEnabled: profileFeaturesEnabled,
-              onStart: onStart,
-              onTutorialPressed: onTutorialPressed,
-              onAnimationSpeedChanged: onAnimationSpeedChanged,
-              onConfirmNewGameChanged: onConfirmNewGameChanged,
-              onConfirmMainMenuChanged: onConfirmMainMenuChanged,
-              onShowInvalidTapHintsChanged: onShowInvalidTapHintsChanged,
-              onSoundEnabledChanged: onSoundEnabledChanged,
-              onLanguageToggle: onLanguageToggle,
-              onAppearanceToggle: onAppearanceToggle,
-              onCardBackChanged: onCardBackChanged,
-              onDisplayNameChanged: onDisplayNameChanged,
-              onPortraitChanged: onPortraitChanged,
-              onCloudSignIn: onCloudSignIn,
-              onCloudSignUp: onCloudSignUp,
-              onCloudResetPassword: onCloudResetPassword,
-              onCloudDeleteAccount: onCloudDeleteAccount,
-              menuRemoteConnection: menuRemoteConnection,
-              profileController: profileController,
-              onStartDailyChallenge: onStartDailyChallenge,
-            )
-          else if (showingOnline)
-            JoinGameView(
-              tokens: tokens,
-              language: language,
-              hostedInviteCode: hostedInviteCode,
-              onlineSessionUpdate: onlineSessionUpdate,
-              gameLobby: gameLobby,
-              showHostedInviteCode: showHostedInviteCode,
-              onJoinOnline: onJoinOnline,
-              onWatchOnline: onWatchOnline,
-              onMatchmakeOnline: onMatchmakeOnline,
-              onKickOnlinePlayer: onKickOnlinePlayer,
-              onEnterOnlineGame: onEnterOnlineGame,
-              onSyncActiveSession: onSyncActiveSession,
-              onCancelOnlineGame: onCancelOnlineGame,
-              comradesSummary: comradesSummary,
-              onComradeRequestToUser: onComradeRequestToUser,
-              mainMenuController: mainMenuController,
-              profileController: profileController,
-            )
-          else if (showingRules)
-            RulesView(
-              tokens: tokens,
-              language: language,
-              onTutorialPressed: onTutorialPressed,
-              hasTutorialProgress: hasTutorialProgress,
-              onRestartTutorialPressed: onRestartTutorialPressed,
+          if (!creatingGame)
+            MechanicalPanelSwitcher(
+              panelKey: secondaryPanelKind,
+              child: secondaryPanel,
             ),
         ],
       ),
@@ -2117,7 +2156,12 @@ class _SettingsPanelState extends State<SettingsPanel> {
           },
         ),
         MainMenuGoldDivider(tokens: widget.tokens),
-        Expanded(child: _tabBody()),
+        Expanded(
+          child: MechanicalPanelSwitcher(
+            panelKey: selectedTab,
+            child: _tabBody(),
+          ),
+        ),
       ],
     );
   }

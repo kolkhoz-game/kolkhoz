@@ -295,10 +295,12 @@ class _CompactBoardToolbarState extends State<CompactBoardToolbar> {
       child: Column(
         spacing: 3,
         children: [
-          GestureDetector(
+          TactileControlSurface(
             key: const Key('compact-toolbar-resize-handle'),
-            behavior: HitTestBehavior.opaque,
-            onTap: () => setState(() => expanded = !expanded),
+            onPressed: () => setState(() => expanded = !expanded),
+            pressTravel: 2,
+            hoverLift: -1,
+            hoverScale: 1.03,
             child: SizedBox(
               height: expanded ? 18 : 8,
               child: Center(
@@ -555,93 +557,82 @@ class RailButton extends StatelessWidget {
         selected: active,
         onTap: onTap,
         child: ExcludeSemantics(
-          child: FocusableActionDetector(
+          child: TactileControlSurface(
             enabled: enabled,
-            mouseCursor: enabled
-                ? SystemMouseCursors.click
-                : SystemMouseCursors.basic,
-            actions: {
-              ActivateIntent: CallbackAction<ActivateIntent>(
-                onInvoke: (_) {
-                  onTap?.call();
-                  return null;
-                },
-              ),
-            },
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onTap,
-              child: SizedBox(
-                width: size ?? metrics.railButtonSize,
-                height: size ?? metrics.railButtonSize,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      if (active)
-                        BoxShadow(
-                          color: tokens.colors.red.withValues(alpha: 0.35),
-                          blurRadius: _activeShadowRadius,
-                          offset: const Offset(0, _activeShadowYOffset),
-                        ),
-                    ],
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Positioned.fill(
-                        child: ChromeButtonBackground(asset: backgroundAsset),
+            onPressed: onTap,
+            pressTravel: 3,
+            hoverLift: -1.5,
+            hoverScale: 1.05,
+            child: SizedBox(
+              width: size ?? metrics.railButtonSize,
+              height: size ?? metrics.railButtonSize,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    if (active)
+                      BoxShadow(
+                        color: tokens.colors.red.withValues(alpha: 0.35),
+                        blurRadius: _activeShadowRadius,
+                        offset: const Offset(0, _activeShadowYOffset),
                       ),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          top: action ? _actionIconYOffset : 0,
-                        ),
-                        child: ChromeAssetIcon(
-                          asset: asset,
-                          width: iconSize ?? metrics.railIconSize,
-                          height: iconSize ?? metrics.railIconSize,
-                          muted: muted,
-                          errorBuilder: (_, _, _) => Icon(
-                            Icons.crop_square,
-                            size: metrics.railIconSize,
-                            color: active
-                                ? tokens.colors.cream
-                                : tokens.colors.creamDim,
-                          ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Positioned.fill(
+                      child: ChromeButtonBackground(asset: backgroundAsset),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: action ? _actionIconYOffset : 0,
+                      ),
+                      child: ChromeAssetIcon(
+                        asset: asset,
+                        width: iconSize ?? metrics.railIconSize,
+                        height: iconSize ?? metrics.railIconSize,
+                        muted: muted,
+                        errorBuilder: (_, _, _) => Icon(
+                          Icons.crop_square,
+                          size: metrics.railIconSize,
+                          color: active
+                              ? tokens.colors.cream
+                              : tokens.colors.creamDim,
                         ),
                       ),
-                      if (action)
-                        Positioned(
-                          right: 3,
-                          bottom: 3,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: tokens.colors.red,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: tokens.colors.cream,
-                                width: 1,
-                              ),
-                            ),
-                            child: const SizedBox(width: 8, height: 8),
-                          ),
-                        ),
-                      if (unread)
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Container(
-                            key: const Key('game-log-unread-dot'),
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: tokens.colors.redBright,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: tokens.colors.cream),
+                    ),
+                    if (action)
+                      Positioned(
+                        right: 3,
+                        bottom: 3,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: tokens.colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: tokens.colors.cream,
+                              width: 1,
                             ),
                           ),
+                          child: const SizedBox(width: 8, height: 8),
                         ),
-                    ],
-                  ),
+                      ),
+                    if (unread)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          key: const Key('game-log-unread-dot'),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: tokens.colors.redBright,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: tokens.colors.cream),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),

@@ -517,7 +517,7 @@ class PlayerIdentityPanel extends StatelessWidget {
                           },
                   ),
                 ),
-                TextButton(
+                TactileTextButton(
                   onPressed: runtime.busy || onDeleteAccount == null
                       ? null
                       : () => _confirmDelete(context),
@@ -545,11 +545,11 @@ class PlayerIdentityPanel extends StatelessWidget {
           'and synchronized progress. Purchases and histories are not transferred.',
         ),
         actions: [
-          TextButton(
+          TactileTextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('CANCEL'),
           ),
-          TextButton(
+          TactileTextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(
               foregroundColor: tokens.colors.redBright,
@@ -607,14 +607,17 @@ class PlayerIdentityPanel extends StatelessWidget {
           },
         ),
         actions: [
-          TextButton(onPressed: runtime.pollLink, child: const Text('REFRESH')),
-          TextButton(
+          TactileTextButton(
+            onPressed: runtime.pollLink,
+            child: const Text('REFRESH'),
+          ),
+          TactileTextButton(
             onPressed: runtime.cancelLink,
             child: const Text('CANCEL LINK'),
           ),
           AnimatedBuilder(
             animation: runtime,
-            builder: (context, _) => TextButton(
+            builder: (context, _) => TactileTextButton(
               onPressed:
                   runtime.linkState == PlayerIdentityLinkState.targetConfirmed
                   ? runtime.approveLink
@@ -622,7 +625,7 @@ class PlayerIdentityPanel extends StatelessWidget {
               child: const Text('APPROVE LINK'),
             ),
           ),
-          TextButton(
+          TactileTextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('CLOSE'),
           ),
@@ -666,11 +669,11 @@ class PlayerIdentityPanel extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
+          TactileTextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('CANCEL'),
           ),
-          TextButton(
+          TactileTextButton(
             onPressed: () async {
               final preview = await runtime.redeem(controller.text);
               if (!context.mounted) return;
@@ -685,11 +688,11 @@ class PlayerIdentityPanel extends StatelessWidget {
                     '${target['displayName']} (${target['provider']})? No histories are merged.',
                   ),
                   actions: [
-                    TextButton(
+                    TactileTextButton(
                       onPressed: () => Navigator.pop(context, false),
                       child: const Text('BACK'),
                     ),
-                    TextButton(
+                    TactileTextButton(
                       onPressed: () => Navigator.pop(context, true),
                       child: const Text('CONFIRM'),
                     ),
@@ -729,11 +732,11 @@ class PlayerIdentityPanel extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
+          TactileTextButton(
             onPressed: runtime.pollLink,
             child: const Text('CHECK APPROVAL'),
           ),
-          TextButton(
+          TactileTextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('CLOSE'),
           ),

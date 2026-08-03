@@ -18,6 +18,15 @@ class TableViewModel {
   final List<LegalAction> legalActions;
   final int? seed;
 
+  TableViewModel withTable(TableState value) => TableViewModel(
+    viewer: viewer,
+    table: value,
+    panels: panels,
+    selection: selection,
+    legalActions: legalActions,
+    seed: seed,
+  );
+
   TableViewModel withSeed(int value) => TableViewModel(
     viewer: viewer,
     table: table,
@@ -71,6 +80,25 @@ class TableState {
   final List<Score> scoreboard;
   final GameResult? gameResult;
   final TableCard? finalYearTrumpCard;
+
+  TableState withSeats(List<Seat> value) => TableState(
+    year: year,
+    phase: phase,
+    phasePrompt: phasePrompt,
+    currentPlayerID: currentPlayerID,
+    trump: trump,
+    isFamine: isFamine,
+    maxTricks: maxTricks,
+    seats: value,
+    jobs: jobs,
+    trick: trick,
+    lastTrick: lastTrick,
+    requisitionEvents: requisitionEvents,
+    exiledByYear: exiledByYear,
+    scoreboard: scoreboard,
+    gameResult: gameResult,
+    finalYearTrumpCard: finalYearTrumpCard,
+  );
 }
 
 class Prompt {
@@ -117,6 +145,30 @@ class Seat {
   final KolkhozProfileStats? profileStats;
   final String? profileUserID;
   final String statusText;
+
+  Seat withProfile({
+    required String name,
+    required String portraitAsset,
+    required KolkhozProfileStats profileStats,
+    required String? profileUserID,
+  }) => Seat(
+    id: id,
+    name: name,
+    controller: controller,
+    portraitAsset: portraitAsset,
+    isViewer: isViewer,
+    isCurrentTurn: isCurrentTurn,
+    isBrigadeLeader: isBrigadeLeader,
+    hand: hand,
+    hiddenHandCount: hiddenHandCount,
+    plot: plot,
+    medals: medals,
+    bankedMedals: bankedMedals,
+    visibleScore: visibleScore,
+    profileStats: profileStats,
+    profileUserID: profileUserID,
+    statusText: statusText,
+  );
 }
 
 class PlotState {

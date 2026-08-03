@@ -78,6 +78,46 @@ GameUiState autoSelectCards(GameUiState uiState, TableViewModel model) {
   return uiState;
 }
 
+LegalAction? swapActionForDrag(
+  TableViewModel? model, {
+  required String handCardID,
+  required String plotCardID,
+  required String plotZone,
+}) => model?.legalActions
+    .where(
+      (candidate) =>
+          candidate.kind == actionSwap &&
+          candidate.engineAction.handCard?.id == handCardID &&
+          candidate.engineAction.plotCard?.id == plotCardID &&
+          candidate.engineAction.plotZone == plotZone,
+    )
+    .firstOrNull;
+
+TableViewModel withLocalTerminalProfile(
+  TableViewModel model,
+  PlayerProfile? profile,
+) {
+  final displayName = profile?.displayName?.trim();
+  if (profile == null || displayName == null || displayName.isEmpty) {
+    return model;
+  }
+  final seatIndex = model.table.seats.indexWhere(
+    (seat) => seat.id == profile.seatID,
+  );
+  if (seatIndex < 0) {
+    return model;
+  }
+  final seats = model.table.seats.toList(growable: false);
+  final seat = seats[seatIndex];
+  seats[seatIndex] = seat.withProfile(
+    name: displayName,
+    portraitAsset: profile.portraitAsset ?? seat.portraitAsset,
+    profileStats: profile.stats,
+    profileUserID: profile.userID,
+  );
+  return model.withTable(model.table.withSeats(seats));
+}
+
 class GameController extends ChangeNotifier {
   GameController({
     LocalGameEngineFactory? localGameEngineFactory,
@@ -634,6 +674,25 @@ class GameController extends ChangeNotifier {
     _sync();
   }
 
+  void commitSwapDrag(String handCardID, String plotCardID, String plotZone) {
+    if (model?.table.phase != phaseSwap || !isPlotZone(plotZone)) {
+      return;
+    }
+    uiState = uiState
+        .selectSwapHandCard(handCardID)
+        .selectSwapPlotCard(plotCardID, plotZone);
+    _sync();
+    final action = swapActionForDrag(
+      model,
+      handCardID: handCardID,
+      plotCardID: plotCardID,
+      plotZone: plotZone,
+    );
+    if (action != null) {
+      applyLegalAction(action);
+    }
+  }
+
   void selectAssignmentCard(String cardID) {
     if (model?.table.phase != phaseAssignment) {
       return;
@@ -691,7 +750,7 @@ class GameController extends ChangeNotifier {
             event.targetSuit >= 0;
         final lastIndex = isAssignment
             ? assignmentTargetRunEnd(update.transitions, index)
-            : index;
+            : swapMoveRunEnd(update.transitions, index);
         final assignmentEvents = isAssignment
             ? update.transitions.sublist(index, lastIndex + 1)
             : const <EngineTransitionEvent>[];
@@ -877,7 +936,11 @@ class GameController extends ChangeNotifier {
     final engineActions = online == null
         ? List<EngineAction>.of(_localEngine!.actionLog)
         : [for (final action in update!.gameLogActions) action.engineAction];
-    final terminalModel = finalModel.withSeed(currentSeed);
+    final terminalModel =
+        (online == null
+                ? withLocalTerminalProfile(finalModel, _localProfile)
+                : finalModel)
+            .withSeed(currentSeed);
     final gameRecord = TerminalGameRecord(
       seed: currentSeed,
       variants: currentVariants,

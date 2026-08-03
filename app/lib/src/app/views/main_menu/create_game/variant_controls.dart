@@ -681,9 +681,9 @@ class _VariantIconChip extends StatelessWidget {
       child: ExcludeSemantics(
         child: Tooltip(
           message: label,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onPressed,
+          child: MechanicalSelectionSurface(
+            selected: selected,
+            onPressed: onPressed,
             child: SizedBox(
               width: 52,
               height: 48,
@@ -745,9 +745,9 @@ class _VariantToggleRow extends StatelessWidget {
       toggled: value,
       label: label,
       child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => onChanged(!value),
+        child: MechanicalSelectionSurface(
+          selected: value,
+          onPressed: () => onChanged(!value),
           child: VariantRowBackground(
             tokens: tokens,
             active: value,

@@ -119,7 +119,7 @@ class _LeaderboardPanelState extends State<LeaderboardView> {
               ),
               footer: Align(
                 alignment: Alignment.centerRight,
-                child: TextButton(
+                child: TactileTextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text('CLOSE'),
                 ),
@@ -150,7 +150,7 @@ class _LeaderboardPanelState extends State<LeaderboardView> {
     if (loading) return const Center(child: CircularProgressIndicator());
     if (error != null) {
       return Center(
-        child: TextButton(
+        child: TactileTextButton(
           onPressed: load,
           child: const Text('RETRY LEADERBOARD'),
         ),
@@ -292,9 +292,11 @@ class _LeaderboardRow extends StatelessWidget {
             ? tokens.colors.redDark.withValues(alpha: 0.88)
             : tokens.colors.black.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(tokens.radius.sm),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(tokens.radius.sm),
+        child: TactileControlSurface(
+          onPressed: onTap,
+          pressTravel: 2,
+          hoverLift: -0.5,
+          hoverScale: 1.01,
           child: Container(
             height: 46,
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),

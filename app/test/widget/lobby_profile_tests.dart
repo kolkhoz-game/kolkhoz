@@ -993,7 +993,12 @@ void registerLobbyAndProfileTests() {
     await tester.tap(find.bySemanticsLabel('worker3'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('DELETE ACCOUNT'));
-    await tester.tap(find.text('DELETE ACCOUNT'));
+    await tester.tap(
+      find.ancestor(
+        of: find.text('DELETE ACCOUNT'),
+        matching: find.byType(TactileTextButton),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('DELETE YOUR ACCOUNT?'), findsOneWidget);
     expect(
@@ -1001,9 +1006,12 @@ void registerLobbyAndProfileTests() {
       findsOneWidget,
     );
     await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.text('DELETE ACCOUNT'),
+      find.ancestor(
+        of: find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('DELETE ACCOUNT'),
+        ),
+        matching: find.byType(TactileTextButton),
       ),
     );
     await tester.pumpAndSettle();
@@ -1259,14 +1267,65 @@ void registerLobbyAndProfileTests() {
       findAssetImage(fieldPlanPlayerBeekeeper.fieldPlanPath),
       findsWidgets,
     );
+    final summaryTooltip = find
+        .byWidgetPredicate(
+          (widget) =>
+              widget is Tooltip &&
+              widget.triggerMode == TooltipTriggerMode.manual &&
+              widget.richMessage != null,
+        )
+        .first;
+    final tooltipText = tester
+        .widget<Tooltip>(summaryTooltip)
+        .richMessage!
+        .toPlainText();
+    final tactileChip = find.ancestor(
+      of: summaryTooltip,
+      matching: find.byType(TactileControlSurface),
+    );
+    expect(tactileChip, findsOneWidget);
+    await tester.tap(tactileChip);
+    await tester.pump();
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is RichText && widget.text.toPlainText() == tooltipText,
+      ),
+      findsOneWidget,
+    );
+    await tester.tapAt(Offset.zero);
+    await tester.pump();
+
     await tester.tap(find.bySemanticsLabel('P2 OPEN'));
     await tester.pumpAndSettle();
 
-    final selectedOption = find.bySemanticsLabel('Set P2 OPEN');
+    final selectedOption = find.byKey(
+      const ValueKey('seat-selector-accessibility-2'),
+    );
+    final selectedSemantics = tester
+        .getSemantics(selectedOption)
+        .getSemanticsData();
+    expect(selectedSemantics.label, 'P2 controller');
+    expect(selectedSemantics.value, 'OPEN');
+    expect(selectedSemantics.hasAction(SemanticsAction.increase), isTrue);
+    final selectorSemantics = find.semantics.byLabel('P2 controller');
+    tester.semantics.increase(selectorSemantics);
+    await tester.pumpAndSettle();
+    expect(changedControllers?[1], KolkhozPlayerController.heuristicAI);
+    expect(
+      tester.getSemantics(selectedOption).getSemanticsData().value,
+      'Easy',
+    );
+    tester.semantics.decrease(selectorSemantics);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(selectedOption).getSemanticsData().value,
+      'OPEN',
+    );
     final optionBottom = tester.getBottomRight(selectedOption).dy;
     final commandTop = tester.getTopLeft(findAppText('BACK TO SETUP')).dy;
     expect(optionBottom, lessThanOrEqualTo(commandTop));
-    expect(find.bySemanticsLabel('Set P3 Easy'), findsNothing);
+    expect(find.bySemanticsLabel('P3 controller'), findsNothing);
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
 
     await tester.tap(find.bySemanticsLabel('P2 OPEN'));
@@ -1558,8 +1617,9 @@ void registerLobbyAndProfileTests() {
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 140));
     await tester.pumpAndSettle();
-    expect(find.bySemanticsLabel('Set P3 Hotseat'), findsNothing);
-    expect(find.bySemanticsLabel('Set P3 OPEN'), findsOneWidget);
+    final p3Selector = find.bySemanticsLabel('P3 controller');
+    expect(p3Selector, findsOneWidget);
+    expect(tester.getSemantics(p3Selector).getSemanticsData().value, 'OPEN');
     await tester.tap(find.bySemanticsLabel('P3 OPEN'));
     await tester.pumpAndSettle();
     expect(findAppText('PRIVATE'), findsWidgets);

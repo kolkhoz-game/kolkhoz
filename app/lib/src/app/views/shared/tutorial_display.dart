@@ -566,9 +566,12 @@ class TutorialOrientationPanel extends StatelessWidget {
                       label: MaterialLocalizations.of(
                         context,
                       ).closeButtonTooltip,
-                      child: GestureDetector(
+                      child: TactileControlSurface(
                         key: const Key('tutorial-close'),
-                        onTap: onClose,
+                        onPressed: onClose,
+                        pressTravel: 2,
+                        hoverLift: -1,
+                        hoverScale: 1.08,
                         child: Icon(
                           Icons.close,
                           color: tokens.colors.creamDim,
@@ -646,10 +649,12 @@ class TutorialCollapsedBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final motion = GameMotion.of(context);
-    return GestureDetector(
+    return TactileControlSurface(
       key: const Key('tutorial-expand'),
-      behavior: HitTestBehavior.opaque,
-      onTap: onExpand,
+      onPressed: onExpand,
+      pressTravel: 2.5,
+      hoverLift: -1.5,
+      hoverScale: 1.04,
       child: Tooltip(
         message: 'Open Foreman Misha',
         child: TweenAnimationBuilder<double>(
@@ -994,10 +999,12 @@ class TutorialHeader extends StatelessWidget {
           ),
         ),
         if (onCollapse != null)
-          GestureDetector(
+          TactileControlSurface(
             key: const Key('tutorial-collapse'),
-            behavior: HitTestBehavior.opaque,
-            onTap: onCollapse,
+            onPressed: onCollapse,
+            pressTravel: 2,
+            hoverLift: -1,
+            hoverScale: 1.08,
             child: Container(
               width: 28,
               height: 28,
@@ -1020,10 +1027,12 @@ class TutorialHeader extends StatelessWidget {
         Semantics(
           button: true,
           label: MaterialLocalizations.of(context).closeButtonTooltip,
-          child: GestureDetector(
+          child: TactileControlSurface(
             key: const Key('tutorial-close'),
-            behavior: HitTestBehavior.opaque,
-            onTap: onClose,
+            onPressed: onClose,
+            pressTravel: 2,
+            hoverLift: -1,
+            hoverScale: 1.08,
             child: Container(
               width: 28,
               height: 28,

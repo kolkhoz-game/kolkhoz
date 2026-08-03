@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' hide Size;
 import 'dart:io';
+import 'dart:ui' show SemanticsAction;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -663,6 +664,70 @@ class _CardMotionTestBoard extends StatelessWidget {
               },
             ),
           ),
+      ],
+    );
+  }
+}
+
+class _ProvisionalCardMotionTestBoard extends StatelessWidget {
+  const _ProvisionalCardMotionTestBoard({required this.model});
+
+  final TableViewModel model;
+
+  @override
+  Widget build(BuildContext context) {
+    final viewer = localSeat(model);
+    final selectedCardID = model.selection.handCardID;
+    final selectedCard = selectedCardID == null
+        ? null
+        : viewer.hand.where((card) => card.id == selectedCardID).firstOrNull;
+    final playedCard = model.table.trick.plays
+        .where((play) => play.seatID == viewer.id)
+        .firstOrNull
+        ?.card;
+    final provisionalOrPlayedCard = playedCard ?? selectedCard;
+    final visibleHandCard = selectedCard == null
+        ? viewer.hand.firstOrNull
+        : null;
+    return Stack(
+      children: [
+        Positioned(
+          left: 24,
+          top: 180,
+          child: MotionTrackedRegion(
+            motionKey: handCardMotionSourceKey(viewer.id),
+            child: SizedBox(
+              width: defaultDesignTokens.card.small.width,
+              height: defaultDesignTokens.card.small.height,
+              child: visibleHandCard == null
+                  ? null
+                  : GameCard(
+                      card: visibleHandCard,
+                      tokens: defaultDesignTokens,
+                      sizeOverride: defaultDesignTokens.card.small,
+                    ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 220,
+          top: 48,
+          child: MotionTrackedRegion(
+            motionKey: trickCardMotionTargetKey(viewer.id),
+            child: SizedBox(
+              width: defaultDesignTokens.card.small.width,
+              height: defaultDesignTokens.card.small.height,
+              child: provisionalOrPlayedCard == null
+                  ? null
+                  : GameCard(
+                      card: provisionalOrPlayedCard,
+                      tokens: defaultDesignTokens,
+                      sizeOverride: defaultDesignTokens.card.small,
+                      motionTracked: false,
+                    ),
+            ),
+          ),
+        ),
       ],
     );
   }

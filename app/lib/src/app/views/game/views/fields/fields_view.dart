@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/assignment_projection.dart';
+import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
@@ -328,6 +329,7 @@ class JobsPanel extends StatelessWidget {
                               return CardDropTarget(
                                 highlightColor: tokens.colors.green,
                                 borderRadius: tokens.radius.md,
+                                labelBuilder: assignmentCardDropLabel,
                                 accepts: (data) =>
                                     data.kind == CardDragKind.assignment &&
                                     data.phase == phaseAssignment &&
@@ -409,9 +411,12 @@ class _JobTileState extends State<JobTile> {
           : SystemMouseCursors.basic,
       onEnter: (_) => setState(() => hovered = true),
       onExit: (_) => setState(() => hovered = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: actionableTarget ? onAssign : null,
+      child: TactileControlSurface(
+        enabled: actionableTarget,
+        onPressed: actionableTarget ? onAssign : null,
+        pressTravel: 3,
+        hoverLift: -1,
+        hoverScale: 1.012,
         child: Opacity(
           opacity: job.claimed ? 0.68 : 1,
           child: Container(

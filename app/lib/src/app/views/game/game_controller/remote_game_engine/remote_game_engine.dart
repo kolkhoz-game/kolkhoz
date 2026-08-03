@@ -114,7 +114,6 @@ class RemoteGameEngine implements GameEngine {
       return;
     }
     _selectionBeforeCommand = uiState();
-    setUiState(uiState().clearSelectionAfterAction(action.kind));
     unawaited(
       _channel.send(
         SubmitGameAction(
@@ -168,6 +167,15 @@ class RemoteGameEngine implements GameEngine {
       case GameCommandCompleted():
         if (event.command is SubmitGameAction ||
             event.command is SubmitGameActions) {
+          final actionKind = switch (event.command) {
+            SubmitGameAction(:final action) => action.kind,
+            SubmitGameActions(:final actions) when actions.isNotEmpty =>
+              actions.last.kind,
+            _ => null,
+          };
+          if (actionKind != null) {
+            setUiState(uiState().clearSelectionAfterAction(actionKind));
+          }
           _selectionBeforeCommand = null;
           scheduleMicrotask(() {
             if (!_disposed) onStateChanged();
