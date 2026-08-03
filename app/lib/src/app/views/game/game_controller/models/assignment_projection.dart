@@ -114,6 +114,7 @@ TableViewModel withAssignmentDraft(
       scoreboard: model.table.scoreboard,
       gameResult: model.table.gameResult,
       finalYearTrumpCard: model.table.finalYearTrumpCard,
+      managedRewardOffers: model.table.managedRewardOffers,
     ),
     panels: model.panels,
     selection: model.selection,

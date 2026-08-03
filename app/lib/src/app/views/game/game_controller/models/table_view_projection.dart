@@ -71,6 +71,11 @@ class TableViewProjection {
       finalYearTrumpCard: bridge.finalYearTrumpCard(engine).isValid
           ? projectEngineCard(bridge.finalYearTrumpCard(engine))
           : null,
+      managedRewardOffers: [
+        for (var suit = 0; suit < displaySuitOrder.length; suit++)
+          if (bridge.managedRewardOfferCard(engine, suit).isValid)
+            projectEngineCard(bridge.managedRewardOfferCard(engine, suit)),
+      ],
     );
   }
 

@@ -134,6 +134,7 @@ class GameUiState {
       actionAssign => selection.copyWith(clearAssignmentCardID: true),
       actionPlayCard ||
       actionPassCard ||
+      actionAssignReward ||
       actionSubmitAssignments ||
       actionContinueAfterRequisition ||
       actionSetTrump => SelectionState.empty,

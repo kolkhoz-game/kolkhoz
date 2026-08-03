@@ -2255,6 +2255,11 @@ bool kc_engine_policy_action_with_workspace(const KCEngine *engine, KCPolicyMode
         *selected = legal_actions[0];
         return true;
     }
+    if (engine->phase == KC_PHASE_PLANNING &&
+        legal_count > 0 &&
+        legal_actions[0].kind == KC_ACTION_ASSIGN_REWARD) {
+        return kc_engine_heuristic_action(engine, selected);
+    }
     if (engine->phase == KC_PHASE_PLANNING && engine->is_famine) {
         return false;
     }

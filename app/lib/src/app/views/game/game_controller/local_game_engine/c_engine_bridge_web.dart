@@ -113,6 +113,8 @@ class KolkhozCEngineBridge {
       _get(engine, 26, suit) != 0;
   EngineCardValue revealedJobCard(KCEngineHandle engine, int suit) =>
       _card(_get(engine, 27, suit));
+  EngineCardValue managedRewardOfferCard(KCEngineHandle engine, int suit) =>
+      _card(_get(engine, 72, suit));
   bool claimedJob(KCEngineHandle engine, int suit) =>
       _get(engine, 28, suit) != 0;
   int workHours(KCEngineHandle engine, int suit) => _get(engine, 29, suit);

@@ -19,6 +19,7 @@ Map<String, Object?> variantsToJson(KolkhozGameVariants variants) {
     'passCards': variants.passCards,
     'highestCardsRequisition': variants.highestCardsRequisition,
     'lottoRewards': variants.lottoRewards,
+    'managedEconomy': variants.managedEconomy,
   };
 }
 
@@ -39,6 +40,7 @@ KolkhozGameVariants variantsFromJson(Map<String, Object?> json) {
     passCards: json['passCards'] as bool? ?? false,
     highestCardsRequisition: json['highestCardsRequisition'] as bool? ?? false,
     lottoRewards: json['lottoRewards'] as bool? ?? false,
+    managedEconomy: json['managedEconomy'] as bool? ?? false,
   );
 }
 

@@ -58,6 +58,8 @@
   "variantHighestCardsRequisitionDescription": "Lose your highest cards across failed crops, one for each failed job.",
   "variantLottoRewardsTitle": "Lotto Rewards",
   "variantLottoRewardsDescription": "Each crop replaces its 5 reward with a hidden random card from 5 through King.",
+  "variantManagedEconomyTitle": "Managed Economy",
+  "variantManagedEconomyDescription": "In years 1–4, reveal the four rewards into the Central Planner’s hand; they assign one hand card to each job and skip swapping.",
   "variantDemoModeTitle": "Demo Mode",
   "variantDemoModeDescription": "5-year Kolkhoz with easy AI",
   "appsettingsDark": "DARK",

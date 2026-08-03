@@ -702,7 +702,9 @@ class GameController extends ChangeNotifier {
   }
 
   void selectHandCard(String cardID) {
-    if (model?.table.phase != phaseTrick && model?.table.phase != phasePass) {
+    if (model?.table.phase != phasePlanning &&
+        model?.table.phase != phaseTrick &&
+        model?.table.phase != phasePass) {
       return;
     }
     uiState = uiState.selectHandCard(cardID);

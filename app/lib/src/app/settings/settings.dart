@@ -290,6 +290,7 @@ class KolkhozFavoriteSetup {
         'passCards': variants.passCards,
         'highestCardsRequisition': variants.highestCardsRequisition,
         'lottoRewards': variants.lottoRewards,
+        'managedEconomy': variants.managedEconomy,
       },
       'controllers': controllers.map((controller) => controller.name).toList(),
       if (lobbySeats.isNotEmpty) 'lobby-seats': lobbySeats,
@@ -322,6 +323,7 @@ class KolkhozFavoriteSetup {
           highestCardsRequisition:
               variantsJson['highestCardsRequisition'] as bool? ?? false,
           lottoRewards: variantsJson['lottoRewards'] as bool? ?? false,
+          managedEconomy: variantsJson['managedEconomy'] as bool? ?? false,
         ),
         controllers: KolkhozPlayerController.normalized([
           for (final controller in jsonList(json['controllers']))

@@ -362,6 +362,18 @@ abstract class AppLocalizations {
   /// **'Each crop replaces its 5 reward with a hidden random card from 5 through King.'**
   String get variantLottoRewardsDescription;
 
+  /// No description provided for @variantManagedEconomyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Managed Economy'**
+  String get variantManagedEconomyTitle;
+
+  /// No description provided for @variantManagedEconomyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'In years 1–4, reveal the four rewards into the Central Planner’s hand; they assign one hand card to each job and skip swapping.'**
+  String get variantManagedEconomyDescription;
+
   /// No description provided for @variantDemoModeTitle.
   ///
   /// In en, this message translates to:

@@ -185,6 +185,7 @@ int32_t kc_web_engine_get(
         case 69: return kc_web_pack_card(kc_legal_action_plot_card_at(engine, a));
         case 70: return kc_legal_action_plot_zone_at(engine, a);
         case 71: return kc_legal_action_target_suit_at(engine, a);
+        case 72: return kc_web_pack_card(kc_managed_reward_offer_card(engine, a));
         default: return -1;
     }
 }

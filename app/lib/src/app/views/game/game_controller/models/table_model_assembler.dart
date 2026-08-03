@@ -23,6 +23,7 @@ TableViewModel buildTableViewModel({
   required List<Score> finalScoreboard,
   required List<LegalAction> legalActions,
   TableCard? finalYearTrumpCard,
+  List<TableCard> managedRewardOffers = const [],
 }) {
   return TableViewModel(
     viewer: viewer,
@@ -47,6 +48,7 @@ TableViewModel buildTableViewModel({
         scores: finalScoreboard,
       ),
       finalYearTrumpCard: finalYearTrumpCard,
+      managedRewardOffers: managedRewardOffers,
     ),
     panels: panelsForPhase(
       uiState,

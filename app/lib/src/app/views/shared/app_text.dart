@@ -63,6 +63,8 @@ enum KolkhozText {
   variantHighestCardsRequisitionTitle,
   variantLottoRewardsDescription,
   variantLottoRewardsTitle,
+  variantManagedEconomyDescription,
+  variantManagedEconomyTitle,
   variantMedalsDescription,
   variantMedalsTitle,
   variantMiceDescription,
@@ -166,6 +168,10 @@ String lookupKolkhozText(
     KolkhozText.variantLottoRewardsDescription =>
       strings.variantLottoRewardsDescription,
     KolkhozText.variantLottoRewardsTitle => strings.variantLottoRewardsTitle,
+    KolkhozText.variantManagedEconomyDescription =>
+      strings.variantManagedEconomyDescription,
+    KolkhozText.variantManagedEconomyTitle =>
+      strings.variantManagedEconomyTitle,
     KolkhozText.variantMedalsDescription => strings.variantMedalsDescription,
     KolkhozText.variantMedalsTitle => strings.variantMedalsTitle,
     KolkhozText.variantMiceDescription => strings.variantMiceDescription,

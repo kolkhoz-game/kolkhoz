@@ -38,7 +38,9 @@ Set<String> handActionCardIDs(List<CEngineActionValue> actions, int playerID) {
     for (final action in actions)
       if (action.playerID == playerID &&
           action.card.isValid &&
-          (action.kind == kcActionPlayCard || action.kind == kcActionPassCard))
+          (action.kind == kcActionPlayCard ||
+              action.kind == kcActionPassCard ||
+              action.kind == kcActionAssignReward))
         cardID(action.card),
     for (final action in actions)
       if (action.playerID == playerID &&
@@ -122,6 +124,7 @@ String actionKindName(int kind) {
     kcActionPassCard => actionPassCard,
     kcActionRevealReward => actionRevealReward,
     kcActionRevealTrump => actionRevealTrump,
+    kcActionAssignReward => actionAssignReward,
     kcActionCompleteTutorialOrientation => actionCompleteTutorialOrientation,
     kcActionCompleteTutorialRewardLesson => actionCompleteTutorialRewardLesson,
     kcActionCompleteTutorialSaboteurFollowLesson =>
@@ -143,6 +146,7 @@ int? actionKindCode(String kind) {
     actionPassCard => kcActionPassCard,
     actionRevealReward => kcActionRevealReward,
     actionRevealTrump => kcActionRevealTrump,
+    actionAssignReward => kcActionAssignReward,
     actionCompleteTutorialOrientation => kcActionCompleteTutorialOrientation,
     actionCompleteTutorialRewardLesson => kcActionCompleteTutorialRewardLesson,
     actionCompleteTutorialSaboteurFollowLesson =>
@@ -164,6 +168,7 @@ String actionLabel(int kind) {
     kcActionPassCard => 'Pass',
     kcActionRevealReward => 'Reveal reward',
     kcActionRevealTrump => 'Reveal trump',
+    kcActionAssignReward => 'Assign reward',
     kcActionCompleteTutorialOrientation => 'Begin Year 1',
     kcActionCompleteTutorialRewardLesson => 'Continue to trump',
     kcActionCompleteTutorialSaboteurFollowLesson => 'Continue the trick',

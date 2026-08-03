@@ -89,6 +89,7 @@ class KolkhozGameVariants {
     this.passCards = false,
     this.highestCardsRequisition = false,
     this.lottoRewards = false,
+    this.managedEconomy = false,
   });
 
   final int deckType;
@@ -106,6 +107,7 @@ class KolkhozGameVariants {
   final bool passCards;
   final bool highestCardsRequisition;
   final bool lottoRewards;
+  final bool managedEconomy;
 
   KolkhozGameVariants copyWith({
     int? deckType,
@@ -123,6 +125,7 @@ class KolkhozGameVariants {
     bool? passCards,
     bool? highestCardsRequisition,
     bool? lottoRewards,
+    bool? managedEconomy,
   }) {
     return KolkhozGameVariants(
       deckType: deckType ?? this.deckType,
@@ -141,6 +144,7 @@ class KolkhozGameVariants {
       highestCardsRequisition:
           highestCardsRequisition ?? this.highestCardsRequisition,
       lottoRewards: lottoRewards ?? this.lottoRewards,
+      managedEconomy: managedEconomy ?? this.managedEconomy,
     );
   }
 
@@ -208,6 +212,7 @@ const kcActionRevealTrump = 11;
 const kcActionCompleteTutorialOrientation = 12;
 const kcActionCompleteTutorialRewardLesson = 13;
 const kcActionCompleteTutorialSaboteurFollowLesson = 14;
+const kcActionAssignReward = 15;
 
 const kcPhasePlanning = 0;
 const kcPhaseSwap = 1;

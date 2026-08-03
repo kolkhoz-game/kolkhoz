@@ -93,6 +93,29 @@ String seatDisplayName(Seat seat, {KolkhozLanguage? language}) {
 
 String planningTrumpStatus(TableViewModel model, KolkhozLanguage language) {
   final chooser = seatByID(model, model.table.currentPlayerID);
+  final rewardAction = model.legalActions
+      .where((action) => action.kind == actionAssignReward)
+      .firstOrNull;
+  final pendingRewardSuit =
+      rewardAction?.engineAction.suit ??
+      (model.table.managedRewardOffers.length == displaySuitOrder.length
+          ? model.table.jobs
+                .where((job) => job.reward == null)
+                .firstOrNull
+                ?.suit
+          : null);
+  if (pendingRewardSuit != null) {
+    final suit = language.suitName(pendingRewardSuit);
+    if (chooser == null || chooser.isViewer || isLocalHumanSeat(chooser)) {
+      return language == KolkhozLanguage.en
+          ? 'Choose the $suit reward'
+          : 'Выберите награду: $suit';
+    }
+    final name = seatDisplayName(chooser, language: language);
+    return language == KolkhozLanguage.en
+        ? 'Waiting for $name to assign the $suit reward'
+        : 'Ждём, пока $name назначит награду: $suit';
+  }
   if (chooser == null) {
     return language.strings.boardviewChooseTrump;
   }

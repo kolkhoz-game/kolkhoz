@@ -142,9 +142,19 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
     final rewards = {
       for (final job in widget.model.table.jobs) job.suit: job.reward,
     };
+    final managedOffers = {
+      for (final card in widget.model.table.managedRewardOffers)
+        card.suit: card,
+    };
+    final displayedRewards = {
+      for (final suit in displaySuitOrder)
+        suit: rewards[suit] ?? managedOffers[suit],
+    };
     final rewardsReady = displaySuitOrder.every(
       (suit) => rewards[suit] != null,
     );
+    final planningDecisionReady =
+        rewardsReady || managedOffers.length == displaySuitOrder.length;
     final options = planningTrumpOptions(
       widget.model.legalActions,
       language: widget.language,
@@ -164,7 +174,7 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
                 widget.onAction != null;
             return RewardFlipCard(
               key: ValueKey('reward-flip-$suit'),
-              reward: rewards[suit],
+              reward: displayedRewards[suit],
               tokens: widget.tokens,
               size: cardSize,
               label: option?.label ?? widget.language.suitName(suit),
@@ -177,9 +187,9 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
                   ? (hovered) =>
                         widget.onSuitHovered?.call(hovered ? suit : null)
                   : null,
-              onCompleted: rewards[suit] == null
+              onCompleted: displayedRewards[suit] == null
                   ? null
-                  : () => _handleRewardCompleted(suit, rewards[suit]!),
+                  : () => _handleRewardCompleted(suit, displayedRewards[suit]!),
             );
           },
         ),
@@ -206,14 +216,31 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
         spacing: 8,
         children: [
           DisplayText(
-            widget.language == KolkhozLanguage.en
-                ? 'REWARD REVEAL'
-                : 'ОТКРЫТИЕ НАГРАД',
+            managedOffers.isNotEmpty
+                ? (widget.language == KolkhozLanguage.en
+                      ? 'MANAGED ECONOMY'
+                      : 'ПЛАНОВАЯ ЭКОНОМИКА')
+                : (widget.language == KolkhozLanguage.en
+                      ? 'REWARD REVEAL'
+                      : 'ОТКРЫТИЕ НАГРАД'),
             textAlign: TextAlign.center,
             size: DisplayTextSize.caption,
             variant: DisplayTextWeight.bold,
             color: widget.tokens.colors.gold,
           ),
+          if (managedOffers.isNotEmpty)
+            DisplayText(
+              managedOffers.values
+                  .map(
+                    (card) =>
+                        '${widget.language.suitName(card.suit)} ${card.rank}',
+                  )
+                  .join(' · '),
+              key: const Key('managed-economy-offers'),
+              textAlign: TextAlign.center,
+              size: DisplayTextSize.xSmall,
+              color: widget.tokens.colors.cream,
+            ),
           Column(
             key: ValueKey('planning-reward-grid-$columnCount'),
             mainAxisSize: MainAxisSize.min,
@@ -229,7 +256,7 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
             ],
           ),
           DisplayText(
-            rewardsReady
+            planningDecisionReady
                 ? planningTrumpStatus(widget.model, widget.language)
                 : (widget.language == KolkhozLanguage.en
                       ? 'REVEALING REWARDS…'

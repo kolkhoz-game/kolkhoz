@@ -62,6 +62,7 @@ class TableState {
     required this.scoreboard,
     required this.gameResult,
     this.finalYearTrumpCard,
+    this.managedRewardOffers = const [],
   });
 
   final int year;
@@ -80,6 +81,7 @@ class TableState {
   final List<Score> scoreboard;
   final GameResult? gameResult;
   final TableCard? finalYearTrumpCard;
+  final List<TableCard> managedRewardOffers;
 
   TableState withSeats(List<Seat> value) => TableState(
     year: year,
@@ -98,6 +100,7 @@ class TableState {
     scoreboard: scoreboard,
     gameResult: gameResult,
     finalYearTrumpCard: finalYearTrumpCard,
+    managedRewardOffers: managedRewardOffers,
   );
 }
 

@@ -248,6 +248,7 @@ abstract class OnlineEngineSnapshot with _$OnlineEngineSnapshot {
     required List<OnlinePlayerSnapshot> players,
     required List<OnlineSuitCardsSnapshot> jobPiles,
     required List<OnlineSuitCardsSnapshot> revealedJobs,
+    @Default([]) List<OnlineEngineCard> managedRewardOffers,
     required List<int> claimedJobs,
     required List<OnlineSuitValueSnapshot> workHours,
     required List<OnlineSuitCardsSnapshot> jobBuckets,

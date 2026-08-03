@@ -80,6 +80,11 @@ card is public and sets trump automatically; a revealed Saboteur means no trump.
 is then sent North and has no other effect. Otherwise famine has no trump and advances
 automatically. AI trump selection is implemented in the C engine.
 
+With Managed Economy in years 1-4, reveal all four reward offers publicly into the
+Central Planner's hand. The Planner then assigns one matching card from that hand to each
+crop reward slot, in crop order, before selecting trump. Saboteur matches every crop.
+Year 5 follows normal planning.
+
 ### 2. Pass
 
 When enabled, every player privately selects one hand card in years 2-5. Selections lock
@@ -91,6 +96,9 @@ years 3 and 5. Any card, including Saboteur, may be passed.
 Each player may exchange at most one hand card with a hidden or revealed plot card when
 `allow_swap` is enabled. Human/manual callers submit `swap`, `undoSwap`, and
 `confirmSwap` actions; AI turns are automatic.
+
+With Managed Economy in years 2-4, the Central Planner is pre-confirmed and the other
+three players swap normally. All four players use the normal swap flow in year 5.
 
 ### 4. Trick
 

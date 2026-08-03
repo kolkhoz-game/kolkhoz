@@ -158,6 +158,13 @@ class AppLocalizationsRu extends AppLocalizations {
       'В каждой культуре награда 5 заменяется скрытой случайной картой от 5 до короля.';
 
   @override
+  String get variantManagedEconomyTitle => 'Плановая экономика';
+
+  @override
+  String get variantManagedEconomyDescription =>
+      'В годы 1–4 откройте четыре награды в руку Центрального плановика; он назначает по одной карте из руки каждой работе и пропускает обмен.';
+
+  @override
   String get variantDemoModeTitle => 'ДЕМО-РЕЖИМ';
 
   @override

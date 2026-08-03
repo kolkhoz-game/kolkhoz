@@ -119,6 +119,11 @@ _OnlineEngineSnapshot _$OnlineEngineSnapshotFromJson(
   revealedJobs: (json['revealedJobs'] as List<dynamic>)
       .map((e) => OnlineSuitCardsSnapshot.fromJson(e as Map<String, dynamic>))
       .toList(),
+  managedRewardOffers:
+      (json['managedRewardOffers'] as List<dynamic>?)
+          ?.map((e) => OnlineEngineCard.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
   claimedJobs: (json['claimedJobs'] as List<dynamic>)
       .map((e) => (e as num).toInt())
       .toList(),

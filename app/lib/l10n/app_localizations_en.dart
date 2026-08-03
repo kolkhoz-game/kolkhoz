@@ -159,6 +159,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Each crop replaces its 5 reward with a hidden random card from 5 through King.';
 
   @override
+  String get variantManagedEconomyTitle => 'Managed Economy';
+
+  @override
+  String get variantManagedEconomyDescription =>
+      'In years 1–4, reveal the four rewards into the Central Planner’s hand; they assign one hand card to each job and skip swapping.';
+
+  @override
   String get variantDemoModeTitle => 'Demo Mode';
 
   @override

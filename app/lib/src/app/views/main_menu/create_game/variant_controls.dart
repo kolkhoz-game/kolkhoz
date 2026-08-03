@@ -90,7 +90,10 @@ class VariantRowData {
     descriptionKey: KolkhozText.variantNorthernStyleDescription,
     iconAsset: fieldPlanVariantNorthernStyle.fieldPlanPath,
     valueOf: (variants) => variants.northernStyle,
-    withValue: (variants, value) => variants.copyWith(northernStyle: value),
+    withValue: (variants, value) => variants.copyWith(
+      northernStyle: value,
+      managedEconomy: value ? false : variants.managedEconomy,
+    ),
   );
   static final miceVariant = VariantRowData(
     titleKey: KolkhozText.variantMiceTitle,
@@ -167,8 +170,23 @@ class VariantRowData {
     descriptionKey: KolkhozText.variantLottoRewardsDescription,
     iconAsset: fieldPlanVariantLottoRewards.fieldPlanPath,
     valueOf: (variants) => variants.lottoRewards,
-    withValue: (variants, value) => variants.copyWith(lottoRewards: value),
+    withValue: (variants, value) => variants.copyWith(
+      lottoRewards: value,
+      managedEconomy: value ? false : variants.managedEconomy,
+    ),
     visibleInCustom: (variants) => variants.deckType != 36,
+  );
+  static final managedEconomy = VariantRowData(
+    titleKey: KolkhozText.variantManagedEconomyTitle,
+    descriptionKey: KolkhozText.variantManagedEconomyDescription,
+    iconAsset: fieldPlanVariantNomenklatura.fieldPlanPath,
+    valueOf: (variants) => variants.managedEconomy,
+    withValue: (variants, value) => variants.copyWith(
+      managedEconomy: value,
+      lottoRewards: value ? false : variants.lottoRewards,
+    ),
+    visibleInCustom: (variants) =>
+        variants.deckType != 36 && !variants.northernStyle,
   );
   static final demoMode = VariantRowData(
     titleKey: KolkhozText.variantDemoModeTitle,
@@ -193,6 +211,7 @@ class VariantRowData {
     passCards,
     highestCardsRequisition,
     lottoRewards,
+    managedEconomy,
   ];
 
   static List<VariantRowData> enabledRows(
@@ -518,6 +537,7 @@ class _DeckVariantToggleRow extends StatelessWidget {
                 deckType: 36,
                 accumulateJobs: false,
                 lottoRewards: false,
+                managedEconomy: false,
               ),
             ),
           ),

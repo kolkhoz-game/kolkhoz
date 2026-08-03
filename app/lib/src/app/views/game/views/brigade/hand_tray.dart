@@ -135,7 +135,7 @@ bool passIconFlipsHorizontally(int year) => year.isEven;
 
 bool handCardCanReceiveTap(TableViewModel model, TableCard card) {
   return switch (model.table.phase) {
-    phaseTrick || phaseSwap || phasePass => card.highlighted,
+    phasePlanning || phaseTrick || phaseSwap || phasePass => card.highlighted,
     _ => false,
   };
 }
@@ -163,6 +163,17 @@ LegalAction? handCardPassAction(TableViewModel model, TableCard card) {
   if (model.table.phase != phasePass) return null;
   for (final action in model.legalActions) {
     if (action.kind == actionPassCard &&
+        action.engineAction.card?.id == card.id) {
+      return action;
+    }
+  }
+  return null;
+}
+
+LegalAction? handCardRewardAction(TableViewModel model, TableCard card) {
+  if (model.table.phase != phasePlanning) return null;
+  for (final action in model.legalActions) {
+    if (action.kind == actionAssignReward &&
         action.engineAction.card?.id == card.id) {
       return action;
     }
@@ -198,6 +209,20 @@ LegalAction? selectedHandCardPassAction(TableViewModel model) {
   return null;
 }
 
+LegalAction? selectedHandCardRewardAction(TableViewModel model) {
+  final selectedCardID = model.selection.handCardID;
+  if (model.table.phase != phasePlanning || selectedCardID == null) {
+    return null;
+  }
+  for (final action in model.legalActions) {
+    if (action.kind == actionAssignReward &&
+        action.engineAction.card?.id == selectedCardID) {
+      return action;
+    }
+  }
+  return null;
+}
+
 LegalAction? handConsoleLegalAction(TableViewModel model, Set<String> kinds) {
   for (final action in model.legalActions) {
     if (kinds.contains(action.kind)) {
@@ -209,6 +234,7 @@ LegalAction? handConsoleLegalAction(TableViewModel model, Set<String> kinds) {
 
 LegalAction? handConsoleConfirmAction(TableViewModel model) {
   return switch (model.table.phase) {
+    phasePlanning => selectedHandCardRewardAction(model),
     phaseTrick => selectedHandCardPlayAction(model),
     phaseSwap =>
       handConsoleLegalAction(model, {actionSwap}) == null
@@ -372,11 +398,13 @@ TableCard handTrayCard(
 }) {
   final showHighlight = switch (model.table.phase) {
     phaseTrick || phaseSwap || phasePass => card.highlighted,
-    phasePlanning => handCardMatchesPlanningTrumpFocus(
-      model,
-      card,
-      planningTrumpFocusedSuit,
-    ),
+    phasePlanning =>
+      card.highlighted ||
+          handCardMatchesPlanningTrumpFocus(
+            model,
+            card,
+            planningTrumpFocusedSuit,
+          ),
     _ => false,
   };
   final selected = card.selected || card.id == model.selection.handCardID;
@@ -402,6 +430,9 @@ Color? handTrayHighlightColor(
     card,
     planningTrumpFocusedSuit,
   )) {
+    return playableHighlightColor;
+  }
+  if (model.table.phase == phasePlanning && card.highlighted) {
     return playableHighlightColor;
   }
   if (model.table.phase == phaseSwap && card.highlighted && !card.selected) {
@@ -740,10 +771,20 @@ class HandTray extends StatelessWidget {
                                       model,
                                       card,
                                     );
+                                    final rewardAction = handCardRewardAction(
+                                      model,
+                                      card,
+                                    );
                                     final onTap =
                                         !actionsEnabled || trickSelectionLocked
                                         ? null
                                         : switch (model.table.phase) {
+                                            phasePlanning =>
+                                              rewardAction == null ||
+                                                      onHandCardTap == null
+                                                  ? null
+                                                  : () =>
+                                                        onHandCardTap!(card.id),
                                             phaseTrick =>
                                               playAction != null &&
                                                       onHandCardTap != null
@@ -784,6 +825,7 @@ class HandTray extends StatelessWidget {
                                     final playable =
                                         actionsEnabled &&
                                         (switch (model.table.phase) {
+                                          phasePlanning => rewardAction != null,
                                           phaseTrick =>
                                             !trickSelectionLocked &&
                                                 playAction != null,
@@ -798,6 +840,7 @@ class HandTray extends StatelessWidget {
                                     final actionable =
                                         actionsEnabled &&
                                         (switch (model.table.phase) {
+                                          phasePlanning => rewardAction != null,
                                           phaseTrick =>
                                             playAction != null || invalid,
                                           phaseSwap => card.highlighted,
@@ -814,6 +857,7 @@ class HandTray extends StatelessWidget {
                                         actionsEnabled &&
                                         onTap != null &&
                                         switch (model.table.phase) {
+                                          phasePlanning => rewardAction != null,
                                           phaseTrick => playAction != null,
                                           phaseSwap => card.highlighted,
                                           phasePass => passAction != null,

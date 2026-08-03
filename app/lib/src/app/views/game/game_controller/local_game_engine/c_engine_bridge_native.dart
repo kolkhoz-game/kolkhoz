@@ -99,6 +99,8 @@ class KolkhozCEngineBridge {
   _plotStackHiddenCard;
   late final bool Function(Pointer<KCEngine>, int) _hasRevealedJob;
   late final KCCardNative Function(Pointer<KCEngine>, int) _revealedJobCard;
+  late final KCCardNative Function(Pointer<KCEngine>, int)
+  _managedRewardOfferCard;
   late final bool Function(Pointer<KCEngine>, int) _claimedJob;
   late final int Function(Pointer<KCEngine>, int) _workHours;
   late final int Function(Pointer<KCEngine>, int) _jobBucketCount;
@@ -152,6 +154,8 @@ class KolkhozCEngineBridge {
   late final int Function(Pointer<KCEngine>, int, int, int, int) _applyAssign;
   late final int Function(Pointer<KCEngine>, int, int) _applySimple;
   late final int Function(Pointer<KCEngine>, int, int, int) _applySuitAction;
+  late final int Function(Pointer<KCEngine>, int, int, int, int, int)
+  _applyCardAction;
   late final int Function(Pointer<KCEngine>) _stepAutomatic;
   late final bool Function(Pointer<KCEngine>, Pointer<KCActionNative>)
   _heuristicAction;
@@ -186,6 +190,8 @@ class KolkhozCEngineBridge {
   late final int Function(Pointer<KCEngine>, int, int) _applySimpleManual;
   late final int Function(Pointer<KCEngine>, int, int, int)
   _applySuitActionManual;
+  late final int Function(Pointer<KCEngine>, int, int, int, int, int)
+  _applyCardActionManual;
 
   Pointer<KCEngine> newEngine({
     int? seed,
@@ -243,6 +249,7 @@ class KolkhozCEngineBridge {
         passCards: nativeVariants.ref.passCards,
         highestCardsRequisition: nativeVariants.ref.highestCardsRequisition,
         lottoRewards: nativeVariants.ref.lottoRewards,
+        managedEconomy: nativeVariants.ref.managedEconomy,
       );
     } finally {
       arena.releaseAll();
@@ -265,7 +272,14 @@ class KolkhozCEngineBridge {
       ..finalYearTrump = variants.finalYearTrump && variants.wreckerCard
       ..passCards = variants.passCards
       ..highestCardsRequisition = variants.highestCardsRequisition
-      ..lottoRewards = variants.lottoRewards && variants.deckType != 36;
+      ..managedEconomy =
+          variants.managedEconomy &&
+          variants.deckType != 36 &&
+          !variants.northernStyle
+      ..lottoRewards =
+          variants.lottoRewards &&
+          variants.deckType != 36 &&
+          !variants.managedEconomy;
   }
 
   void _writeControllers(
@@ -366,6 +380,8 @@ class KolkhozCEngineBridge {
       _hasRevealedJob(engine, suit);
   EngineCardValue revealedJobCard(Pointer<KCEngine> engine, int suit) =>
       _cardValue(_revealedJobCard(engine, suit));
+  EngineCardValue managedRewardOfferCard(Pointer<KCEngine> engine, int suit) =>
+      _cardValue(_managedRewardOfferCard(engine, suit));
   bool claimedJob(Pointer<KCEngine> engine, int suit) =>
       _claimedJob(engine, suit);
   int workHours(Pointer<KCEngine> engine, int suit) => _workHours(engine, suit);
@@ -485,6 +501,14 @@ class KolkhozCEngineBridge {
         action.playerID,
         action.suit,
       ),
+      kcActionAssignReward => _applyCardAction(
+        engine,
+        action.kind,
+        action.playerID,
+        action.suit,
+        action.card.suit,
+        action.card.value,
+      ),
       _ => _applySimple(engine, action.kind, action.playerID),
     };
   }
@@ -529,6 +553,14 @@ class KolkhozCEngineBridge {
         action.kind,
         action.playerID,
         action.suit,
+      ),
+      kcActionAssignReward => _applyCardActionManual(
+        engine,
+        action.kind,
+        action.playerID,
+        action.suit,
+        action.card.suit,
+        action.card.value,
       ),
       _ => _applySimpleManual(engine, action.kind, action.playerID),
     };
@@ -675,6 +707,7 @@ class KolkhozCEngineBridge {
     _plotStackHiddenCard = _card3('kc_player_plot_stack_hidden_card');
     _hasRevealedJob = _bool1('kc_has_revealed_job');
     _revealedJobCard = _card1('kc_revealed_job_card');
+    _managedRewardOfferCard = _card1('kc_managed_reward_offer_card');
     _claimedJob = _bool1('kc_claimed_job');
     _workHours = _int1('kc_work_hours');
     _jobBucketCount = _int1('kc_job_bucket_count');
@@ -762,6 +795,11 @@ class KolkhozCEngineBridge {
           Int32 Function(Pointer<KCEngine>, Int32, Int32, Int32),
           int Function(Pointer<KCEngine>, int, int, int)
         >('kc_engine_apply_suit_action');
+    _applyCardAction = _lib
+        .lookupFunction<
+          Int32 Function(Pointer<KCEngine>, Int32, Int32, Int32, Int32, Int32),
+          int Function(Pointer<KCEngine>, int, int, int, int, int)
+        >('kc_engine_apply_card_action');
     _stepAutomatic = _int0('kc_engine_step_automatic');
     _heuristicAction = _lib
         .lookupFunction<
@@ -859,6 +897,11 @@ class KolkhozCEngineBridge {
           Int32 Function(Pointer<KCEngine>, Int32, Int32, Int32),
           int Function(Pointer<KCEngine>, int, int, int)
         >('kc_engine_apply_suit_action_manual');
+    _applyCardActionManual = _lib
+        .lookupFunction<
+          Int32 Function(Pointer<KCEngine>, Int32, Int32, Int32, Int32, Int32),
+          int Function(Pointer<KCEngine>, int, int, int, int, int)
+        >('kc_engine_apply_card_action_manual');
   }
 
   int Function(Pointer<KCEngine>) _int0(String name) {
@@ -1027,6 +1070,9 @@ final class KCVariantsNative extends Struct {
 
   @Bool()
   external bool lottoRewards;
+
+  @Bool()
+  external bool managedEconomy;
 }
 
 final class KCControllersNative extends Struct {

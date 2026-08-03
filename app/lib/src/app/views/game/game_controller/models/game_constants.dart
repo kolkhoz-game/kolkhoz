@@ -50,6 +50,7 @@ const actionUndoSwap = 'undoSwap';
 const actionPassCard = 'passCard';
 const actionRevealReward = 'revealReward';
 const actionRevealTrump = 'revealTrump';
+const actionAssignReward = 'assignReward';
 const actionCompleteTutorialOrientation = 'completeTutorialOrientation';
 const actionCompleteTutorialRewardLesson = 'completeTutorialRewardLesson';
 const actionCompleteTutorialSaboteurFollowLesson =

@@ -42,6 +42,7 @@ class KCVariants(ctypes.Structure):
         ("pass_cards", ctypes.c_bool),
         ("highest_cards_requisition", ctypes.c_bool),
         ("lotto_rewards", ctypes.c_bool),
+        ("managed_economy", ctypes.c_bool),
     ]
 
 
@@ -152,6 +153,7 @@ class KCEngineSnapshot(ctypes.Structure):
         ("job_piles", KCCardList * SUIT_COUNT),
         ("revealed_jobs", KCCard * SUIT_COUNT),
         ("has_revealed_job", ctypes.c_bool * SUIT_COUNT),
+        ("managed_reward_offers", KCCard * SUIT_COUNT),
         ("claimed_jobs", ctypes.c_bool * SUIT_COUNT),
         ("work_hours", ctypes.c_int32 * SUIT_COUNT),
         ("job_buckets", KCCardList * SUIT_COUNT),

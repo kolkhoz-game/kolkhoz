@@ -63,6 +63,14 @@ Saboteur-specific behavior:
   that job as failed;
 - a plot Saboteur matches any failed job, but the same card is exiled only once per year.
 
+With Managed Economy, years 1-4 replace normal reward revelation. The four top reward
+cards are revealed publicly and added to the Central Planner's hand. The Planner assigns
+one matching hand card to each crop's reward slot before choosing trump; Saboteur matches
+every crop and, if claimed as a reward, enters the claimant's revealed plot normally.
+The four offers remain public for the year, and the Planner skips their swap turn. Year 5
+uses the normal planning and swap flow. Managed Economy is mutually exclusive with Lotto
+Rewards and is unavailable with the 36-card deck or Northern Style.
+
 ## Phases
 
 ```text
@@ -97,6 +105,7 @@ The C `KCVariants` struct owns:
 - `pass_cards`
 - `highest_cards_requisition`
 - `lotto_rewards`
+- `managed_economy`
 
 ## Key State Mutations
 

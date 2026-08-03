@@ -699,4 +699,5 @@ TableState _copyTable(
   scoreboard: table.scoreboard,
   gameResult: table.gameResult,
   finalYearTrumpCard: table.finalYearTrumpCard,
+  managedRewardOffers: table.managedRewardOffers,
 );

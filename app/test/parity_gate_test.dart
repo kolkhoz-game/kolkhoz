@@ -114,6 +114,59 @@ actions=
     );
   });
 
+  test('managed economy publicly offers and assigns four rewards', () {
+    final bridge = KolkhozCEngineBridge();
+    final engine = bridge.newEngine(
+      seed: 20260803,
+      variants: const KolkhozGameVariants(
+        managedEconomy: true,
+        lottoRewards: true,
+      ),
+      controllers: const [
+        KolkhozPlayerController.human,
+        KolkhozPlayerController.human,
+        KolkhozPlayerController.human,
+        KolkhozPlayerController.human,
+      ],
+    );
+    try {
+      final planner = bridge.currentPlayer(engine);
+      expect(bridge.handCount(engine, planner), 5);
+
+      for (var suit = 0; suit < 4; suit += 1) {
+        final actions = bridge.legalActions(engine);
+        expect(actions, hasLength(1));
+        expect(actions.single.kind, kcActionRevealReward);
+        expect(actions.single.suit, suit);
+        expect(bridge.apply(engine, actions.single), 0);
+        expect(bridge.managedRewardOfferCard(engine, suit).isValid, isTrue);
+        expect(bridge.handCount(engine, planner), 6 + suit);
+      }
+
+      for (var suit = 0; suit < 4; suit += 1) {
+        final actions = bridge.legalActions(engine);
+        expect(actions, isNotEmpty);
+        expect(
+          actions.every((action) => action.kind == kcActionAssignReward),
+          isTrue,
+        );
+        expect(actions.every((action) => action.suit == suit), isTrue);
+        expect(bridge.apply(engine, actions.first), 0);
+        expect(bridge.hasRevealedJob(engine, suit), isTrue);
+      }
+
+      expect(bridge.handCount(engine, planner), 5);
+      expect(
+        bridge
+            .legalActions(engine)
+            .every((action) => action.kind == kcActionSetTrump),
+        isTrue,
+      );
+    } finally {
+      bridge.freeEngine(engine);
+    }
+  });
+
   test('policy AI submits an assignment prefilled for a single suit', () async {
     final bridge = KolkhozCEngineBridge();
     final policy = await KolkhozNativePolicyModel.loadAsset(
@@ -771,6 +824,7 @@ String variantsFingerprint(KolkhozGameVariants variants) {
     variants.passCards,
     variants.highestCardsRequisition,
     variants.lottoRewards,
+    variants.managedEconomy,
   ].join(':');
 }
 

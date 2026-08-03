@@ -53,6 +53,10 @@ class OnlineTableProjection {
       finalYearTrumpCard: snapshot.finalYearTrumpCard.isValid
           ? projectOnlineCard(snapshot.finalYearTrumpCard.valueObject)
           : null,
+      managedRewardOffers: [
+        for (final card in snapshot.managedRewardOffers)
+          if (card.isValid) projectOnlineCard(card.valueObject),
+      ],
     );
   }
 

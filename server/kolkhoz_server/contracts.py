@@ -45,6 +45,7 @@ DEFAULT_VARIANTS: JsonObject = {
     "passCards": False,
     "highestCardsRequisition": True,
     "lottoRewards": True,
+    "managedEconomy": False,
 }
 
 
@@ -59,7 +60,14 @@ def normalize_variants(value: object) -> JsonObject:
             result[key] = value[key]
     if not bool(result["wrecker"]):
         result["finalYearTrump"] = False
-    if int(result["deckType"]) == 36:
+    if (
+        int(result["deckType"]) == 36
+        or bool(result["northernStyle"])
+    ):
+        result["managedEconomy"] = False
+    if bool(result["managedEconomy"]):
+        result["lottoRewards"] = False
+    elif int(result["deckType"]) == 36:
         result["lottoRewards"] = False
     return result
 
@@ -81,6 +89,7 @@ def variants_native(variants: Mapping[str, object]) -> KCVariants:
         bool(variants["passCards"]),
         bool(variants["highestCardsRequisition"]),
         bool(variants["lottoRewards"]),
+        bool(variants["managedEconomy"]),
     )
 
 
@@ -262,6 +271,10 @@ def snapshot_json(
         ],
         "jobPiles": redacted_suit_cards(SUIT_COUNT),
         "revealedJobs": revealed_jobs_json(state),
+        "managedRewardOffers": [
+            card_to_json(state.managed_reward_offers[suit])
+            for suit in range(SUIT_COUNT)
+        ],
         "claimedJobs": [s for s in range(SUIT_COUNT) if bool(state.claimed_jobs[s])],
         "workHours": [
             {"suit": s, "value": engine.work_hours(pointer, s)}
