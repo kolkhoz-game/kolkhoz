@@ -61,15 +61,25 @@ Saboteur-specific behavior:
 - Saboteur can make any crop suit a legal assignment target because it matches every suit;
 - a job containing Saboteur can claim its reward at 40 hours, but requisition still treats
   that job as failed;
+- if a Hero of Socialist Labor has a Plot or Cellar card matching the crop of the
+  Saboteur's field, their single highest matching card is exiled despite Hero immunity;
 - a plot Saboteur matches any failed job, but the same card is exiled only once per year.
 
-With Managed Economy, years 1-4 replace normal reward revelation. The four top reward
-cards are revealed publicly and added to the Central Planner's hand. The Planner assigns
-one matching hand card to each crop's reward slot before choosing trump; Saboteur matches
-every crop and, if claimed as a reward, enters the claimant's revealed plot normally.
-The four offers remain public for the year, and the Planner skips their swap turn. Year 5
-uses the normal planning and swap flow. Managed Economy is mutually exclusive with Lotto
-Rewards and is unavailable with the 36-card deck or Northern Style.
+With Managed Economy, shuffle the four aces and deal one to each player's hidden plot at
+setup. The player holding the clubs/Wheat ace reveals it and becomes the first Central
+Planner. The remaining `2...5` reward cards support years 1-4: the four top rewards are
+revealed publicly in their reward slots. For each crop, the Planner may leave its reward
+unchanged or swap it with a matching-suit card from their hand; Saboteur matches every
+crop. These provisional swaps may be repeated or reversed. The Planner confirms the
+whole reward layout before choosing trump, and only then do the other players begin
+their plot swaps with the final rewards visible. A replaced reward enters the Planner's
+hand, so the hand remains at five cards. If
+Saboteur is claimed as a reward, it enters the claimant's revealed plot normally. The
+four original offers remain public for the year, and the Planner skips their swap turn.
+Year 5 has no reward cards and uses the normal swap flow. Because every player begins
+with an ace in their plot, the other three players may swap starting in year 1. Managed
+Economy is mutually exclusive with Lotto Rewards and is unavailable with the 36-card
+deck or Northern Style.
 
 ## Phases
 
@@ -159,7 +169,9 @@ For each failed job (`work_hours[suit] < 40`):
 
 A job containing Saboteur is processed as failed even when its work hours reached 40 and
 its reward was already claimed. Saboteur plot cards match every failed job, but the engine
-does not exile the same Saboteur card more than once in the same year.
+does not exile the same Saboteur card more than once in the same year. A Hero remains
+immune to ordinary requisition, but loses their single highest Plot or Cellar card of the
+Saboteur field's crop when one exists.
 
 Exiled cards are recorded immediately, then removed from plots when requisition continues.
 

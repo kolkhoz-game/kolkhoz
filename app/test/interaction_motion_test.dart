@@ -60,6 +60,7 @@ void main() {
   });
 
   testWidgets('mechanical panel switcher hands content across', (tester) async {
+    final semantics = tester.ensureSemantics();
     var panel = 0;
     late StateSetter setState;
 
@@ -80,15 +81,53 @@ void main() {
         ),
       ),
     );
+    expect(find.bySemanticsLabel('panel 0'), findsOneWidget);
 
     setState(() => panel = 1);
     await tester.pump();
     expect(find.text('panel 0'), findsOneWidget);
     expect(find.text('panel 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('panel 0'), findsNothing);
+    expect(find.bySemanticsLabel('panel 1'), findsOneWidget);
 
     await tester.pumpAndSettle();
     expect(find.text('panel 0'), findsNothing);
     expect(find.text('panel 1'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('interactive card flip exposes only its stable semantic node', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: InteractiveCardFlip(
+            concealedLabel: 'Hidden card',
+            revealedLabel: 'Visible card',
+            front: Semantics(
+              label: 'Front artwork',
+              child: SizedBox(width: 80, height: 120),
+            ),
+            back: Semantics(
+              label: 'Back artwork',
+              child: SizedBox(width: 80, height: 120),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.bySemanticsLabel('Hidden card'), findsOneWidget);
+    expect(find.bySemanticsLabel('Back artwork'), findsNothing);
+    await tester.tap(find.bySemanticsLabel('Hidden card'));
+    await tester.pump();
+    expect(find.bySemanticsLabel('Visible card'), findsOneWidget);
+    expect(find.bySemanticsLabel('Front artwork'), findsNothing);
+
+    semantics.dispose();
   });
 
   testWidgets('focused world dismiss uses tactile activation', (tester) async {

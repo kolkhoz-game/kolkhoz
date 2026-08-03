@@ -31,6 +31,7 @@ void main() {
     expect(requisitionMessage(2), 'No matching card found.');
     expect(requisitionMessage(3), 'Drunkard exiled.');
     expect(requisitionMessage(4), 'Protected from requisition.');
+    expect(requisitionMessage(5), 'Saboteur compromised the Hero.');
   });
 
   test('demo variant runs the normal five-year game', () {
@@ -58,7 +59,7 @@ void main() {
           openingFingerprint(model),
           '''
 year=1 phase=planning current=2 trump=null viewer=0 privacy=none
-seats=0:human:hand=beet-8,potato-13,sunflower-7,sunflower-8,wheat-8:hidden=0:score=0|1:heuristicAI:hand=beet-10,potato-8,sunflower-11,sunflower-12,sunflower-9:hidden=5:score=0|2:heuristicAI:hand=beet-11,beet-6,beet-7,sunflower-6,wheat-11:hidden=5:score=0|3:heuristicAI:hand=beet-13,sunflower-10,wheat-10,wheat-13,wheat-9:hidden=5:score=0
+seats=0:human:hand=beet-9,potato-10,sunflower-11,wheat-11,wheat-6:hidden=0:score=0|1:heuristicAI:hand=beet-10,beet-12,beet-13,beet-7,sunflower-13:hidden=5:score=0|2:heuristicAI:hand=potato-6,potato-8,potato-9,sunflower-10,sunflower-9:hidden=5:score=1|3:heuristicAI:hand=potato-12,sunflower-6,wheat-10,wheat-13,wheat-9:hidden=5:score=0
 jobs=beet:none:0:false|potato:none:0:false|sunflower:none:0:false|wheat:none:0:false
 actions=
 '''
@@ -87,34 +88,26 @@ actions=
           expect(bridge.applyAIAction(engine, revealAction), 0);
         }
 
+        final confirmRewardsAction = bridge.heuristicAction(engine);
+        expect(confirmRewardsAction, isNotNull);
+        expect(confirmRewardsAction!.kind, kcActionConfirmRewardSwaps);
+        expect(bridge.applyAIAction(engine, confirmRewardsAction), 0);
+
         final trumpAction = bridge.heuristicAction(engine);
         expect(trumpAction, isNotNull);
         expect(trumpAction!.kind, kcActionSetTrump);
         expect(bridge.applyAIAction(engine, trumpAction), 0);
 
         model = project(bridge, engine);
-        expect(model.table.phase, phaseTrick);
-        expect(model.table.currentPlayerID, 3);
-        expect(model.table.trump, 'beet');
-        expect(model.table.trick.plays, isEmpty);
-
-        final cardAction = bridge.heuristicAction(engine);
-        expect(cardAction, isNotNull);
-        expect(cardAction!.kind, kcActionPlayCard);
-        expect(bridge.applyAIAction(engine, cardAction), 0);
-
-        model = project(bridge, engine);
+        expect(model.table.phase, phaseSwap);
         expect(model.table.currentPlayerID, 0);
-        expect(model.table.trick.plays, hasLength(1));
-        expect(
-          model.table.trick.winnerSeatID,
-          model.table.trick.plays.single.seatID,
-        );
+        expect(model.table.trump, 'potato');
+        expect(model.table.trick.plays, isEmpty);
       },
     );
   });
 
-  test('managed economy publicly offers and assigns four rewards', () {
+  test('managed economy publicly offers and swaps four rewards', () {
     final bridge = KolkhozCEngineBridge();
     final engine = bridge.newEngine(
       seed: 20260803,
@@ -132,6 +125,32 @@ actions=
     try {
       final planner = bridge.currentPlayer(engine);
       expect(bridge.handCount(engine, planner), 5);
+      final dealtAces = <String>[];
+      for (var playerID = 0; playerID < 4; playerID += 1) {
+        for (
+          var index = 0;
+          index < bridge.plotHiddenCount(engine, playerID);
+          index += 1
+        ) {
+          final card = bridge.plotHiddenCard(engine, playerID, index);
+          if (card.value == 1) dealtAces.add('${card.suit}:hidden');
+        }
+        for (
+          var index = 0;
+          index < bridge.plotRevealedCount(engine, playerID);
+          index += 1
+        ) {
+          final card = bridge.plotRevealedCard(engine, playerID, index);
+          if (card.value == 1) dealtAces.add('${card.suit}:revealed');
+        }
+      }
+      expect(dealtAces..sort(), [
+        '0:revealed',
+        '1:hidden',
+        '2:hidden',
+        '3:hidden',
+      ]);
+      expect(bridge.plotRevealedCard(engine, planner, 0).suit, 0);
 
       for (var suit = 0; suit < 4; suit += 1) {
         final actions = bridge.legalActions(engine);
@@ -140,20 +159,62 @@ actions=
         expect(actions.single.suit, suit);
         expect(bridge.apply(engine, actions.single), 0);
         expect(bridge.managedRewardOfferCard(engine, suit).isValid, isTrue);
-        expect(bridge.handCount(engine, planner), 6 + suit);
+        expect(bridge.handCount(engine, planner), 5);
       }
 
-      for (var suit = 0; suit < 4; suit += 1) {
-        final actions = bridge.legalActions(engine);
-        expect(actions, isNotEmpty);
+      final provisionalActions = bridge.legalActions(engine);
+      expect(provisionalActions, isNotEmpty);
+      expect(
+        provisionalActions.every(
+          (action) =>
+              action.kind == kcActionAssignReward ||
+              action.kind == kcActionConfirmRewardSwaps,
+        ),
+        isTrue,
+      );
+      expect(
+        provisionalActions.where(
+          (action) => action.kind == kcActionConfirmRewardSwaps,
+        ),
+        hasLength(1),
+      );
+      expect(
+        List.generate(4, (suit) => bridge.hasRevealedJob(engine, suit)),
+        everyElement(isTrue),
+      );
+
+      final rewardSwaps = provisionalActions
+          .where((action) => action.kind == kcActionAssignReward)
+          .toList();
+      if (rewardSwaps.isNotEmpty) {
+        final swap = rewardSwaps.first;
+        final outgoingReward = bridge.revealedJobCard(engine, swap.suit);
+        expect(bridge.apply(engine, swap), 0);
+        expect(bridge.handCount(engine, planner), 5);
+        final reverseSwap = bridge
+            .legalActions(engine)
+            .singleWhere(
+              (action) =>
+                  action.kind == kcActionAssignReward &&
+                  action.suit == swap.suit &&
+                  action.card.suit == outgoingReward.suit &&
+                  action.card.value == outgoingReward.value,
+            );
+        expect(bridge.apply(engine, reverseSwap), 0);
+        expect(bridge.handCount(engine, planner), 5);
         expect(
-          actions.every((action) => action.kind == kcActionAssignReward),
-          isTrue,
+          bridge.revealedJobCard(engine, swap.suit).suit,
+          outgoingReward.suit,
         );
-        expect(actions.every((action) => action.suit == suit), isTrue);
-        expect(bridge.apply(engine, actions.first), 0);
-        expect(bridge.hasRevealedJob(engine, suit), isTrue);
+        expect(
+          bridge.revealedJobCard(engine, swap.suit).value,
+          outgoingReward.value,
+        );
       }
+      final confirmRewards = bridge
+          .legalActions(engine)
+          .singleWhere((action) => action.kind == kcActionConfirmRewardSwaps);
+      expect(bridge.apply(engine, confirmRewards), 0);
 
       expect(bridge.handCount(engine, planner), 5);
       expect(
@@ -162,6 +223,11 @@ actions=
             .every((action) => action.kind == kcActionSetTrump),
         isTrue,
       );
+      expect(bridge.apply(engine, bridge.legalActions(engine).first), 0);
+      expect(bridge.phase(engine), kcPhaseSwap);
+      expect(bridge.year(engine), 1);
+      expect(bridge.swapConfirmed(engine, planner), isTrue);
+      expect(bridge.currentPlayer(engine), isNot(planner));
     } finally {
       bridge.freeEngine(engine);
     }
@@ -213,7 +279,10 @@ actions=
               break;
             }
 
-            final action = legalActions.first;
+            final action = legalActions.firstWhere(
+              (action) => action.kind == kcActionConfirmRewardSwaps,
+              orElse: () => legalActions.first,
+            );
             expect(bridge.applyAIAction(engine, action), 0);
           }
         } finally {
@@ -227,12 +296,15 @@ actions=
     expect(foundPrefilledAssignment, isTrue);
   });
 
-  test('kolkhoz default deals a 0-value all-suit saboteur card', () {
+  test('kolkhoz deals a 0-value all-suit saboteur card', () {
     final bridge = KolkhozCEngineBridge();
     for (var seed = 1; seed < 5000; seed += 1) {
       final engine = bridge.newEngine(
         seed: seed,
-        variants: KolkhozGameVariants.kolkhoz,
+        variants: KolkhozGameVariants.kolkhoz.copyWith(
+          managedEconomy: false,
+          lottoRewards: true,
+        ),
         controllers: const [...fixtureControllers],
       );
       try {
@@ -265,59 +337,63 @@ actions=
   });
 
   test('saboteur job can pay reward but still fails during requisition', () {
-    withEngine(seed: 1, variants: KolkhozGameVariants.kolkhoz, (
-      bridge,
-      engine,
-    ) {
-      var model = project(bridge, engine);
-      final currentRewardsBySuit = <String, String>{};
-      var appliedActions = 0;
+    withEngine(
+      seed: 1,
+      variants: KolkhozGameVariants.kolkhoz.copyWith(
+        managedEconomy: false,
+        lottoRewards: true,
+      ),
+      (bridge, engine) {
+        var model = project(bridge, engine);
+        final currentRewardsBySuit = <String, String>{};
+        var appliedActions = 0;
 
-      while (model.table.phase != phaseGameOver && appliedActions < 500) {
-        model = drainAutomaticPhases(bridge, engine, model);
-        if (model.table.phase == phaseGameOver) break;
-        for (final job in model.table.jobs) {
-          final reward = job.reward;
-          if (reward != null) {
-            currentRewardsBySuit[job.suit] = reward.id;
+        while (model.table.phase != phaseGameOver && appliedActions < 500) {
+          model = drainAutomaticPhases(bridge, engine, model);
+          if (model.table.phase == phaseGameOver) break;
+          for (final job in model.table.jobs) {
+            final reward = job.reward;
+            if (reward != null) {
+              currentRewardsBySuit[job.suit] = reward.id;
+            }
           }
-        }
-        final wreckerJobs = model.table.jobs.where(
-          (job) => job.assignedCards.any(
-            (card) => card.suit == wreckerSuit && card.value == 0,
-          ),
-        );
-        if (model.table.phase == phaseRequisition && wreckerJobs.isNotEmpty) {
-          final wreckerJob = wreckerJobs.single;
-          final rewardID = currentRewardsBySuit[wreckerJob.suit];
-
-          expect(wreckerJob.claimed, isTrue);
-          expect(wreckerJob.hours, greaterThanOrEqualTo(40));
-          expect(rewardID, isNotNull);
-          expect(
-            model.table.seats.any(
-              (seat) => seat.plot.revealed.any((card) => card.id == rewardID),
+          final wreckerJobs = model.table.jobs.where(
+            (job) => job.assignedCards.any(
+              (card) => card.suit == wreckerSuit && card.value == 0,
             ),
-            isTrue,
           );
-          expect(
-            model.table.requisitionEvents.any(
-              (event) => event.suit == wreckerJob.suit,
-            ),
-            isTrue,
-          );
-          return;
-        }
-        final action = deterministicAction(model);
-        final cAction = cEngineAction(action.engineAction);
-        expect(cAction, isNotNull);
-        expect(bridge.apply(engine, cAction!), 0);
-        appliedActions += 1;
-        model = project(bridge, engine);
-      }
+          if (model.table.phase == phaseRequisition && wreckerJobs.isNotEmpty) {
+            final wreckerJob = wreckerJobs.single;
+            final rewardID = currentRewardsBySuit[wreckerJob.suit];
 
-      fail('Seed did not reach a Saboteur job requisition.');
-    });
+            expect(wreckerJob.claimed, isTrue);
+            expect(wreckerJob.hours, greaterThanOrEqualTo(40));
+            expect(rewardID, isNotNull);
+            expect(
+              model.table.seats.any(
+                (seat) => seat.plot.revealed.any((card) => card.id == rewardID),
+              ),
+              isTrue,
+            );
+            expect(
+              model.table.requisitionEvents.any(
+                (event) => event.suit == wreckerJob.suit,
+              ),
+              isTrue,
+            );
+            return;
+          }
+          final action = deterministicAction(model);
+          final cAction = cEngineAction(action.engineAction);
+          expect(cAction, isNotNull);
+          expect(bridge.apply(engine, cAction!), 0);
+          appliedActions += 1;
+          model = project(bridge, engine);
+        }
+
+        fail('Seed did not reach a Saboteur job requisition.');
+      },
+    );
   });
 
   test('saboteur plot card is exiled once during requisition', () {
@@ -359,27 +435,31 @@ actions=
   });
 
   test('manual apply leaves automatic AI turns for explicit engine steps', () {
-    withEngine(seed: 20260703, variants: KolkhozGameVariants.kolkhoz, (
-      bridge,
-      engine,
-    ) {
-      var model = project(bridge, engine);
-      final initialTrickCount = model.table.trick.plays.length;
-      final action = deterministicAction(model);
-      final cAction = cEngineAction(action.engineAction);
-      expect(cAction, isNotNull);
+    withEngine(
+      seed: 20260703,
+      variants: KolkhozGameVariants.kolkhoz.copyWith(
+        managedEconomy: false,
+        lottoRewards: true,
+      ),
+      (bridge, engine) {
+        var model = project(bridge, engine);
+        final initialTrickCount = model.table.trick.plays.length;
+        final action = deterministicAction(model);
+        final cAction = cEngineAction(action.engineAction);
+        expect(cAction, isNotNull);
 
-      expect(bridge.applyManual(engine, cAction!), 0);
-      model = project(bridge, engine);
-      expect(model.table.trick.plays.length, initialTrickCount + 1);
-      expect(model.table.currentPlayerID, 1);
-      expect(model.legalActions, isEmpty);
+        expect(bridge.applyManual(engine, cAction!), 0);
+        model = project(bridge, engine);
+        expect(model.table.trick.plays.length, initialTrickCount + 1);
+        expect(model.table.currentPlayerID, 1);
+        expect(model.legalActions, isEmpty);
 
-      expect(bridge.stepAutomatic(engine), 1);
-      model = project(bridge, engine);
-      expect(model.table.trick.plays.length, initialTrickCount + 2);
-      expect(model.table.currentPlayerID, 2);
-    });
+        expect(bridge.stepAutomatic(engine), 1);
+        model = project(bridge, engine);
+        expect(model.table.trick.plays.length, initialTrickCount + 2);
+        expect(model.table.currentPlayerID, 2);
+      },
+    );
   });
 
   test(
@@ -410,9 +490,9 @@ actions=
         expect(
           gameOverFingerprint(model, appliedActions),
           '''
-actions=44 winner=3
-scores=0:visible=3:final=24|1:visible=15:final=28|2:visible=4:final=17|3:visible=6:final=30
-exiled=1:beet-2,potato-1,wrecker-0|2:beet-4,beet-7,beet-8,potato-2|3:beet-1,beet-10,beet-13,sunflower-10,wheat-2,wheat-3,wheat-4|4:beet-3,beet-6,sunflower-1,sunflower-13,sunflower-4,sunflower-5,sunflower-7,sunflower-9|5:sunflower-2,sunflower-8,wheat-1,wheat-10,wheat-13
+actions=67 winner=3
+scores=0:visible=8:final=33|1:visible=0:final=8|2:visible=0:final=0|3:visible=4:final=35
+exiled=1:beet-1,beet-4|2:beet-5,potato-11,potato-4,potato-5|3:beet-2,beet-6,potato-12,potato-13,potato-2,sunflower-1,sunflower-10,sunflower-11,sunflower-3,sunflower-5,sunflower-6|4:potato-3,potato-6,sunflower-2,sunflower-4,sunflower-7,sunflower-8|5:beet-13,beet-3,wheat-1,wheat-13,wheat-2,wheat-9
 '''
               .trim(),
         );
@@ -757,6 +837,7 @@ int actionPriority(LegalAction action) {
     actionSubmitAssignments => 0,
     actionContinueAfterRequisition => 0,
     actionConfirmSwap => 0,
+    actionConfirmRewardSwaps => 0,
     actionSetTrump => 1,
     actionPlayCard => 1,
     actionAssign => 1,

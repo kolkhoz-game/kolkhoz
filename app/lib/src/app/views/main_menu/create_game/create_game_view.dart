@@ -1311,6 +1311,9 @@ class _FieldPlanVariantLedger extends StatelessWidget {
     if (identical(row, VariantRowData.lottoRewards)) {
       return fieldPlanVariantLottoRewards;
     }
+    if (identical(row, VariantRowData.managedEconomy)) {
+      return fieldPlanVariantFiveYearPlanFourYears;
+    }
     if (identical(row, VariantRowData.accumulateJobs)) {
       return fieldPlanVariantStakhanovite;
     }

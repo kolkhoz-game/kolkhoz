@@ -58,12 +58,18 @@ bool sameVariants(KolkhozGameVariants left, KolkhozGameVariants right) {
       left.finalYearTrump == right.finalYearTrump &&
       left.passCards == right.passCards &&
       left.highestCardsRequisition == right.highestCardsRequisition &&
-      left.lottoRewards == right.lottoRewards;
+      left.lottoRewards == right.lottoRewards &&
+      left.managedEconomy == right.managedEconomy;
 }
 
 KolkhozGameVariants migrateLegacyKolkhozVariants(KolkhozGameVariants variants) {
-  final legacyKolkhoz = KolkhozGameVariants.kolkhoz.copyWith(passCards: true);
-  return sameVariants(variants, legacyKolkhoz)
+  final legacyLottoKolkhoz = KolkhozGameVariants.kolkhoz.copyWith(
+    lottoRewards: true,
+    managedEconomy: false,
+  );
+  final legacyPassingKolkhoz = legacyLottoKolkhoz.copyWith(passCards: true);
+  return sameVariants(variants, legacyLottoKolkhoz) ||
+          sameVariants(variants, legacyPassingKolkhoz)
       ? KolkhozGameVariants.kolkhoz
       : variants;
 }

@@ -44,8 +44,8 @@ DEFAULT_VARIANTS: JsonObject = {
     "finalYearTrump": True,
     "passCards": False,
     "highestCardsRequisition": True,
-    "lottoRewards": True,
-    "managedEconomy": False,
+    "lottoRewards": False,
+    "managedEconomy": True,
 }
 
 
@@ -491,6 +491,7 @@ def requisition_message(kind: int) -> str:
         2: "No matching card found.",
         3: "Drunkard exiled.",
         4: "Protected from requisition.",
+        5: "Saboteur compromised the Hero.",
     }.get(kind, "Requisition resolved.")
 
 

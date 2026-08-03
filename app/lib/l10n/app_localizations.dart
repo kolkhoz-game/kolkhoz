@@ -365,13 +365,13 @@ abstract class AppLocalizations {
   /// No description provided for @variantManagedEconomyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Managed Economy'**
+  /// **'Five Year Plan in Four Years'**
   String get variantManagedEconomyTitle;
 
   /// No description provided for @variantManagedEconomyDescription.
   ///
   /// In en, this message translates to:
-  /// **'In years 1–4, reveal the four rewards into the Central Planner’s hand; they assign one hand card to each job and skip swapping.'**
+  /// **'Deal each player a hidden ace; the clubs ace chooses the first Planner. In years 1–4, the Planner may provisionally swap public rewards with matching hand cards, confirms the layout, then chooses trump. The Planner skips the player swap while everyone else may swap from year 1. Year 5 has no rewards.'**
   String get variantManagedEconomyDescription;
 
   /// No description provided for @variantDemoModeTitle.

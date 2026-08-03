@@ -88,37 +88,46 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
     final previousCards = cardMotionCards(previousModel);
     final nextCards = cardMotionCards(nextModel);
     final event = widget.transition?.event;
-    final eventCardID = motionEventCardID(event);
-    final explicitFromZone = event == null || eventCardID == null
-        ? null
-        : motionZoneForEngineTransition(
-            zone: event.fromZone,
-            owner: event.fromOwner,
-            targetSuit: event.targetSuit,
-          );
-    final explicitToZone = event == null || eventCardID == null
-        ? null
-        : motionZoneForEngineTransition(
-            zone: event.toZone,
-            owner: event.toOwner,
-            targetSuit: event.targetSuit,
-          );
-    final provisionalPreviousZone = eventCardID == null
-        ? null
-        : provisionalTrickCardMotionZone(previousModel, eventCardID);
-    final effectiveFromZone = provisionalPreviousZone ?? explicitFromZone;
-    final previousZones = event == null
+    final transitionEvents = widget.transition?.events.isNotEmpty == true
+        ? widget.transition!.events
+        : [?event];
+    final explicitPreviousZones = <String, MotionZone>{};
+    final explicitNextZones = <String, MotionZone>{};
+    for (final transitionEvent in transitionEvents) {
+      final cardID = motionEventCardID(transitionEvent);
+      if (cardID == null) {
+        continue;
+      }
+      final fromZone = motionZoneForEngineTransition(
+        zone: transitionEvent.fromZone,
+        owner: transitionEvent.fromOwner,
+        targetSuit: transitionEvent.targetSuit,
+        phase: previousModel.table.phase,
+      );
+      final toZone = motionZoneForEngineTransition(
+        zone: transitionEvent.toZone,
+        owner: transitionEvent.toOwner,
+        targetSuit: transitionEvent.targetSuit,
+        phase: nextModel.table.phase,
+      );
+      final provisionalPreviousZone = provisionalTrickCardMotionZone(
+        previousModel,
+        cardID,
+      );
+      final effectiveFromZone = provisionalPreviousZone ?? fromZone;
+      if (effectiveFromZone != null) {
+        explicitPreviousZones[cardID] = effectiveFromZone;
+      }
+      if (toZone != null) {
+        explicitNextZones[cardID] = toZone;
+      }
+    }
+    final previousZones = transitionEvents.isEmpty
         ? cardMotionZones(previousModel)
-        : <String, MotionZone>{
-            if (eventCardID != null && effectiveFromZone != null)
-              eventCardID: effectiveFromZone,
-          };
-    final nextZones = event == null
+        : explicitPreviousZones;
+    final nextZones = transitionEvents.isEmpty
         ? cardMotionZones(nextModel)
-        : {
-            if (eventCardID != null && explicitToZone != null)
-              eventCardID: explicitToZone,
-          };
+        : explicitNextZones;
     final previousGeometry = MotionGeometry(_controller.previousRects);
     final transitionID = widget.transition?.id;
     final assignmentCardIDs = List<String>.of(
@@ -168,7 +177,7 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
           suppressedCardIDs: suppressedCardIDs,
           presentedAssignmentCardIDs: _presentedAssignmentCardIDs,
           initialFlightID: _nextFlightID,
-          explicitTransition: event != null,
+          explicitTransition: transitionEvents.isNotEmpty,
         ),
       );
       _nextFlightID = plan.nextFlightID;
@@ -312,27 +321,30 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
         children: [
           widget.child,
           Positioned.fill(
-            child: IgnorePointer(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  for (final flight in _flights)
-                    FlyingCard(
-                      key: ValueKey(flight.id),
-                      flight: flight,
-                      tokens: widget.tokens,
-                      trump: widget.model.table.trump,
-                      duration: _motion.cardFlightDuration,
-                      visible: _flightVisibleOnPanel(
-                        flight,
-                        widget.model.panels.active,
+            child: ExcludeSemantics(
+              child: IgnorePointer(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (final flight in _flights)
+                      FlyingCard(
+                        key: ValueKey(flight.id),
+                        flight: flight,
+                        tokens: widget.tokens,
+                        trump: widget.model.table.trump,
+                        duration: _motion.cardFlightDuration,
+                        visible: _flightVisibleOnPanel(
+                          flight,
+                          widget.model.panels.active,
+                        ),
+                        winningTrick:
+                            flight.destinationZone.kind ==
+                                MotionZoneKind.trick &&
+                            flight.card.id == winningTrickCardID,
+                        onDone: () => _landFlight(flight.id),
                       ),
-                      winningTrick:
-                          flight.destinationZone.kind == MotionZoneKind.trick &&
-                          flight.card.id == winningTrickCardID,
-                      onDone: () => _landFlight(flight.id),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -353,6 +365,7 @@ MotionZone? motionZoneForEngineTransition({
   required int zone,
   required int owner,
   required int targetSuit,
+  required String phase,
 }) {
   final suit = engineSuitName(targetSuit);
   return switch (zone) {
@@ -360,7 +373,10 @@ MotionZone? motionZoneForEngineTransition({
     kcObjectZonePlotRevealed when owner >= 0 => MotionZone.plotRevealed(owner),
     kcObjectZonePlotHidden when owner >= 0 => MotionZone.plotHidden(owner),
     kcObjectZoneJobPile when suit != null => MotionZone.rewardReveal(suit),
-    kcObjectZoneRevealedJob when suit != null => MotionZone.reward(suit),
+    kcObjectZoneRevealedJob when suit != null =>
+      phase == phasePlanning
+          ? MotionZone.rewardReveal(suit)
+          : MotionZone.reward(suit),
     kcObjectZoneCurrentTrick ||
     kcObjectZoneLastTrick when owner >= 0 => MotionZone.trick(owner),
     kcObjectZoneJobBucket when suit != null => MotionZone.job(suit),

@@ -260,7 +260,9 @@ class MechanicalPanelSwitcher extends StatelessWidget {
       switchInCurve: Curves.linear,
       switchOutCurve: Curves.linear,
       layoutBuilder: (currentChild, previousChildren) {
-        final children = <Widget>[...previousChildren];
+        final children = <Widget>[
+          for (final child in previousChildren) ExcludeSemantics(child: child),
+        ];
         if (currentChild case final child?) {
           children.add(child);
         }

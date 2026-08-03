@@ -65,6 +65,12 @@ class FlyingCard extends StatelessWidget {
         final entersJobGauge = isJobGaugeInsertionFlight(flight);
         final rect = entersJobGauge
             ? jobGaugeFlightRectAt(flight, rawFlightProgress)
+            : flight.rewardExchange
+            ? managedRewardExchangeRectAt(
+                flight.from,
+                flight.to,
+                flightProgress,
+              )
             : cardFlightRectAt(flight.from, flight.to, flightProgress);
         final card = _flyingCardFace(
           faceDown:
@@ -101,6 +107,20 @@ class FlyingCard extends StatelessWidget {
             child: Transform.rotate(
               angle: jobGaugeEntryAngle(flight, rawFlightProgress),
               alignment: Alignment.center,
+              child: presentedCard,
+            ),
+          );
+        }
+        if (flight.rewardExchange) {
+          final emphasis = math.sin(math.pi * rawFlightProgress);
+          final direction =
+              flight.destinationZone.kind == MotionZoneKind.rewardReveal
+              ? 1.0
+              : -1.0;
+          presentedCard = Transform.rotate(
+            angle: direction * 0.09 * emphasis,
+            child: Transform.scale(
+              scale: 1 + 0.12 * emphasis,
               child: presentedCard,
             ),
           );
@@ -248,6 +268,26 @@ Rect cardFlightRectAt(Rect from, Rect to, double progress) {
   final arcOffset = -4 * arcHeight * clamped * (1 - clamped);
   return Rect.fromCenter(
     center: linearCenter.translate(0, arcOffset),
+    width: width,
+    height: height,
+  );
+}
+
+Rect managedRewardExchangeRectAt(Rect from, Rect to, double progress) {
+  final clamped = progress.clamp(0.0, 1.0);
+  final width = lerpDouble(from.width, to.width, clamped)!;
+  final height = lerpDouble(from.height, to.height, clamped)!;
+  final linearCenter = Offset.lerp(from.center, to.center, clamped)!;
+  final delta = to.center - from.center;
+  final distance = delta.distance;
+  if (distance == 0) {
+    return Rect.fromCenter(center: linearCenter, width: width, height: height);
+  }
+  final normal = Offset(-delta.dy / distance, delta.dx / distance);
+  final arcHeight = math.min(120.0, distance * 0.3);
+  final arc = 4 * arcHeight * clamped * (1 - clamped);
+  return Rect.fromCenter(
+    center: linearCenter + normal * arc,
     width: width,
     height: height,
   );

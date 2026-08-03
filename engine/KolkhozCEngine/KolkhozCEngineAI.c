@@ -235,7 +235,10 @@ static int32_t kc_benchmark_assignment_card_score(
         (planned_wrecker && planned_wrecker[target]);
     int32_t revealed_value = engine->has_revealed_job[target] ?
         engine->revealed_jobs[target].value : 0;
-    int32_t risk = kc_benchmark_plot_risk_count(engine, player_id, target);
+    bool completed_job_stays_safe = engine->claimed_jobs[target] &&
+        !has_wrecker && !kc_card_is_wrecker(card);
+    int32_t risk = completed_job_stays_safe ? 0 :
+        kc_benchmark_plot_risk_count(engine, player_id, target);
 
     if (kc_card_is_wrecker(card)) {
         int32_t score = 0;
@@ -328,8 +331,17 @@ static void kc_benchmark_assignment_plan(const KCEngine *engine, int32_t player_
     }
     int32_t legal_suits[KC_SUIT_COUNT];
     int32_t legal_count = 0;
+    bool has_unclaimed_legal_suit = false;
     for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-        if (kc_assignment_target_legal(engine, suit)) {
+        if (kc_assignment_target_legal(engine, suit) &&
+            !engine->claimed_jobs[suit]) {
+            has_unclaimed_legal_suit = true;
+            break;
+        }
+    }
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        if (kc_assignment_target_legal(engine, suit) &&
+            (!has_unclaimed_legal_suit || !engine->claimed_jobs[suit])) {
             legal_suits[legal_count++] = suit;
         }
     }
@@ -493,6 +505,7 @@ static int32_t kc_benchmark_action_score(const KCEngine *engine, KCAction action
     case KC_ACTION_ASSIGN:
         return 1000 + kc_benchmark_assignment_score(engine, action);
     case KC_ACTION_CONFIRM_SWAP:
+    case KC_ACTION_CONFIRM_REWARD_SWAPS:
     case KC_ACTION_SUBMIT_ASSIGNMENTS:
     case KC_ACTION_CONTINUE_AFTER_REQUISITION:
         return 900;
@@ -502,6 +515,9 @@ static int32_t kc_benchmark_action_score(const KCEngine *engine, KCAction action
 }
 
 bool kc_choose_benchmark_action(const KCEngine *engine, const KCAction *actions, int32_t count, KCAction *selected) {
+    if (kc_choose_managed_economy_action(engine, actions, count, selected)) {
+        return true;
+    }
     bool has_swap = false;
     KCAction best_swap = {0};
     int32_t best_swap_score = 0;
@@ -526,6 +542,12 @@ bool kc_choose_benchmark_action(const KCEngine *engine, const KCAction *actions,
 
     for (int32_t i = 0; i < count; i++) {
         if (actions[i].kind == KC_ACTION_SUBMIT_ASSIGNMENTS) {
+            *selected = actions[i];
+            return true;
+        }
+    }
+    for (int32_t i = 0; i < count; i++) {
+        if (actions[i].kind == KC_ACTION_CONFIRM_REWARD_SWAPS) {
             *selected = actions[i];
             return true;
         }
@@ -2247,17 +2269,17 @@ bool kc_engine_policy_action_with_workspace(const KCEngine *engine, KCPolicyMode
         !kc_controller_is_policy(engine->controllers.seats[player_id])) {
         return false;
     }
-    KCAction legal_actions[4];
-    int32_t legal_count = kc_engine_legal_actions(engine, legal_actions, 4);
+    KCAction legal_actions[256];
+    int32_t legal_count = kc_engine_legal_actions(engine, legal_actions, 256);
     if (legal_count == 1 &&
         (legal_actions[0].kind == KC_ACTION_REVEAL_REWARD ||
          legal_actions[0].kind == KC_ACTION_REVEAL_TRUMP)) {
         *selected = legal_actions[0];
         return true;
     }
-    if (engine->phase == KC_PHASE_PLANNING &&
-        legal_count > 0 &&
-        legal_actions[0].kind == KC_ACTION_ASSIGN_REWARD) {
+    if (engine->phase == KC_PHASE_PLANNING && legal_count > 0 &&
+        (legal_actions[0].kind == KC_ACTION_ASSIGN_REWARD ||
+         legal_actions[0].kind == KC_ACTION_CONFIRM_REWARD_SWAPS)) {
         return kc_engine_heuristic_action(engine, selected);
     }
     if (engine->phase == KC_PHASE_PLANNING && engine->is_famine) {

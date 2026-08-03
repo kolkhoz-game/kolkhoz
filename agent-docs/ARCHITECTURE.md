@@ -298,6 +298,8 @@ instead of defining local animation durations.
 ## AI And Training
 
 Runtime heuristic AI is deterministic for a given seed and implemented in the C engine.
+Managed Economy reward swaps use the dedicated
+`KolkhozCEngineManagedEconomyAI.c` heuristic before the general action scorer.
 Research models train and evaluate against C-engine simulations. Do not add a parallel
 Dart or Python rules implementation.
 

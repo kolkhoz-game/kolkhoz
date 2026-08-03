@@ -42,6 +42,8 @@ class ContractNormalizationTests(unittest.TestCase):
         self.assertFalse(native.allow_swap)
         self.assertFalse(native.pass_cards)
         self.assertTrue(native.wrecker)
+        self.assertTrue(native.managed_economy)
+        self.assertFalse(native.lotto_rewards)
 
     def test_passing_remains_available_as_an_explicit_custom_variant(self) -> None:
         normalized = normalize_variants({"passCards": True})
@@ -196,7 +198,7 @@ class ProjectionContractTests(unittest.TestCase):
             },
         )
 
-    def test_managed_economy_reveals_then_assigns_rewards_from_the_planners_hand(
+    def test_managed_economy_reveals_then_swaps_rewards_with_the_planners_hand(
         self,
     ) -> None:
         variants = variants_native(
@@ -211,6 +213,34 @@ class ProjectionContractTests(unittest.TestCase):
             state = self.engine.snapshot(pointer)
             planner = int(state.trump_selector)
             self.assertEqual(state.players[planner].hand.count, 5)
+            dealt_aces: list[tuple[int, int]] = []
+            for player_id in range(4):
+                player = state.players[player_id]
+                dealt_aces.extend(
+                    (player.plot_hidden.cards[index].suit, 0)
+                    for index in range(player.plot_hidden.count)
+                    if player.plot_hidden.cards[index].value == 1
+                )
+                dealt_aces.extend(
+                    (player.plot_revealed.cards[index].suit, 1)
+                    for index in range(player.plot_revealed.count)
+                    if player.plot_revealed.cards[index].value == 1
+                )
+            self.assertEqual(
+                sorted(dealt_aces),
+                [(0, 1), (1, 0), (2, 0), (3, 0)],
+            )
+            self.assertEqual(state.players[planner].plot_revealed.cards[0].suit, 0)
+            self.assertTrue(
+                all(
+                    sorted(
+                        state.job_piles[suit].cards[index].value
+                        for index in range(state.job_piles[suit].count)
+                    )
+                    == [2, 3, 4, 5]
+                    for suit in range(4)
+                )
+            )
 
             for suit in range(4):
                 actions = self.engine.legal_actions(pointer)
@@ -219,7 +249,7 @@ class ProjectionContractTests(unittest.TestCase):
                 self.engine.apply_action(pointer, actions[0])
 
             state = self.engine.snapshot(pointer)
-            self.assertEqual(state.players[planner].hand.count, 9)
+            self.assertEqual(state.players[planner].hand.count, 5)
             self.assertTrue(
                 all(state.managed_reward_offers[suit].suit == suit for suit in range(4))
             )
@@ -229,48 +259,107 @@ class ProjectionContractTests(unittest.TestCase):
                 [0, 1, 2, 3],
             )
             self.assertEqual(public["players"][planner]["hand"], [])
-
-            for suit in range(4):
-                if suit == 0:
-                    state.players[planner].hand.cards[0] = KCCard(4, 0)
-                actions = self.engine.legal_actions(pointer)
-                self.assertTrue(actions)
-                self.assertTrue(
-                    all(action.kind == 15 and action.suit == suit for action in actions)
-                )
-                selected = next(
-                    (
-                        action
-                        for action in actions
-                        if suit == 0 and action.card.suit == 4
-                    ),
-                    actions[0],
-                )
-                self.engine.apply_action(pointer, selected)
-                if suit == 0:
-                    state = self.engine.snapshot(pointer)
-                    self.assertEqual(
-                        (state.revealed_jobs[0].suit, state.revealed_jobs[0].value),
-                        (4, 0),
+            self.assertEqual(
+                public["players"][planner]["revealedPlot"],
+                [{"suit": 0, "value": 1}],
+            )
+            viewer = (planner + 1) % 4
+            self.assertTrue(
+                all(
+                    public["players"][player_id]["hiddenPlotCount"] == 1
+                    and (
+                        len(public["players"][player_id]["hiddenPlot"]) == 1
+                        if player_id == viewer
+                        else public["players"][player_id]["hiddenPlot"] == []
                     )
+                    for player_id in range(4)
+                    if player_id != planner
+                )
+            )
+
+            # All four reward slots are live at once, while keeping every
+            # revealed offer unchanged remains the default provisional layout.
+            state.players[planner].hand.cards[0] = KCCard(4, 0)
+            actions = self.engine.legal_actions(pointer)
+            self.assertEqual(sum(action.kind == 16 for action in actions), 1)
+            self.assertTrue(all(action.kind in (15, 16) for action in actions))
+            self.assertEqual(
+                {action.suit for action in actions if action.kind == 15},
+                {0, 1, 2, 3},
+            )
+
+            saboteur_swap = next(
+                action
+                for action in actions
+                if action.kind == 15 and action.suit == 0 and action.card.suit == 4
+            )
+            original_wheat_reward = (
+                state.managed_reward_offers[0].suit,
+                state.managed_reward_offers[0].value,
+            )
+            self.engine.apply_action(pointer, saboteur_swap)
+            state = self.engine.snapshot(pointer)
+            self.assertEqual(state.players[planner].hand.count, 5)
+            self.assertEqual(
+                (state.revealed_jobs[0].suit, state.revealed_jobs[0].value),
+                (4, 0),
+            )
+
+            # Before confirmation, swapping the outgoing offer back into the
+            # same slot reverses the provisional choice.
+            reverse_swap = next(
+                action
+                for action in self.engine.legal_actions(pointer)
+                if action.kind == 15
+                and action.suit == 0
+                and (action.card.suit, action.card.value) == original_wheat_reward
+            )
+            self.engine.apply_action(pointer, reverse_swap)
+            state = self.engine.snapshot(pointer)
+            self.assertEqual(
+                (state.revealed_jobs[0].suit, state.revealed_jobs[0].value),
+                original_wheat_reward,
+            )
+            self.assertEqual(state.players[planner].hand.count, 5)
 
             state = self.engine.snapshot(pointer)
             self.assertEqual(state.players[planner].hand.count, 5)
             self.assertTrue(all(state.has_revealed_job))
+            confirm_rewards = next(
+                action
+                for action in self.engine.legal_actions(pointer)
+                if action.kind == 16
+            )
+            self.engine.apply_action(pointer, confirm_rewards)
             self.assertTrue(
                 all(action.kind == 1 for action in self.engine.legal_actions(pointer))
             )
 
-            state.year = 2
             self.engine.apply_action(pointer, self.engine.legal_actions(pointer)[0])
             state = self.engine.snapshot(pointer)
             self.assertEqual(state.phase, 1)
+            self.assertEqual(state.year, 1)
             self.assertTrue(state.swap_confirmed[planner])
             self.assertNotEqual(state.current_player, planner)
+            swapping_players: list[int] = []
+            while state.phase == 1:
+                swapping_players.append(int(state.current_player))
+                confirm = next(
+                    action
+                    for action in self.engine.legal_actions(pointer)
+                    if action.kind == 3
+                )
+                self.engine.apply_action(pointer, confirm)
+                state = self.engine.snapshot(pointer)
+            self.assertEqual(
+                set(swapping_players),
+                set(range(4)) - {planner},
+            )
+            self.assertEqual(state.phase, 2)
         finally:
             self.engine.free_engine(pointer)
 
-    def test_managed_economy_keeps_the_normal_reward_flow_in_year_five(self) -> None:
+    def test_managed_economy_has_no_reward_cards_in_year_five(self) -> None:
         variants = variants_native(
             normalize_variants({"managedEconomy": True, "lottoRewards": False})
         )
@@ -282,12 +371,18 @@ class ProjectionContractTests(unittest.TestCase):
         try:
             state = self.engine.snapshot(pointer)
             state.year = 5
-            action = self.engine.legal_actions(pointer)[0]
-            self.assertEqual((action.kind, action.suit), (10, 0))
-            self.engine.apply_action(pointer, action)
+            state.is_famine = True
+            self.assertEqual(self.engine.legal_actions(pointer), [])
+            self.assertEqual(self.engine.step_automatic(pointer), 1)
             state = self.engine.snapshot(pointer)
-            self.assertTrue(state.has_revealed_job[0])
-            self.assertEqual(state.managed_reward_offers[0].suit, -1)
+            self.assertEqual(state.phase, 1)
+            self.assertFalse(any(state.has_revealed_job))
+            self.assertTrue(
+                all(
+                    state.managed_reward_offers[suit].suit == -1
+                    for suit in range(4)
+                )
+            )
         finally:
             self.engine.free_engine(pointer)
 
@@ -300,6 +395,54 @@ class ProjectionContractTests(unittest.TestCase):
         self.assertGreater(result.actions, 0)
         self.assertLess(result.actions, 1000)
         self.assertNotEqual(result.checksum, -999999)
+
+    def test_managed_economy_heuristic_upgrades_every_worthwhile_reward(self) -> None:
+        pointer = self.engine.new_engine(
+            42045,
+            variants=variants_native(
+                normalize_variants({"managedEconomy": True, "lottoRewards": False})
+            ),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 0
+            state.year = 1
+            state.current_player = 0
+            state.trump_selector = 0
+            state.controllers.seats[0] = 1
+            state.managed_rewards_confirmed = False
+            state.players[0].hand.count = 5
+            for suit, value in enumerate((6, 7, 8, 9)):
+                state.players[0].hand.cards[suit] = KCCard(suit, value)
+                state.managed_reward_offers[suit] = KCCard(suit, value - 4)
+                state.revealed_jobs[suit] = KCCard(suit, value - 4)
+                state.has_revealed_job[suit] = True
+            state.players[0].hand.cards[4] = KCCard(4, 0)
+
+            self.assertEqual(self.engine.phase(pointer), 0)
+            self.assertTrue(
+                any(action.kind == 15 for action in self.engine.legal_actions(pointer))
+            )
+
+            changed_suits: set[int] = set()
+            for _ in range(4):
+                action = self.engine.heuristic_action(pointer)
+                self.assertEqual(action.kind, 15)
+                self.assertNotEqual(action.card.suit, 4)
+                changed_suits.add(int(action.suit))
+                state.controllers.seats[0] = 0
+                self.engine.apply_action(pointer, action)
+                state.controllers.seats[0] = 1
+
+            self.assertEqual(changed_suits, {0, 1, 2, 3})
+            confirm = self.engine.heuristic_action(pointer)
+            self.assertEqual(confirm.kind, 16)
+            state.controllers.seats[0] = 0
+            self.engine.apply_action(pointer, confirm)
+            self.assertTrue(self.engine.snapshot(pointer).managed_rewards_confirmed)
+        finally:
+            self.engine.free_engine(pointer)
 
     def test_snapshot_reads_work_hours_through_the_c_api(self) -> None:
         pointer = self.engine.new_engine(

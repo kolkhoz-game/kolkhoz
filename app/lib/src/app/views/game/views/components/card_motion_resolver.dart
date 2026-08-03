@@ -216,6 +216,26 @@ Rect? cardFlightSourceRect({
     return previousRects[trickCardMotionSourceKey(cardID)] ??
         previousRects[MotionAnchor.card(cardID)];
   }
+  if (previousZone.kind == MotionZoneKind.hand &&
+      nextZone.kind == MotionZoneKind.rewardReveal) {
+    final seatID = previousZone.seatID!;
+    return previousRects[MotionAnchor.card(cardID)] ??
+        handCardMotionSourceRect(
+          seatID: seatID,
+          previousRects: previousRects,
+          tokens: tokens,
+        ) ??
+        playerCardMotionSourceRect(
+          seatID: seatID,
+          previousRects: previousRects,
+          tokens: tokens,
+        );
+  }
+  if (previousZone.kind == MotionZoneKind.rewardReveal &&
+      nextZone.kind == MotionZoneKind.hand) {
+    return previousRects[rewardPileMotionSourceKey(previousZone.suit!)] ??
+        previousRects[MotionAnchor.card(cardID)];
+  }
   if (previousZone.kind == MotionZoneKind.reward && nextZone.isPlot) {
     return jobGaugeCardMotionTargetRect(
       suit: previousZone.suit!,
@@ -260,7 +280,24 @@ Rect? cardFlightDestinationRect({
     return gaugeRect ?? assignedCardRect;
   }
   if (nextZone.kind == MotionZoneKind.rewardReveal) {
-    return null;
+    return previousZone?.kind == MotionZoneKind.hand
+        ? currentRects[rewardPileMotionSourceKey(nextZone.suit!)]
+        : null;
+  }
+  if (previousZone?.kind == MotionZoneKind.rewardReveal &&
+      nextZone.kind == MotionZoneKind.hand) {
+    final seatID = nextZone.seatID!;
+    return currentRects[MotionAnchor.card(cardID)] ??
+        handCardMotionSourceRect(
+          seatID: seatID,
+          previousRects: currentRects,
+          tokens: tokens,
+        ) ??
+        playerCardMotionSourceRect(
+          seatID: seatID,
+          previousRects: currentRects,
+          tokens: tokens,
+        );
   }
   if (nextZone.kind == MotionZoneKind.reward) {
     return jobGaugeCardMotionTargetRect(
@@ -326,6 +363,7 @@ CardMotionPlan addParallelJobPanelFlights({
                 faceDown: flight.faceDown,
                 revealBeforeFlight: flight.revealBeforeFlight,
                 requisitioned: flight.requisitioned,
+                rewardExchange: flight.rewardExchange,
               )
             else
               flight,
@@ -349,6 +387,7 @@ CardMotionPlan addParallelJobPanelFlights({
                   faceDown: flight.faceDown,
                   revealBeforeFlight: flight.revealBeforeFlight,
                   requisitioned: flight.requisitioned,
+                  rewardExchange: flight.rewardExchange,
                 ),
           ],
         ],

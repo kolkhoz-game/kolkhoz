@@ -231,8 +231,8 @@ void kc_variants_kolkhoz(KCVariants *variants) {
     variants->final_year_trump = true;
     variants->pass_cards = false;
     variants->highest_cards_requisition = true;
-    variants->lotto_rewards = true;
-    variants->managed_economy = false;
+    variants->lotto_rewards = false;
+    variants->managed_economy = true;
 }
 
 void kc_controllers_all_external(KCControllers *controllers) {
@@ -277,6 +277,7 @@ static void kc_make_players(KCEngine *engine) {
 }
 
 static void kc_clear_revealed_jobs(KCEngine *engine) {
+    engine->managed_rewards_confirmed = false;
     for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
         engine->has_revealed_job[suit] = false;
         engine->revealed_jobs[suit] = kc_no_card();
@@ -289,6 +290,9 @@ static bool kc_managed_economy_active(const KCEngine *engine) {
 }
 
 static int32_t kc_next_reward_to_reveal(const KCEngine *engine) {
+    if (engine->variants.managed_economy && engine->year >= KC_MAX_YEARS) {
+        return KC_NO_SUIT;
+    }
     for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
         if (kc_managed_economy_active(engine)) {
             if (!kc_card_valid(engine->managed_reward_offers[suit])) return suit;
@@ -299,15 +303,10 @@ static int32_t kc_next_reward_to_reveal(const KCEngine *engine) {
     return KC_NO_SUIT;
 }
 
-static int32_t kc_next_managed_reward_to_assign(const KCEngine *engine) {
-    if (!kc_managed_economy_active(engine) ||
-        kc_next_reward_to_reveal(engine) != KC_NO_SUIT) {
-        return KC_NO_SUIT;
-    }
-    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-        if (!engine->has_revealed_job[suit]) return suit;
-    }
-    return KC_NO_SUIT;
+static bool kc_managed_rewards_ready_for_swaps(const KCEngine *engine) {
+    return kc_managed_economy_active(engine) &&
+        kc_next_reward_to_reveal(engine) == KC_NO_SUIT &&
+        !engine->managed_rewards_confirmed;
 }
 
 static bool kc_reveal_managed_reward(KCEngine *engine, int32_t suit) {
@@ -319,31 +318,45 @@ static bool kc_reveal_managed_reward(KCEngine *engine, int32_t suit) {
     KCCard card = kc_list_pop_last(&engine->job_piles[suit]);
     if (!kc_card_valid(card)) return false;
     engine->managed_reward_offers[suit] = card;
-    kc_list_append(&engine->players[engine->trump_selector].hand, card);
+    engine->revealed_jobs[suit] = card;
+    engine->has_revealed_job[suit] = true;
     kc_emit_transition(engine, (KCTransitionEvent){
         .kind = KC_TRANSITION_CARD_MOVED,
         .player_id = engine->trump_selector,
         .card = card,
         .from_zone = KC_OBJECT_ZONE_JOB_PILE,
-        .to_zone = KC_OBJECT_ZONE_HAND,
+        .to_zone = KC_OBJECT_ZONE_REVEALED_JOB,
         .from_owner = suit,
-        .to_owner = engine->trump_selector,
+        .to_owner = suit,
         .target_suit = suit
     });
     return true;
 }
 
 static bool kc_assign_managed_reward(KCEngine *engine, int32_t target_suit, KCCard card) {
-    if (target_suit != kc_next_managed_reward_to_assign(engine) ||
+    if (!kc_managed_rewards_ready_for_swaps(engine) ||
+        !kc_valid_suit(target_suit) ||
         !kc_card_matches_suit(card, target_suit)) {
         return false;
     }
+    KCCard outgoing_reward = engine->revealed_jobs[target_suit];
+    if (!kc_card_valid(outgoing_reward)) return false;
     KCCardList *hand = &engine->players[engine->trump_selector].hand;
     int32_t card_index = kc_list_find(hand, card);
     if (card_index < 0) return false;
     kc_list_remove_at(hand, card_index);
+    kc_list_append(hand, outgoing_reward);
     engine->revealed_jobs[target_suit] = card;
-    engine->has_revealed_job[target_suit] = true;
+    kc_emit_transition(engine, (KCTransitionEvent){
+        .kind = KC_TRANSITION_CARD_MOVED,
+        .player_id = engine->trump_selector,
+        .card = outgoing_reward,
+        .from_zone = KC_OBJECT_ZONE_REVEALED_JOB,
+        .to_zone = KC_OBJECT_ZONE_HAND,
+        .from_owner = target_suit,
+        .to_owner = engine->trump_selector,
+        .target_suit = target_suit
+    });
     kc_emit_transition(engine, (KCTransitionEvent){
         .kind = KC_TRANSITION_CARD_MOVED,
         .player_id = engine->trump_selector,
@@ -748,14 +761,37 @@ static void kc_deal_hands(KCEngine *engine) {
     }
 }
 
+static void kc_setup_managed_economy_aces(KCEngine *engine) {
+    if (!engine->variants.managed_economy) {
+        return;
+    }
+    KCCardList aces;
+    kc_list_clear(&aces);
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        kc_list_append(&aces, (KCCard){ .suit = suit, .value = 1 });
+    }
+    kc_shuffle(engine, &aces);
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        KCCard ace = kc_list_pop_last(&aces);
+        /* Wheat is the engine's crop identity for the physical clubs suit. */
+        if (ace.suit == KC_SUIT_WHEAT) {
+            kc_list_append(&engine->players[player_id].plot_revealed, ace);
+            engine->trump_selector = player_id;
+        } else {
+            kc_list_append(&engine->players[player_id].plot_hidden, ace);
+        }
+    }
+}
+
 static void kc_setup_decks(KCEngine *engine) {
     for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
         kc_list_clear(&engine->job_piles[suit]);
         if (engine->variants.deck_type == 36) {
             kc_list_append(&engine->job_piles[suit], (KCCard){ .suit = suit, .value = 1 });
         } else {
+            int32_t first_reward = engine->variants.managed_economy ? 2 : 1;
             int32_t fixed_rewards = engine->variants.lotto_rewards ? 4 : KC_MAX_YEARS;
-            for (int32_t value = 1; value <= fixed_rewards; value++) {
+            for (int32_t value = first_reward; value <= fixed_rewards; value++) {
                 kc_list_append(&engine->job_piles[suit], (KCCard){ .suit = suit, .value = value });
             }
             if (engine->variants.lotto_rewards) {
@@ -783,6 +819,7 @@ static void kc_setup_decks(KCEngine *engine) {
     }
     kc_clear_revealed_jobs(engine);
     engine->is_famine = engine->year == KC_MAX_YEARS;
+    kc_setup_managed_economy_aces(engine);
     kc_deal_hands(engine);
 }
 
@@ -797,6 +834,11 @@ static void kc_engine_init_with_controllers_internal(
     memset(engine, 0, sizeof(*engine));
     engine->rng_state = seed == 0 ? 1 : seed;
     engine->tutorial_mode = tutorial_mode;
+    if (tutorial_mode) {
+        /* The authored walkthrough teaches the classic fixed reward flow. */
+        variants.managed_economy = false;
+        variants.lotto_rewards = true;
+    }
     variants.final_year_trump = variants.final_year_trump && variants.wrecker;
     variants.managed_economy = variants.managed_economy &&
         variants.deck_type != 36 && !variants.northern_style;
@@ -818,10 +860,10 @@ static void kc_engine_init_with_controllers_internal(
         engine->lead = 1;
         engine->trump_selector = 1;
     }
-    engine->current_player = engine->trump_selector;
     engine->phase = KC_PHASE_PLANNING;
     kc_reset_year_work(engine);
     kc_setup_decks(engine);
+    engine->current_player = engine->trump_selector;
     if (tutorial_mode) {
         engine->current_player = 0;
     }
@@ -1533,7 +1575,8 @@ static void kc_clear_pass(KCEngine *engine) {
 }
 
 static void kc_advance_after_pass(KCEngine *engine) {
-    if (engine->variants.allow_swap && engine->year > 1) {
+    bool swap_available = engine->year > 1 || kc_managed_economy_active(engine);
+    if (engine->variants.allow_swap && swap_available) {
         engine->phase = KC_PHASE_SWAP;
         memset(engine->swap_confirmed, 0, sizeof(engine->swap_confirmed));
         memset(engine->swap_count, 0, sizeof(engine->swap_count));
@@ -2074,6 +2117,55 @@ static int32_t kc_hero_player_id(const KCEngine *engine) {
     return KC_NO_PLAYER;
 }
 
+static void kc_append_exiled(KCEngine *engine, KCCard card, int32_t player_id);
+
+static int32_t kc_wrecker_job_suit(const KCEngine *engine) {
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        if (kc_job_contains_wrecker(engine, suit)) {
+            return suit;
+        }
+    }
+    return KC_NO_SUIT;
+}
+
+static bool kc_plan_hero_wrecker_penalty(KCEngine *engine, int32_t hero_id) {
+    int32_t suit = kc_wrecker_job_suit(engine);
+    if (!kc_valid_player_id(hero_id) || !kc_valid_suit(suit)) {
+        return false;
+    }
+    KCPlayer *hero = &engine->players[hero_id];
+    KCCard highest = kc_no_card();
+    for (int32_t i = 0; i < hero->plot_revealed.count; i++) {
+        KCCard card = hero->plot_revealed.cards[i];
+        if (card.suit == suit &&
+            !kc_card_already_exiled_this_year(engine, card) &&
+            (!kc_card_valid(highest) || card.value > highest.value)) {
+            highest = card;
+        }
+    }
+    for (int32_t i = 0; i < hero->plot_hidden.count; i++) {
+        KCCard card = hero->plot_hidden.cards[i];
+        if (card.suit == suit &&
+            !kc_card_already_exiled_this_year(engine, card) &&
+            (!kc_card_valid(highest) || card.value > highest.value)) {
+            highest = card;
+        }
+    }
+    if (!kc_card_valid(highest)) {
+        return false;
+    }
+    kc_append_exiled(engine, highest, hero_id);
+    if (engine->requisition_event_count < KC_MAX_CARDS) {
+        engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
+            .player_id = hero_id,
+            .suit = suit,
+            .card = highest,
+            .message_kind = 5
+        };
+    }
+    return true;
+}
+
 static void kc_append_exiled(KCEngine *engine, KCCard card, int32_t player_id) {
     KCCardList *cards = &engine->exiled[engine->year];
     if (cards->count >= KC_MAX_CARDS) return;
@@ -2291,7 +2383,10 @@ static void kc_perform_requisition_batch(KCEngine *engine) {
     engine->current_player = 0;
     engine->requisition_event_count = 0;
     int32_t hero_id = engine->variants.hero_of_soviet_union ? kc_hero_player_id(engine) : KC_NO_PLAYER;
-    if (hero_id >= 0 && engine->requisition_event_count < KC_MAX_CARDS) {
+    bool hero_penalized = hero_id >= 0 &&
+        kc_plan_hero_wrecker_penalty(engine, hero_id);
+    if (hero_id >= 0 && !hero_penalized &&
+        engine->requisition_event_count < KC_MAX_CARDS) {
         engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
             .player_id = hero_id,
             .suit = 0,
@@ -2394,8 +2489,9 @@ static bool kc_step_requisition(KCEngine *engine) {
         kc_list_contains(&engine->players[event.player_id].plot_hidden, event.card)) {
         source_zone = KC_OBJECT_ZONE_PLOT_HIDDEN;
     }
-    if (event.message_kind == 1 && event.player_id >= 0 && event.player_id < KC_PLAYER_COUNT) {
-        if (kc_requisition_reveal_all(engine, event.suit)) {
+    bool exiles_plot_card = event.message_kind == 1 || event.message_kind == 5;
+    if (exiles_plot_card && event.player_id >= 0 && event.player_id < KC_PLAYER_COUNT) {
+        if (event.message_kind == 1 && kc_requisition_reveal_all(engine, event.suit)) {
             kc_reveal_hidden_cards(engine, event.player_id, event.suit, true);
         }
         kc_append_exiled(engine, event.card, event.player_id);
@@ -2793,6 +2889,19 @@ static int32_t kc_engine_apply_action(KCEngine *engine, KCAction action) {
             ? 0
             : KC_ERR_INVALID_CARD;
 
+    case KC_ACTION_CONFIRM_REWARD_SWAPS:
+        if (engine->phase != KC_PHASE_PLANNING) {
+            return KC_ERR_WRONG_PHASE;
+        }
+        if (!kc_is_active_turn(engine, player_id)) {
+            return KC_ERR_WRONG_PLAYER;
+        }
+        if (!kc_managed_rewards_ready_for_swaps(engine)) {
+            return KC_ERR_INVALID_CARD;
+        }
+        engine->managed_rewards_confirmed = true;
+        return 0;
+
     case KC_ACTION_SET_TRUMP:
         if (engine->phase != KC_PHASE_PLANNING) {
             return KC_ERR_WRONG_PHASE;
@@ -2801,6 +2910,10 @@ static int32_t kc_engine_apply_action(KCEngine *engine, KCAction action) {
             return KC_ERR_WRONG_PLAYER;
         }
         if (action.suit < 0 || action.suit >= KC_SUIT_COUNT) {
+            return KC_ERR_INVALID_CARD;
+        }
+        if (kc_managed_economy_active(engine) &&
+            !engine->managed_rewards_confirmed) {
             return KC_ERR_INVALID_CARD;
         }
         engine->trump = action.suit;
@@ -3236,23 +3349,34 @@ int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32
             action.plot_zone = -1;
             action.target_suit = -1;
             kc_add_action(actions, max_actions, &count, action);
-        } else if (kc_next_managed_reward_to_assign(engine) != KC_NO_SUIT) {
-            int32_t target_suit = kc_next_managed_reward_to_assign(engine);
+        } else if (kc_managed_rewards_ready_for_swaps(engine)) {
             const KCCardList *hand = &engine->players[engine->trump_selector].hand;
-            for (int32_t card_index = 0; card_index < hand->count; card_index++) {
-                KCCard card = hand->cards[card_index];
-                if (!kc_card_matches_suit(card, target_suit)) continue;
-                KCAction action = {0};
-                action.kind = KC_ACTION_ASSIGN_REWARD;
-                action.player_id = engine->trump_selector;
-                action.suit = target_suit;
-                action.card = card;
-                action.hand_card = kc_no_card();
-                action.plot_card = kc_no_card();
-                action.plot_zone = -1;
-                action.target_suit = target_suit;
-                kc_add_action(actions, max_actions, &count, action);
+            for (int32_t target_suit = 0; target_suit < KC_SUIT_COUNT; target_suit++) {
+                for (int32_t card_index = 0; card_index < hand->count; card_index++) {
+                    KCCard card = hand->cards[card_index];
+                    if (!kc_card_matches_suit(card, target_suit)) continue;
+                    KCAction action = {0};
+                    action.kind = KC_ACTION_ASSIGN_REWARD;
+                    action.player_id = engine->trump_selector;
+                    action.suit = target_suit;
+                    action.card = card;
+                    action.hand_card = kc_no_card();
+                    action.plot_card = kc_no_card();
+                    action.plot_zone = -1;
+                    action.target_suit = target_suit;
+                    kc_add_action(actions, max_actions, &count, action);
+                }
             }
+            KCAction confirm_action = {0};
+            confirm_action.kind = KC_ACTION_CONFIRM_REWARD_SWAPS;
+            confirm_action.player_id = engine->trump_selector;
+            confirm_action.suit = KC_NO_SUIT;
+            confirm_action.card = kc_no_card();
+            confirm_action.hand_card = kc_no_card();
+            confirm_action.plot_card = kc_no_card();
+            confirm_action.plot_zone = -1;
+            confirm_action.target_suit = KC_NO_SUIT;
+            kc_add_action(actions, max_actions, &count, confirm_action);
         } else if (kc_card_valid(engine->pending_final_year_trump_card)) {
             KCAction action = {0};
             action.kind = KC_ACTION_REVEAL_TRUMP;

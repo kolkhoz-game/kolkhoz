@@ -54,6 +54,7 @@ bool kc_curriculum_incomplete(const KCEngine *engine, bool curriculum, int32_t s
 void kc_advance_from_planning(KCEngine *engine);
 int32_t kc_pending_assignment_count(const KCEngine *engine);
 bool kc_choose_benchmark_action(const KCEngine *engine, const KCAction *actions, int32_t count, KCAction *selected);
+bool kc_choose_managed_economy_action(const KCEngine *engine, const KCAction *actions, int32_t count, KCAction *selected);
 bool kc_heuristic_policy_action(const KCEngine *engine, KCAction *selected);
 double kc_uniform_from_state(uint64_t *state);
 int32_t kc_policy_parameter_count(KCPolicyModelBuffer model);

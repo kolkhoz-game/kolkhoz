@@ -80,10 +80,15 @@ card is public and sets trump automatically; a revealed Saboteur means no trump.
 is then sent North and has no other effect. Otherwise famine has no trump and advances
 automatically. AI trump selection is implemented in the C engine.
 
-With Managed Economy in years 1-4, reveal all four reward offers publicly into the
-Central Planner's hand. The Planner then assigns one matching card from that hand to each
-crop reward slot, in crop order, before selecting trump. Saboteur matches every crop.
-Year 5 follows normal planning.
+With Managed Economy in years 1-4, reveal all four reward offers publicly in their crop
+slots. The Central Planner may provisionally swap any reward with a matching-suit card
+from their hand; leaving a slot untouched keeps its reward, swaps may be repeated or
+reversed, and Saboteur matches every crop. The replaced reward enters the Planner's
+hand. The Planner confirms the complete reward layout, then selects trump. Only after
+both decisions are public does the game advance to the other players' plot swaps.
+The four aces were dealt to player plots during setup, with the clubs/Wheat ace revealed
+to identify the first Planner. Year 5 reveals no rewards and advances through famine
+planning normally.
 
 ### 2. Pass
 
@@ -97,8 +102,9 @@ Each player may exchange at most one hand card with a hidden or revealed plot ca
 `allow_swap` is enabled. Human/manual callers submit `swap`, `undoSwap`, and
 `confirmSwap` actions; AI turns are automatic.
 
-With Managed Economy in years 2-4, the Central Planner is pre-confirmed and the other
-three players swap normally. All four players use the normal swap flow in year 5.
+With Managed Economy in years 1-4, the Central Planner is pre-confirmed and the other
+three players swap normally, including year 1 because each begins with an ace in their
+plot. All four players use the normal swap flow in year 5.
 
 ### 4. Trick
 
@@ -141,6 +147,7 @@ Famine is year 5. It means:
 - 3 tricks instead of 4;
 - normally no trump suit, unless Final Year Trump reveals an ordinary crop card;
 - 4 cards dealt per player instead of 5.
+- with Managed Economy, no job reward cards are available.
 
 ### Assignment Targets
 
@@ -158,7 +165,9 @@ the requisition screen until the user continues.
 
 A job containing Saboteur is requisitioned as failed even if it reached 40 work hours and
 claimed its reward. A plot Saboteur matches any failed job, but a specific Saboteur card is
-exiled only once in a year's requisition report.
+exiled only once in a year's requisition report. Hero immunity does not fully stop this
+failure: the Hero loses their single highest Plot or Cellar card matching the Saboteur
+field's crop, if they have one.
 
 ### Swap Is Sequential
 

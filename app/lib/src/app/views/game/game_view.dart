@@ -1423,7 +1423,8 @@ class BoardPlayArea extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (model.table.phase == phasePlanning &&
+                        if (model.panels.active == panelBrigade &&
+                            model.table.phase == phasePlanning &&
                             !suppressPlanningOverlay)
                           Positioned.fill(
                             key: const Key('planning-phase-overlay'),
@@ -1498,7 +1499,13 @@ class BoardPlayArea extends StatelessWidget {
                                         tokens: tokens,
                                         language: language,
                                         focusedSuit: planningTrumpFocusedSuit,
-                                        onAction: onPlanningTrumpActionSelected,
+                                        onAction: (action) =>
+                                            dispatchPlanningPanelAction(
+                                              action: action,
+                                              onRewardAction: onAction,
+                                              onTrumpActionSelected:
+                                                  onPlanningTrumpActionSelected,
+                                            ),
                                         onSuitHovered:
                                             onPlanningTrumpSuitHovered,
                                         onRewardsRevealed:
@@ -1760,6 +1767,18 @@ class PlanningTrumpFocusHost extends StatefulWidget {
   State<PlanningTrumpFocusHost> createState() => _PlanningTrumpFocusHostState();
 }
 
+void dispatchPlanningPanelAction({
+  required LegalAction action,
+  required ValueChanged<LegalAction>? onRewardAction,
+  required ValueChanged<LegalAction> onTrumpActionSelected,
+}) {
+  if (action.kind == actionAssignReward) {
+    onRewardAction?.call(action);
+    return;
+  }
+  onTrumpActionSelected(action);
+}
+
 class _PlanningTrumpFocusHostState extends State<PlanningTrumpFocusHost> {
   final math.Random selectorRandom = math.Random();
   Timer? selectorTimer;
@@ -1782,15 +1801,21 @@ class _PlanningTrumpFocusHostState extends State<PlanningTrumpFocusHost> {
   @override
   void didUpdateWidget(PlanningTrumpFocusHost oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldAnimating = planningTrumpSelectorIsAI(oldWidget.model);
-    final nextAnimating = planningTrumpSelectorIsAI(widget.model);
-    if (oldAnimating != nextAnimating ||
+    final oldSelectorIsAI = planningTrumpSelectorIsAI(oldWidget.model);
+    final nextSelectorIsAI = planningTrumpSelectorIsAI(widget.model);
+    final selectorContextChanged =
+        oldSelectorIsAI != nextSelectorIsAI ||
         oldWidget.model.table.currentPlayerID !=
             widget.model.table.currentPlayerID ||
-        oldWidget.model.table.phase != widget.model.table.phase) {
+        oldWidget.model.table.phase != widget.model.table.phase;
+    if (selectorContextChanged) {
       selectedAction = null;
       hoveredSuit = null;
       rewardsRevealed = false;
+    }
+    if (selectorContextChanged ||
+        planningTrumpSelectionIsReadyForAI(oldWidget.model) !=
+            planningTrumpSelectionIsReadyForAI(widget.model)) {
       syncSelectorTimer();
     }
   }
@@ -1805,7 +1830,7 @@ class _PlanningTrumpFocusHostState extends State<PlanningTrumpFocusHost> {
     selectorTimer?.cancel();
     selectorTimer = null;
     final motion = GameMotion.of(context);
-    if (!planningTrumpSelectorIsAI(widget.model) ||
+    if (!planningTrumpSelectionIsReadyForAI(widget.model) ||
         !rewardsRevealed ||
         !motion.enabled) {
       return;
@@ -1828,19 +1853,23 @@ class _PlanningTrumpFocusHostState extends State<PlanningTrumpFocusHost> {
   @override
   Widget build(BuildContext context) {
     final focusedSuit =
-        planningTrumpSelectorIsAI(widget.model) && rewardsRevealed
+        planningTrumpSelectionIsReadyForAI(widget.model) && rewardsRevealed
         ? displaySuitOrder[selectorIndex]
-        : hoveredSuit ?? selectedAction?.engineAction.suit;
+        : hoveredSuit ??
+              (selectedAction?.kind == actionSetTrump
+                  ? selectedAction!.engineAction.suit
+                  : null);
     return widget.builder(
       context,
       focusedSuit,
       selectedAction,
       (action) => setState(() {
-        selectedAction = action;
+        selectedAction = action.kind == actionSetTrump ? action : null;
         hoveredSuit = null;
       }),
       (suit) {
-        if (planningTrumpSelectorIsAI(widget.model) || hoveredSuit == suit) {
+        if (planningTrumpSelectionIsReadyForAI(widget.model) ||
+            hoveredSuit == suit) {
           return;
         }
         setState(() => hoveredSuit = suit);
@@ -2304,8 +2333,7 @@ class _JobGaugeState extends State<JobGauge>
   final Map<String, int> pendingCardDeltas = {};
   final List<_VisibleJobGaugeDelta> visibleDeltas = [];
   final LayerLink deltaLink = LayerLink();
-  final OverlayPortalController deltaOverlayController =
-      OverlayPortalController();
+  OverlayEntry? deltaOverlayEntry;
   late final AnimationController impactController;
 
   @override
@@ -2340,13 +2368,58 @@ class _JobGaugeState extends State<JobGauge>
         pendingCardDeltas[card.id] = card.value;
       }
     }
+    deltaOverlayEntry?.markNeedsBuild();
   }
 
   @override
   void dispose() {
     motionController?.jobCardArrival.removeListener(_handleJobCardArrival);
+    deltaOverlayEntry?.remove();
     impactController.dispose();
     super.dispose();
+  }
+
+  void _showDeltaOverlay() {
+    if (deltaOverlayEntry != null) {
+      deltaOverlayEntry!.markNeedsBuild();
+      return;
+    }
+    final entry = OverlayEntry(builder: _buildDeltaOverlay);
+    deltaOverlayEntry = entry;
+    Overlay.of(context).insert(entry);
+  }
+
+  Widget _buildDeltaOverlay(BuildContext context) {
+    final height = widget.height;
+    return ExcludeSemantics(
+      child: CompositedTransformFollower(
+        link: deltaLink,
+        targetAnchor: Alignment.topRight,
+        followerAnchor: Alignment.topRight,
+        offset: const Offset(-6, 0),
+        showWhenUnlinked: false,
+        child: SizedBox(
+          width: 80,
+          height: height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (final (index, delta) in visibleDeltas.indexed)
+                Positioned(
+                  key: ValueKey(delta.serial),
+                  right: 0,
+                  top: index * 8,
+                  child: JobGaugeDeltaBadge(
+                    delta: delta.delta,
+                    tokens: widget.tokens,
+                    onDone: () => _removeVisibleDelta(delta.serial),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _handleJobCardArrival() {
@@ -2363,7 +2436,7 @@ class _JobGaugeState extends State<JobGauge>
         _VisibleJobGaugeDelta(serial: deltaSerial++, delta: delta),
       );
     });
-    deltaOverlayController.show();
+    _showDeltaOverlay();
     final motion = GameMotion.of(context);
     if (motion.enabled) {
       impactController
@@ -2380,7 +2453,10 @@ class _JobGaugeState extends State<JobGauge>
       () => visibleDeltas.removeWhere((entry) => entry.serial == serial),
     );
     if (visibleDeltas.isEmpty) {
-      deltaOverlayController.hide();
+      deltaOverlayEntry?.remove();
+      deltaOverlayEntry = null;
+    } else {
+      deltaOverlayEntry?.markNeedsBuild();
     }
   }
 
@@ -2413,36 +2489,8 @@ class _JobGaugeState extends State<JobGauge>
     const olive = Color(0xff6f7848);
     final accent = widget.highlighted ? red : olive;
     final trailingWidth = math.min(markerWidth, width * 0.42);
-    return OverlayPortal(
-      controller: deltaOverlayController,
-      overlayChildBuilder: (context) => CompositedTransformFollower(
-        link: deltaLink,
-        targetAnchor: Alignment.topRight,
-        followerAnchor: Alignment.topRight,
-        offset: const Offset(-6, 0),
-        showWhenUnlinked: false,
-        child: SizedBox(
-          width: 80,
-          height: height,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              for (final (index, delta) in visibleDeltas.indexed)
-                Positioned(
-                  key: ValueKey(delta.serial),
-                  right: 0,
-                  top: index * 8,
-                  child: JobGaugeDeltaBadge(
-                    delta: delta.delta,
-                    tokens: tokens,
-                    onDone: () => _removeVisibleDelta(delta.serial),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-      child: CompositedTransformTarget(
+    return Builder(
+      builder: (context) => CompositedTransformTarget(
         link: deltaLink,
         child: AnimatedBuilder(
           animation: impactController,

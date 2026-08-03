@@ -53,7 +53,13 @@ void main() {
     while (engine.phase != kcPhaseTrick) {
       final actions = engine.legalActions;
       expect(actions, isNotEmpty);
-      expect(engine.applyManual(actions.first), 0);
+      final action = actions.firstWhere(
+        (action) =>
+            action.kind == kcActionConfirmRewardSwaps ||
+            action.kind == kcActionConfirmSwap,
+        orElse: () => actions.first,
+      );
+      expect(engine.applyManual(action), 0);
     }
 
     for (var play = 0; play < 4; play++) {
@@ -85,6 +91,118 @@ void main() {
     );
     expect(engine.transitionEvents.first.fromZone, kcObjectZoneHand);
     expect(engine.transitionEvents.first.toZone, kcObjectZoneCurrentTrick);
+  });
+
+  test('Saboteur field takes the Hero highest matching plot card', () {
+    var foundScenario = false;
+    for (var seed = 1; seed <= 250 && !foundScenario; seed += 1) {
+      final bridge = KolkhozCEngineBridge();
+      final engine = NativeGameEngine(
+        bridge: bridge,
+        seed: seed,
+        variants: KolkhozGameVariants.kolkhoz.copyWith(managedEconomy: false),
+        controllers: const [
+          KolkhozPlayerController.human,
+          KolkhozPlayerController.human,
+          KolkhozPlayerController.human,
+          KolkhozPlayerController.human,
+        ],
+      );
+      addTearDown(engine.dispose);
+      final inspectedYears = <int>{};
+
+      for (var actionCount = 0; actionCount < 900; actionCount += 1) {
+        final year = engine.readNative(
+          (bridge, pointer) => bridge.year(pointer),
+        );
+        if (engine.phase == kcPhaseGameOver) {
+          break;
+        }
+        if (engine.phase == kcPhaseRequisition && inspectedYears.add(year)) {
+          final requiredMedals = engine.readNative(
+            (bridge, pointer) => bridge.isFamine(pointer) ? 3 : 4,
+          );
+          final heroID = engine.readNative(
+            (bridge, pointer) => [
+              for (var playerID = 0; playerID < 4; playerID += 1)
+                if (bridge.playerMedals(pointer, playerID) == requiredMedals)
+                  playerID,
+            ].firstOrNull,
+          );
+          final wreckerSuit = engine.readNative(
+            (bridge, pointer) => [
+              for (var suit = 0; suit < 4; suit += 1)
+                if ([
+                  for (
+                    var index = 0;
+                    index < bridge.jobBucketCount(pointer, suit);
+                    index += 1
+                  )
+                    bridge.jobBucketCard(pointer, suit, index).suit,
+                ].contains(4))
+                  suit,
+            ].firstOrNull,
+          );
+          if (heroID != null && wreckerSuit != null) {
+            final matchingCards = engine.readNative(
+              (bridge, pointer) => [
+                for (
+                  var index = 0;
+                  index < bridge.plotRevealedCount(pointer, heroID);
+                  index += 1
+                )
+                  bridge.plotRevealedCard(pointer, heroID, index),
+                for (
+                  var index = 0;
+                  index < bridge.plotHiddenCount(pointer, heroID);
+                  index += 1
+                )
+                  bridge.plotHiddenCard(pointer, heroID, index),
+              ].where((card) => card.suit == wreckerSuit).toList(),
+            );
+            if (matchingCards.isNotEmpty) {
+              final expected = matchingCards.reduce(
+                (left, right) => left.value > right.value ? left : right,
+              );
+              while (engine.phase == kcPhaseRequisition &&
+                  engine.legalActions.isEmpty) {
+                expect(engine.stepAutomatic(), greaterThan(0));
+              }
+              final penalty = engine.readNative(
+                (bridge, pointer) => [
+                  for (
+                    var index = 0;
+                    index < bridge.requisitionEventCount(pointer);
+                    index += 1
+                  )
+                    if (bridge.requisitionEventMessageKind(pointer, index) == 5)
+                      (
+                        playerID: bridge.requisitionEventPlayer(pointer, index),
+                        suit: bridge.requisitionEventSuit(pointer, index),
+                        card: bridge.requisitionEventCard(pointer, index),
+                      ),
+                ].single,
+              );
+              expect(penalty.playerID, heroID);
+              expect(penalty.suit, wreckerSuit);
+              expect(
+                (penalty.card.suit, penalty.card.value),
+                (expected.suit, expected.value),
+              );
+              foundScenario = true;
+              break;
+            }
+          }
+        }
+        if (engine.phase == kcPhaseRequisition && engine.legalActions.isEmpty) {
+          expect(engine.stepAutomatic(), greaterThan(0));
+          continue;
+        }
+        final action = engine.heuristicAction() ?? engine.legalActions.first;
+        expect(engine.applyManual(action), 0);
+      }
+    }
+    expect(foundScenario, isTrue);
   });
 
   test('tutorial engine authors the first three teaching years', () {
@@ -1045,18 +1163,21 @@ void main() {
           engine.legalActions.isEmpty) {
         expect(engine.stepAutomatic(), greaterThan(0));
       }
-      final protectedPlayers = engine.readNative(
+      final heroResolutionPlayers = engine.readNative(
         (bridge, pointer) => [
           for (
             var index = 0;
             index < bridge.requisitionEventCount(pointer);
             index += 1
           )
-            if (bridge.requisitionEventMessageKind(pointer, index) == 4)
+            if (const {
+              4,
+              5,
+            }.contains(bridge.requisitionEventMessageKind(pointer, index)))
               bridge.requisitionEventPlayer(pointer, index),
         ],
       );
-      expect(protectedPlayers, [0]);
+      expect(heroResolutionPlayers, [0]);
     }
   });
 }

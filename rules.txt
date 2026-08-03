@@ -113,7 +113,10 @@ REQUISITION
 
 Hero of Labor: if a player won every trick that year, the Hero is exempt and
 every other player is inspected, including players with no Medals. Each other
-player still sends up to N highest eligible cards.
+player still sends up to N highest eligible cards. Exception: if the Saboteur
+is in a field, the Hero sends their single highest Plot or Cellar card matching
+that field's crop North. If the Hero has no card of that crop, they remain
+fully exempt.
 
 CLEANUP — YEARS 1–4
 

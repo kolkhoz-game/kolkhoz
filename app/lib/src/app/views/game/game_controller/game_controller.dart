@@ -768,6 +768,7 @@ class GameController extends ChangeNotifier {
           after: visibleStates[lastIndex],
           action: index == 0 ? action : null,
           event: lastIndex == index ? event : null,
+          events: update.transitions.sublist(index, lastIndex + 1),
           startsUpdate: index == 0,
           assignmentCardIDs: assignmentCardIDs,
           assignmentTargets: assignmentTarget == null

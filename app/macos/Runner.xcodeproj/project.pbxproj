@@ -353,6 +353,7 @@
 					"$(PROJECT_DIR)/../tool/build_c_engine_macos.sh",
 					"$(PROJECT_DIR)/../../engine/KolkhozCEngine/KolkhozCEngine.c",
 					"$(PROJECT_DIR)/../../engine/KolkhozCEngine/KolkhozCEngineAI.c",
+					"$(PROJECT_DIR)/../../engine/KolkhozCEngine/KolkhozCEngineManagedEconomyAI.c",
 					"$(PROJECT_DIR)/../../engine/KolkhozCEngine/KolkhozCEngineTraining.c",
 					"$(PROJECT_DIR)/../../engine/KolkhozCEngine/KolkhozCEngineInternal.h",
 					"$(PROJECT_DIR)/../../engine/KolkhozCEngine/include/KolkhozCEngine.h",

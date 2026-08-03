@@ -38,27 +38,29 @@ int swapMoveRunEnd(List<EngineTransitionEvent> events, int startIndex) {
   final firstIsSwapRoute =
       first.kind == kcTransitionCardMoved &&
       first.card.isValid &&
-      _isHandPlotRoute(first.fromZone, first.toZone);
+      _isHandExchangeRoute(first.fromZone, first.toZone);
   final secondIsComplement =
       second.kind == kcTransitionCardMoved &&
       second.card.isValid &&
       (second.card.suit != first.card.suit ||
           second.card.value != first.card.value) &&
       second.playerID == first.playerID &&
-      second.fromOwner == first.fromOwner &&
-      second.toOwner == first.toOwner &&
+      second.fromOwner == first.toOwner &&
+      second.toOwner == first.fromOwner &&
       second.fromZone == first.toZone &&
       second.toZone == first.fromZone;
   return firstIsSwapRoute && secondIsComplement ? startIndex + 1 : startIndex;
 }
 
-bool _isHandPlotRoute(int fromZone, int toZone) =>
+bool _isHandExchangeRoute(int fromZone, int toZone) =>
     (fromZone == kcObjectZoneHand &&
         (toZone == kcObjectZonePlotHidden ||
-            toZone == kcObjectZonePlotRevealed)) ||
+            toZone == kcObjectZonePlotRevealed ||
+            toZone == kcObjectZoneRevealedJob)) ||
     (toZone == kcObjectZoneHand &&
         (fromZone == kcObjectZonePlotHidden ||
-            fromZone == kcObjectZonePlotRevealed));
+            fromZone == kcObjectZonePlotRevealed ||
+            fromZone == kcObjectZoneRevealedJob));
 
 bool needsFinalPresentationBoundary(
   TableViewModel presented,
@@ -72,7 +74,8 @@ bool sameSelection(SelectionState left, SelectionState right) =>
     left.handCardID == right.handCardID &&
     left.plotCardID == right.plotCardID &&
     left.plotZone == right.plotZone &&
-    left.assignmentCardID == right.assignmentCardID;
+    left.assignmentCardID == right.assignmentCardID &&
+    left.planningRewardSuit == right.planningRewardSuit;
 
 /// Builds the visible state at each semantic boundary in one engine dispatch.
 ///

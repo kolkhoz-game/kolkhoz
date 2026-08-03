@@ -153,7 +153,7 @@ class KolkhozGameVariants {
     wreckerCard: true,
     finalYearTrump: true,
     highestCardsRequisition: true,
-    lottoRewards: true,
+    managedEconomy: true,
   );
   static const demoKolkhoz = kolkhoz;
   static const littleKolkhoz = KolkhozGameVariants(
@@ -213,6 +213,7 @@ const kcActionCompleteTutorialOrientation = 12;
 const kcActionCompleteTutorialRewardLesson = 13;
 const kcActionCompleteTutorialSaboteurFollowLesson = 14;
 const kcActionAssignReward = 15;
+const kcActionConfirmRewardSwaps = 16;
 
 const kcPhasePlanning = 0;
 const kcPhaseSwap = 1;

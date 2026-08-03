@@ -308,6 +308,10 @@ const fieldPlanVariantLottoRewards = ArtAssetRef(
   fieldPlanPath:
       'assets/art/field_plan/ledger/variants/variant_lotto_rewards.png',
 );
+const fieldPlanVariantFiveYearPlanFourYears = ArtAssetRef(
+  fieldPlanPath:
+      'assets/art/field_plan/ledger/variants/variant_five_year_plan_four_years.png',
+);
 const fieldPlanVariantStakhanovite = ArtAssetRef(
   fieldPlanPath:
       'assets/art/field_plan/ledger/variants/variant_stakhanovite.png',
@@ -335,6 +339,7 @@ const fieldPlanLedgerIllustrations = <ArtAssetRef>[
   fieldPlanVariantFinalYearTrump,
   fieldPlanVariantHighestCardsRequisition,
   fieldPlanVariantLottoRewards,
+  fieldPlanVariantFiveYearPlanFourYears,
   fieldPlanVariantStakhanovite,
   fieldPlanVariantSaboteur,
 ];

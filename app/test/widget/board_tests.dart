@@ -2118,6 +2118,18 @@ void registerBoardTests() {
       const Duration(milliseconds: 2200),
     );
     expect(
+      GameAnimationSpeed.normal.automaticRewardPlanningDelay,
+      const Duration(milliseconds: 1100),
+    );
+    expect(
+      jitteredAutomaticRewardPlanningDelay(GameAnimationSpeed.normal, 0),
+      const Duration(milliseconds: 924),
+    );
+    expect(
+      jitteredAutomaticRewardPlanningDelay(GameAnimationSpeed.normal, 1),
+      const Duration(milliseconds: 1276),
+    );
+    expect(
       GameAnimationSpeed.normal.cardFlightDuration,
       const Duration(milliseconds: 520),
     );
@@ -2418,6 +2430,145 @@ void registerBoardTests() {
       containsAll([
         for (final suit in displaySuitOrder) MotionZone.reward(suit),
       ]),
+    );
+  });
+
+  test('confirming managed rewards leaves all four cards in the popup', () {
+    final jobs = [
+      for (final job in runtimeModel().table.jobs)
+        Job(
+          suit: job.suit,
+          hours: job.hours,
+          requiredHours: job.requiredHours,
+          claimed: job.claimed,
+          reward: testCard(id: '${job.suit}-reward', suit: job.suit, value: 8),
+          assignedCards: job.assignedCards,
+          validAssignmentTarget: job.validAssignmentTarget,
+          highlighted: job.highlighted,
+        ),
+    ];
+    final planning = runtimeModelWith(
+      phase: phasePlanning,
+      selection: SelectionState.empty,
+      jobs: jobs,
+    );
+    final previousZones = cardMotionZones(planning);
+    final nextZones = cardMotionZones(planning);
+    final geometry = MotionGeometry({
+      for (final (index, suit) in displaySuitOrder.indexed) ...{
+        rewardPileMotionSourceKey(suit): Rect.fromLTWH(
+          100 + index * 60,
+          300,
+          42,
+          58,
+        ),
+        jobGaugeMotionTargetKey(suit): Rect.fromLTWH(
+          80 + index * 110,
+          20,
+          90,
+          38,
+        ),
+      },
+    });
+
+    final plan = planCardFlights(
+      motionEnabled: true,
+      minimumFlightDistance: GameMotion.minimumFlightDistance,
+      previousModel: planning,
+      nextModel: planning,
+      previousZones: previousZones,
+      nextZones: nextZones,
+      previousCards: cardMotionCards(planning),
+      nextCards: cardMotionCards(planning),
+      previousGeometry: geometry,
+      currentGeometry: geometry,
+      geometry: const DefaultCardMotionGeometryResolver(defaultDesignTokens),
+      transitionID: 2,
+      assignmentCardIDs: const [],
+      assignmentTargets: const {},
+      suppressedCardIDs: const {},
+      presentedAssignmentCardIDs: const {},
+      initialFlightID: 0,
+    );
+
+    expect(plan.stages, isEmpty);
+  });
+
+  test('managed reward swaps use a pronounced two-card exchange', () {
+    final outgoing = testCard(id: 'wheat-5', suit: 'wheat', value: 5);
+    final incoming = testCard(id: 'wheat-9', suit: 'wheat', value: 9);
+    const rewardRect = Rect.fromLTWH(280, 220, 42, 58);
+    const playerRect = Rect.fromLTWH(80, 40, 42, 58);
+    final geometry = MotionGeometry({
+      rewardPileMotionSourceKey('wheat'): rewardRect,
+      playerCardMotionSourceKey(1): playerRect,
+    });
+    final previousZones = {
+      outgoing.id: const MotionZone.rewardReveal('wheat'),
+      incoming.id: const MotionZone.hand(1),
+    };
+    final nextZones = {
+      outgoing.id: const MotionZone.hand(1),
+      incoming.id: const MotionZone.rewardReveal('wheat'),
+    };
+    final cards = {outgoing.id: outgoing, incoming.id: incoming};
+
+    final plan = planCardFlights(
+      motionEnabled: true,
+      minimumFlightDistance: GameMotion.minimumFlightDistance,
+      previousModel: runtimeModel(),
+      nextModel: runtimeModel(),
+      previousZones: previousZones,
+      nextZones: nextZones,
+      previousCards: cards,
+      nextCards: cards,
+      previousGeometry: geometry,
+      currentGeometry: geometry,
+      geometry: const DefaultCardMotionGeometryResolver(defaultDesignTokens),
+      transitionID: 3,
+      assignmentCardIDs: const [],
+      assignmentTargets: const {},
+      suppressedCardIDs: const {},
+      presentedAssignmentCardIDs: const {},
+      initialFlightID: 0,
+      explicitTransition: true,
+    );
+
+    expect(plan.stages, hasLength(1));
+    expect(plan.stages.single, hasLength(2));
+    expect(plan.stages.single.every((flight) => flight.rewardExchange), isTrue);
+    expect(
+      plan.stages.single.every(
+        (flight) =>
+            flight.durationScale ==
+            managedRewardExchangeCardFlightDurationScale,
+      ),
+      isTrue,
+    );
+
+    final entering = managedRewardExchangeRectAt(playerRect, rewardRect, 0.5);
+    final leaving = managedRewardExchangeRectAt(rewardRect, playerRect, 0.5);
+    expect((entering.center - leaving.center).distance, greaterThan(100));
+  });
+
+  test('revealed-job events stay in the popup during planning', () {
+    expect(
+      motionZoneForEngineTransition(
+        zone: kcObjectZoneRevealedJob,
+        owner: 0,
+        targetSuit: 0,
+        phase: phasePlanning,
+      ),
+      const MotionZone.rewardReveal('wheat'),
+    );
+    expect(
+      motionZoneForEngineTransition(
+        zone: kcObjectZoneRevealedJob,
+        owner: 0,
+        targetSuit: 0,
+        phase: phaseTrick,
+      ),
+      const MotionZone.reward('wheat'),
     );
   });
 

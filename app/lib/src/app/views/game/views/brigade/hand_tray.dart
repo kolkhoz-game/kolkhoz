@@ -20,6 +20,7 @@ import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.da
 const lowerBarActionKinds = {
   actionSwap,
   actionConfirmSwap,
+  actionConfirmRewardSwaps,
   actionUndoSwap,
   actionSubmitAssignments,
   actionContinueAfterRequisition,
@@ -27,6 +28,7 @@ const lowerBarActionKinds = {
 
 bool isProminentLowerBarAction(LegalAction action) {
   return action.kind == actionConfirmSwap ||
+      action.kind == actionConfirmRewardSwaps ||
       action.kind == actionSubmitAssignments ||
       action.kind == actionContinueAfterRequisition;
 }
@@ -64,6 +66,7 @@ int lowerBarActionRank(String kind) {
     actionSwap => 0,
     actionUndoSwap => 0,
     actionConfirmSwap => 1,
+    actionConfirmRewardSwaps => 1,
     actionSubmitAssignments => 1,
     actionContinueAfterRequisition => 1,
     _ => 2,
@@ -80,6 +83,7 @@ String lowerBarActionLabel(
     actionSwap => resolvedLanguage.strings.lowerbaractionsSwap,
     actionUndoSwap => resolvedLanguage.strings.lowerbaractionsUndo,
     actionConfirmSwap => resolvedLanguage.strings.lowerbaractionsConfirm,
+    actionConfirmRewardSwaps => resolvedLanguage.strings.lowerbaractionsConfirm,
     actionSubmitAssignments => resolvedLanguage.strings.lowerbaractionsConfirm,
     actionContinueAfterRequisition =>
       tableYear >= finalGameYear
@@ -96,6 +100,7 @@ String lowerBarActionIconAsset(LegalAction action) {
     actionSwap => fieldPlanToolbarSwapIconPath,
     actionUndoSwap => fieldPlanToolbarUndoIconPath,
     actionConfirmSwap ||
+    actionConfirmRewardSwaps ||
     actionSubmitAssignments ||
     actionContinueAfterRequisition => fieldPlanToolbarConfirmIconPath,
     _ => fieldPlanToolbarConfirmIconPath,
@@ -181,6 +186,22 @@ LegalAction? handCardRewardAction(TableViewModel model, TableCard card) {
   return null;
 }
 
+LegalAction? handCardRewardActionForSuit(
+  TableViewModel model,
+  TableCard card,
+  String? rewardSuit,
+) {
+  if (model.table.phase != phasePlanning || rewardSuit == null) return null;
+  for (final action in model.legalActions) {
+    if (action.kind == actionAssignReward &&
+        action.engineAction.suit == rewardSuit &&
+        action.engineAction.card?.id == card.id) {
+      return action;
+    }
+  }
+  return null;
+}
+
 LegalAction? selectedHandCardPlayAction(TableViewModel model) {
   final selectedCardID = model.selection.handCardID;
   if (model.table.phase != phaseTrick || selectedCardID == null) {
@@ -234,7 +255,9 @@ LegalAction? handConsoleLegalAction(TableViewModel model, Set<String> kinds) {
 
 LegalAction? handConsoleConfirmAction(TableViewModel model) {
   return switch (model.table.phase) {
-    phasePlanning => selectedHandCardRewardAction(model),
+    phasePlanning =>
+      handConsoleLegalAction(model, {actionConfirmRewardSwaps}) ??
+          selectedHandCardRewardAction(model),
     phaseTrick => selectedHandCardPlayAction(model),
     phaseSwap =>
       handConsoleLegalAction(model, {actionSwap}) == null
@@ -944,7 +967,44 @@ class HandTray extends StatelessWidget {
                                     if (model.table.phase != phaseSwap ||
                                         !card.highlighted ||
                                         onSwapHandCardTap == null) {
-                                      return handCardControl;
+                                      if (model.table.phase != phasePlanning ||
+                                          rewardAction == null ||
+                                          onAction == null) {
+                                        return handCardControl;
+                                      }
+                                      return CardDropTarget(
+                                        key: ValueKey(
+                                          'planning-reward-hand-drop-${card.id}',
+                                        ),
+                                        highlightColor: tokens.colors.green,
+                                        borderRadius: tokens.radius.card,
+                                        dragFeedbackSize: Size(
+                                          largeCardSize.width,
+                                          largeCardSize.height,
+                                        ),
+                                        accepts: (data) =>
+                                            data.canDrop &&
+                                            data.kind == CardDragKind.reward &&
+                                            data.phase == phasePlanning &&
+                                            handCardRewardActionForSuit(
+                                                  model,
+                                                  card,
+                                                  data.suit,
+                                                ) !=
+                                                null,
+                                        onAccepted: (data) {
+                                          final action =
+                                              handCardRewardActionForSuit(
+                                                model,
+                                                card,
+                                                data.suit,
+                                              );
+                                          if (action != null) {
+                                            onAction?.call(action);
+                                          }
+                                        },
+                                        child: handCardControl,
+                                      );
                                     }
                                     return CardDropTarget(
                                       highlightColor: tokens.colors.green,

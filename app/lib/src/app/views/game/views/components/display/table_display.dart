@@ -93,6 +93,29 @@ String seatDisplayName(Seat seat, {KolkhozLanguage? language}) {
 
 String planningTrumpStatus(TableViewModel model, KolkhozLanguage language) {
   final chooser = seatByID(model, model.table.currentPlayerID);
+  final rewardsAwaitingConfirmation = model.legalActions.any(
+    (action) => action.kind == actionConfirmRewardSwaps,
+  );
+  if (rewardsAwaitingConfirmation) {
+    if (chooser == null || chooser.isViewer || isLocalHumanSeat(chooser)) {
+      return language == KolkhozLanguage.en
+          ? 'Drag matching hand cards onto rewards, then confirm'
+          : 'Перетащите карты той же масти на награды, затем подтвердите';
+    }
+    final name = seatDisplayName(chooser, language: language);
+    return language == KolkhozLanguage.en
+        ? '$name is arranging the rewards'
+        : '$name распределяет награды';
+  }
+  if (model.table.managedRewardOffers.length == displaySuitOrder.length &&
+      chooser != null &&
+      !chooser.isViewer &&
+      !isLocalHumanSeat(chooser)) {
+    final name = seatDisplayName(chooser, language: language);
+    return language == KolkhozLanguage.en
+        ? '$name is choosing trump'
+        : '$name выбирает козырь';
+  }
   final rewardAction = model.legalActions
       .where((action) => action.kind == actionAssignReward)
       .firstOrNull;
@@ -108,13 +131,13 @@ String planningTrumpStatus(TableViewModel model, KolkhozLanguage language) {
     final suit = language.suitName(pendingRewardSuit);
     if (chooser == null || chooser.isViewer || isLocalHumanSeat(chooser)) {
       return language == KolkhozLanguage.en
-          ? 'Choose the $suit reward'
-          : 'Выберите награду: $suit';
+          ? 'Swap a matching card for the $suit reward, or keep it'
+          : 'Замените награду $suit картой той же масти или оставьте её';
     }
     final name = seatDisplayName(chooser, language: language);
     return language == KolkhozLanguage.en
-        ? 'Waiting for $name to assign the $suit reward'
-        : 'Ждём, пока $name назначит награду: $suit';
+        ? 'Waiting for $name to set the $suit reward'
+        : 'Ждём, пока $name определит награду: $suit';
   }
   if (chooser == null) {
     return language.strings.boardviewChooseTrump;

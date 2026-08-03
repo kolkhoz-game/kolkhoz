@@ -96,16 +96,18 @@ class _CardFlipState extends State<CardFlip>
           ..setEntry(3, 2, 0.002)
           ..rotateY(math.pi * progress);
         return Transform(
-          key: showingFront ? widget.frontKey : widget.backKey,
           alignment: Alignment.center,
           transform: transform,
-          child: showingFront
-              ? Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.rotationY(math.pi),
-                  child: widget.front,
-                )
-              : widget.back,
+          child: KeyedSubtree(
+            key: showingFront ? widget.frontKey : widget.backKey,
+            child: showingFront
+                ? Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.rotationY(math.pi),
+                    child: widget.front,
+                  )
+                : widget.back,
+          ),
         );
       },
     );
@@ -144,6 +146,13 @@ class _InteractiveCardFlipState extends State<InteractiveCardFlip> {
 
   bool get showingFront => widget.forceShowFront || hovered || pinned;
 
+  void _handleTap() {
+    if (!widget.forceShowFront) {
+      setState(() => pinned = !pinned);
+    }
+    widget.onTap?.call();
+  }
+
   @override
   void didUpdateWidget(InteractiveCardFlip oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -158,31 +167,29 @@ class _InteractiveCardFlipState extends State<InteractiveCardFlip> {
     return Semantics(
       button: true,
       label: showingFront ? widget.revealedLabel : widget.concealedLabel,
-      child: MouseRegion(
-        onEnter: (_) {
-          if (!widget.forceShowFront) {
-            setState(() => hovered = true);
-          }
-        },
-        onExit: (_) {
-          if (!widget.forceShowFront) {
-            setState(() => hovered = false);
-          }
-        },
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
+      onTap: _handleTap,
+      child: ExcludeSemantics(
+        child: MouseRegion(
+          onEnter: (_) {
             if (!widget.forceShowFront) {
-              setState(() => pinned = !pinned);
+              setState(() => hovered = true);
             }
-            widget.onTap?.call();
           },
-          child: CardFlip(
-            showFront: showingFront,
-            front: widget.front,
-            back: widget.back,
-            frontKey: widget.frontKey,
-            backKey: widget.backKey,
+          onExit: (_) {
+            if (!widget.forceShowFront) {
+              setState(() => hovered = false);
+            }
+          },
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _handleTap,
+            child: CardFlip(
+              showFront: showingFront,
+              front: widget.front,
+              back: widget.back,
+              frontKey: widget.frontKey,
+              backKey: widget.backKey,
+            ),
           ),
         ),
       ),

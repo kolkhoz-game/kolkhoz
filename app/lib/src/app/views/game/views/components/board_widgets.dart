@@ -67,6 +67,7 @@ class CardDragData {
     this.actionLabel,
     this.onSwapWith,
     this.plotZone,
+    this.suit,
   });
 
   final String cardID;
@@ -77,6 +78,7 @@ class CardDragData {
   final String? actionLabel;
   final SwapWithCardCallback? onSwapWith;
   final String? plotZone;
+  final String? suit;
 }
 
 final ValueNotifier<CardDragData?> activeCardDrag =
@@ -234,6 +236,7 @@ class _DraggableCardSurfaceState extends State<DraggableCardSurface> {
           affinity: Axis.vertical,
           maxSimultaneousDrags: widget.enabled ? 1 : 0,
           dragAnchorStrategy: childDragAnchorStrategy,
+          ignoringFeedbackSemantics: true,
           feedback: Material(
             type: MaterialType.transparency,
             child: ValueListenableBuilder<double>(
@@ -408,10 +411,12 @@ class _CardSnapBackOverlayState extends State<_CardSnapBackOverlay>
         return Positioned(
           left: position.dx,
           top: position.dy,
-          child: IgnorePointer(
-            child: Transform.scale(
-              scale: lerpDouble(cardDragFeedbackScale, 1, progress)!,
-              child: child,
+          child: ExcludeSemantics(
+            child: IgnorePointer(
+              child: Transform.scale(
+                scale: lerpDouble(cardDragFeedbackScale, 1, progress)!,
+                child: child,
+              ),
             ),
           ),
         );

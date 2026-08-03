@@ -10,7 +10,7 @@ from server.kolkhoz_server.store import SQLiteEventStore
 
 
 class RealCEngineRecoveryTests(unittest.TestCase):
-    def test_server_advances_central_planner_reveals_before_human_trump(self) -> None:
+    def test_server_reveals_default_managed_rewards_before_human_planning(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             database = Path(temporary) / "central-planner.sqlite3"
             runtime = GameRuntime(
@@ -37,7 +37,14 @@ class RealCEngineRecoveryTests(unittest.TestCase):
             self.assertEqual(update.revision, 4)
             self.assertTrue(update.state["legalActions"])
             self.assertTrue(
-                all(action["kind"] == 1 for action in update.state["legalActions"])
+                all(
+                    action["kind"] in (15, 16)
+                    for action in update.state["legalActions"]
+                )
+            )
+            self.assertEqual(
+                sum(action["kind"] == 16 for action in update.state["legalActions"]),
+                1,
             )
             self.assertEqual([event.payload["kind"] for event in events], [10] * 4)
             self.assertTrue(

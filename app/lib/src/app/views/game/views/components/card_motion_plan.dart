@@ -20,6 +20,7 @@ class CardFlight {
     this.faceDown = false,
     this.revealBeforeFlight = false,
     this.requisitioned = false,
+    this.rewardExchange = false,
   });
 
   final int id;
@@ -33,6 +34,7 @@ class CardFlight {
   final bool faceDown;
   final bool revealBeforeFlight;
   final bool requisitioned;
+  final bool rewardExchange;
 }
 
 @immutable
@@ -232,6 +234,7 @@ CardMotionPlan planCardFlights({
                 previousZone?.seatID != null &&
                 motionSeatIsViewer(previousModel, previousZone!.seatID!)),
         requisitioned: requisitioned,
+        rewardExchange: isManagedRewardExchange(previousZone, entry.value),
       ),
     );
   }
@@ -418,6 +421,9 @@ double cardFlightDurationScaleForZones({
     }
     return 1;
   }
+  if (isManagedRewardExchange(previousZone, nextZone)) {
+    return managedRewardExchangeCardFlightDurationScale;
+  }
   if (nextZone.kind == MotionZoneKind.northExile ||
       (previousZone.isPlot && nextZone.kind == MotionZoneKind.exiled)) {
     return requisitionCardFlightDurationScale;
@@ -439,6 +445,13 @@ double cardFlightDurationScaleForZones({
   }
   return playerInfoCardFlightDurationScale;
 }
+
+bool isManagedRewardExchange(MotionZone? previousZone, MotionZone nextZone) =>
+    previousZone != null &&
+    ((previousZone.kind == MotionZoneKind.hand &&
+            nextZone.kind == MotionZoneKind.rewardReveal) ||
+        (previousZone.kind == MotionZoneKind.rewardReveal &&
+            nextZone.kind == MotionZoneKind.hand));
 
 bool motionSeatIsViewer(TableViewModel model, int seatID) {
   return model.table.seats.any((seat) => seat.id == seatID && seat.isViewer);

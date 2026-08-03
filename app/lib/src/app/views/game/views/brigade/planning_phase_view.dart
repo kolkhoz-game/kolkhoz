@@ -168,28 +168,72 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
         child: Builder(
           builder: (context) {
             final option = optionForSuit(options, suit);
-            final enabled =
+            LegalAction? rewardSwapAction(String cardID) => widget
+                .model
+                .legalActions
+                .where(
+                  (action) =>
+                      action.kind == actionAssignReward &&
+                      action.engineAction.suit == suit &&
+                      action.engineAction.card?.id == cardID,
+                )
+                .firstOrNull;
+            final selectedRewardSwap = widget.model.selection.handCardID == null
+                ? null
+                : rewardSwapAction(widget.model.selection.handCardID!);
+            final rewardDragEnabled =
+                widget.onAction != null &&
+                widget.model.legalActions.any(
+                  (action) =>
+                      action.kind == actionAssignReward &&
+                      action.engineAction.suit == suit,
+                );
+            final trumpEnabled =
                 canSelectTrump &&
                 option?.action != null &&
                 widget.onAction != null;
-            return RewardFlipCard(
+            final rewardSwapEnabled =
+                selectedRewardSwap != null && widget.onAction != null;
+            final rewardCard = RewardFlipCard(
               key: ValueKey('reward-flip-$suit'),
               reward: displayedRewards[suit],
               tokens: widget.tokens,
               size: cardSize,
               label: option?.label ?? widget.language.suitName(suit),
               selected: suit == widget.focusedSuit,
-              enabled: enabled,
-              onPressed: enabled
+              considering: widget.model.selection.planningRewardSuit == suit,
+              enabled: trumpEnabled || rewardSwapEnabled,
+              draggable: rewardDragEnabled,
+              onPressed: rewardSwapEnabled
+                  ? () => widget.onAction!(selectedRewardSwap)
+                  : trumpEnabled
                   ? () => widget.onAction!(option!.action!)
                   : null,
-              onHoverChanged: enabled
+              onHoverChanged: trumpEnabled
                   ? (hovered) =>
                         widget.onSuitHovered?.call(hovered ? suit : null)
                   : null,
               onCompleted: displayedRewards[suit] == null
                   ? null
                   : () => _handleRewardCompleted(suit, displayedRewards[suit]!),
+            );
+            if (widget.onAction == null) return rewardCard;
+            return CardDropTarget(
+              key: ValueKey('reward-drop-$suit'),
+              accepts: (data) =>
+                  data.kind == CardDragKind.hand &&
+                  data.phase == phasePlanning &&
+                  rewardSwapAction(data.cardID) != null,
+              onAccepted: (data) {
+                final action = rewardSwapAction(data.cardID);
+                if (action != null) widget.onAction!(action);
+              },
+              labelBuilder: (_) => widget.language == KolkhozLanguage.en
+                  ? 'SWAP REWARD'
+                  : 'ЗАМЕНИТЬ НАГРАДУ',
+              highlightColor: widget.tokens.colors.gold,
+              dragFeedbackSize: Size(cardSize.width, cardSize.height),
+              child: rewardCard,
             );
           },
         ),
@@ -217,9 +261,8 @@ class _PlanningRewardsPanelState extends State<PlanningRewardsPanel> {
         children: [
           DisplayText(
             managedOffers.isNotEmpty
-                ? (widget.language == KolkhozLanguage.en
-                      ? 'MANAGED ECONOMY'
-                      : 'ПЛАНОВАЯ ЭКОНОМИКА')
+                ? widget.language.strings.variantManagedEconomyTitle
+                      .toUpperCase()
                 : (widget.language == KolkhozLanguage.en
                       ? 'REWARD REVEAL'
                       : 'ОТКРЫТИЕ НАГРАД'),
@@ -349,7 +392,9 @@ class RewardFlipCard extends StatelessWidget {
     required this.size,
     this.label,
     this.selected = false,
+    this.considering = false,
     this.enabled = false,
+    this.draggable = false,
     this.onPressed,
     this.onHoverChanged,
     this.onCompleted,
@@ -361,7 +406,9 @@ class RewardFlipCard extends StatelessWidget {
   final TokenCardSize size;
   final String? label;
   final bool selected;
+  final bool considering;
   final bool enabled;
+  final bool draggable;
   final VoidCallback? onPressed;
   final ValueChanged<bool>? onHoverChanged;
   final VoidCallback? onCompleted;
@@ -379,14 +426,47 @@ class RewardFlipCard extends StatelessWidget {
           : TactileCardSurface(
               tokens: tokens,
               size: size,
-              enabled: enabled || selected,
+              enabled: enabled || selected || draggable,
               focused: selected,
               onHoverChanged: onHoverChanged,
-              child: GameCard(
-                card: reward,
-                tokens: tokens,
-                trump: selected ? reward.suit : null,
-                sizeOverride: size,
+              child: Stack(
+                fit: StackFit.passthrough,
+                children: [
+                  GameCard(
+                    card: reward,
+                    tokens: tokens,
+                    trump: selected ? reward.suit : null,
+                    sizeOverride: size,
+                  ),
+                  if (considering)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          key: ValueKey(
+                            'planning-reward-considering-${reward.id}',
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(
+                              cardViewCornerRadius,
+                            ),
+                            border: Border.all(
+                              color: tokens.colors.green,
+                              width: tokens.stroke.active,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: tokens.colors.green.withValues(
+                                  alpha: 0.38,
+                                ),
+                                blurRadius: 9,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
       back: ScaledCardBack(tokens: tokens, size: size),
@@ -422,12 +502,13 @@ class RewardFlipCard extends StatelessWidget {
       ),
     );
     return DraggableCardSurface(
-      enabled: reward != null,
+      enabled: reward != null && draggable,
       data: CardDragData(
         cardID: reward?.id ?? 'unrevealed-reward',
         kind: CardDragKind.reward,
         phase: phasePlanning,
-        canDrop: false,
+        canDrop: reward != null && draggable,
+        suit: reward?.suit,
         onAccepted: () {},
       ),
       feedback: reward == null
@@ -509,3 +590,7 @@ bool planningTrumpSelectorIsAI(TableViewModel model) {
   }
   return false;
 }
+
+bool planningTrumpSelectionIsReadyForAI(TableViewModel model) =>
+    planningTrumpSelectorIsAI(model) &&
+    model.legalActions.any((action) => action.kind == actionSetTrump);

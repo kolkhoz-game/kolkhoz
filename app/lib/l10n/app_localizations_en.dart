@@ -159,11 +159,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Each crop replaces its 5 reward with a hidden random card from 5 through King.';
 
   @override
-  String get variantManagedEconomyTitle => 'Managed Economy';
+  String get variantManagedEconomyTitle => 'Five Year Plan in Four Years';
 
   @override
   String get variantManagedEconomyDescription =>
-      'In years 1–4, reveal the four rewards into the Central Planner’s hand; they assign one hand card to each job and skip swapping.';
+      'Deal each player a hidden ace; the clubs ace chooses the first Planner. In years 1–4, the Planner may provisionally swap public rewards with matching hand cards, confirms the layout, then chooses trump. The Planner skips the player swap while everyone else may swap from year 1. Year 5 has no rewards.';
 
   @override
   String get variantDemoModeTitle => 'Demo Mode';

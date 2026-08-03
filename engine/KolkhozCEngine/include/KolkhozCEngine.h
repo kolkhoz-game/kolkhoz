@@ -54,7 +54,8 @@ enum {
     KC_ACTION_COMPLETE_TUTORIAL_ORIENTATION = 12,
     KC_ACTION_COMPLETE_TUTORIAL_REWARD_LESSON = 13,
     KC_ACTION_COMPLETE_TUTORIAL_SABOTEUR_FOLLOW_LESSON = 14,
-    KC_ACTION_ASSIGN_REWARD = 15
+    KC_ACTION_ASSIGN_REWARD = 15,
+    KC_ACTION_CONFIRM_REWARD_SWAPS = 16
 };
 
 enum {
@@ -359,6 +360,7 @@ typedef struct {
     KCCard revealed_jobs[KC_SUIT_COUNT];
     bool has_revealed_job[KC_SUIT_COUNT];
     KCCard managed_reward_offers[KC_SUIT_COUNT];
+    bool managed_rewards_confirmed;
     bool claimed_jobs[KC_SUIT_COUNT];
     int32_t work_hours[KC_SUIT_COUNT];
     KCCardList job_buckets[KC_SUIT_COUNT];

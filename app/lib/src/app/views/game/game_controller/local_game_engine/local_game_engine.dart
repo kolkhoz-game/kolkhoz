@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:kolkhoz_app/src/app/settings/animation_speed.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_engine.dart';
@@ -51,6 +52,9 @@ class LocalGameEngine implements GameEngine {
 
   NativeGameEngine engine;
   Timer? _automaticStepTimer;
+  GameCommand? _scheduledAutomaticCommand;
+  String? _automaticRewardPreviewSuit;
+  final math.Random _automaticDelayRandom = math.Random();
   int? _automaticPhaseBefore;
   int _automaticRequisitionCountBefore = 0;
   bool _disposed = false;
@@ -130,12 +134,23 @@ class LocalGameEngine implements GameEngine {
     if (!_engineDecisionNeedsRouting(engine)) {
       return;
     }
-    _automaticStepTimer = Timer(_automaticStepDelay(engine), _runAutomaticStep);
+    final command = _automaticCommand(engine);
+    if (command == null) {
+      return;
+    }
+    _scheduledAutomaticCommand = command;
+    _automaticStepTimer = Timer(
+      _automaticStepDelay(engine, command),
+      _runAutomaticStep,
+    );
+    _showAutomaticRewardPreview(command);
   }
 
   void clearAutomaticStepTimer() {
     _automaticStepTimer?.cancel();
     _automaticStepTimer = null;
+    _scheduledAutomaticCommand = null;
+    _clearAutomaticRewardPreview(notify: !_disposed);
   }
 
   void _runAutomaticStep() {
@@ -144,7 +159,8 @@ class LocalGameEngine implements GameEngine {
     _automaticRequisitionCountBefore = engine.phase == kcPhaseRequisition
         ? engine.requisitionEventCount
         : 0;
-    final command = _automaticCommand(engine);
+    final command = _scheduledAutomaticCommand ?? _automaticCommand(engine);
+    _scheduledAutomaticCommand = null;
     if (command != null) {
       _send(command);
     }
@@ -161,18 +177,58 @@ class LocalGameEngine implements GameEngine {
     return _decisionPlayer(engine)?.waitsForHumanInput == false;
   }
 
-  Duration _automaticStepDelay(NativeGameEngine engine) {
+  Duration _automaticStepDelay(NativeGameEngine engine, GameCommand command) {
     if (engine.phase != kcPhasePlanning || engine.isFamine) {
       return animationSpeed().automaticStepDelay;
     }
-    final player = _decisionPlayer(engine);
-    final selectingTrump =
-        player != null &&
-        !player.waitsForHumanInput &&
-        engine.legalActions.any((action) => action.kind == kcActionSetTrump);
-    return selectingTrump
-        ? animationSpeed().automaticTrumpSelectionDelay
-        : animationSpeed().automaticStepDelay;
+    if (command case SubmitGameAction(:final action)) {
+      if (action.kind == actionAssignReward) {
+        return jitteredAutomaticRewardPlanningDelay(
+          animationSpeed(),
+          _automaticDelayRandom.nextDouble(),
+        );
+      }
+      if (action.kind == actionSetTrump) {
+        return animationSpeed().automaticTrumpSelectionDelay;
+      }
+    }
+    return animationSpeed().automaticStepDelay;
+  }
+
+  void _showAutomaticRewardPreview(GameCommand command) {
+    final suit = switch (command) {
+      SubmitGameAction(:final action) when action.kind == actionAssignReward =>
+        action.suit,
+      _ => null,
+    };
+    if (suit == null || suit == _automaticRewardPreviewSuit) {
+      return;
+    }
+    _automaticRewardPreviewSuit = suit;
+    setUiState(
+      uiState().copyWith(
+        selection: uiState().selection.copyWith(planningRewardSuit: suit),
+      ),
+    );
+    onStateChanged();
+  }
+
+  void _clearAutomaticRewardPreview({required bool notify}) {
+    if (_automaticRewardPreviewSuit == null) {
+      return;
+    }
+    _automaticRewardPreviewSuit = null;
+    if (_disposed) {
+      return;
+    }
+    setUiState(
+      uiState().copyWith(
+        selection: uiState().selection.copyWith(clearPlanningRewardSuit: true),
+      ),
+    );
+    if (notify) {
+      onStateChanged();
+    }
   }
 
   GameCommand? _automaticCommand(NativeGameEngine engine) {
@@ -275,6 +331,7 @@ class LocalGameEngine implements GameEngine {
 
   void _handleCommandResult(LocalGameCommandResult event) {
     final command = event.command;
+    _clearAutomaticRewardPreview(notify: false);
     if (command is SubmitGameAction &&
         command.source == GameActionSource.human) {
       if (!event.accepted) {

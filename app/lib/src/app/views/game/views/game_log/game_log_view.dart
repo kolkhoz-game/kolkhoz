@@ -630,7 +630,11 @@ String _phaseNameFromCode(int phase) => switch (phase) {
 };
 
 String _phaseForAction(String kind) => switch (kind) {
-  actionSetTrump || actionRevealReward || actionRevealTrump => phasePlanning,
+  actionSetTrump ||
+  actionRevealReward ||
+  actionRevealTrump ||
+  actionAssignReward ||
+  actionConfirmRewardSwaps => phasePlanning,
   actionSwap || actionUndoSwap || actionConfirmSwap => phaseSwap,
   actionPassCard => phasePass,
   actionPlayCard => phaseTrick,
@@ -707,6 +711,16 @@ List<Widget> _actionWidgets(
     ],
     actionConfirmSwap => [
       text('confirmed the plot exchange.', 'подтвердил обмен.'),
+    ],
+    actionAssignReward => [
+      text('exchanged', 'обменял'),
+      if (card != null) _InlineCard(card: card, tokens: tokens),
+      text('with the', 'с наградой'),
+      _InlineSuitIcon(suit: action.suit, tokens: tokens),
+      text('reward.', '.'),
+    ],
+    actionConfirmRewardSwaps => [
+      text('confirmed the reward layout.', 'подтвердил распределение наград.'),
     ],
     actionPassCard => [
       text('locked a card for the pass.', 'выбрал карту для передачи.'),

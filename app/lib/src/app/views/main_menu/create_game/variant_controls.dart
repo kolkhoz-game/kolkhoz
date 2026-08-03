@@ -179,7 +179,7 @@ class VariantRowData {
   static final managedEconomy = VariantRowData(
     titleKey: KolkhozText.variantManagedEconomyTitle,
     descriptionKey: KolkhozText.variantManagedEconomyDescription,
-    iconAsset: fieldPlanVariantNomenklatura.fieldPlanPath,
+    iconAsset: fieldPlanVariantFiveYearPlanFourYears.fieldPlanPath,
     valueOf: (variants) => variants.managedEconomy,
     withValue: (variants, value) => variants.copyWith(
       managedEconomy: value,

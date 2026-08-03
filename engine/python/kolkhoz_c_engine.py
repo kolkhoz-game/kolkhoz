@@ -154,6 +154,7 @@ class KCEngineSnapshot(ctypes.Structure):
         ("revealed_jobs", KCCard * SUIT_COUNT),
         ("has_revealed_job", ctypes.c_bool * SUIT_COUNT),
         ("managed_reward_offers", KCCard * SUIT_COUNT),
+        ("managed_rewards_confirmed", ctypes.c_bool),
         ("claimed_jobs", ctypes.c_bool * SUIT_COUNT),
         ("work_hours", ctypes.c_int32 * SUIT_COUNT),
         ("job_buckets", KCCardList * SUIT_COUNT),

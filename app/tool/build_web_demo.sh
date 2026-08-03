@@ -18,6 +18,7 @@ dart run tool/sync_policy_assets.dart
 emcc \
   "${repo_dir}/engine/KolkhozCEngine/KolkhozCEngine.c" \
   "${repo_dir}/engine/KolkhozCEngine/KolkhozCEngineAI.c" \
+  "${repo_dir}/engine/KolkhozCEngine/KolkhozCEngineManagedEconomyAI.c" \
   "${repo_dir}/engine/KolkhozCEngine/KolkhozCEngineWeb.c" \
   -std=c11 \
   -O3 \

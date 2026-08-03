@@ -583,9 +583,9 @@ class _CellarBackWedgeClipper extends CustomClipper<Path> {
 
   @override
   Path getClip(Size size) => Path()
-    ..moveTo(size.width, size.height * 0.35)
-    ..lineTo(size.width, size.height)
-    ..lineTo(size.width * 0.1, size.height)
+    ..moveTo(0, size.height * 0.35)
+    ..lineTo(0, size.height)
+    ..lineTo(size.width * 0.9, size.height)
     ..close();
 
   @override
@@ -599,8 +599,8 @@ class _CellarSplitSeamPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final start = Offset(size.width, size.height * 0.35);
-    final end = Offset(size.width * 0.1, size.height);
+    final start = Offset(0, size.height * 0.35);
+    final end = Offset(size.width * 0.9, size.height);
     canvas
       ..drawLine(
         start,

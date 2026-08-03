@@ -58,6 +58,7 @@ set(KOLKHOZ_ENGINE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../engine/KolkhozCEngine"
 add_library(kolkhoz_c_engine SHARED
   "${KOLKHOZ_ENGINE_DIR}/KolkhozCEngine.c"
   "${KOLKHOZ_ENGINE_DIR}/KolkhozCEngineAI.c"
+  "${KOLKHOZ_ENGINE_DIR}/KolkhozCEngineManagedEconomyAI.c"
 )
 target_compile_features(kolkhoz_c_engine PRIVATE c_std_11)
 target_include_directories(kolkhoz_c_engine PRIVATE

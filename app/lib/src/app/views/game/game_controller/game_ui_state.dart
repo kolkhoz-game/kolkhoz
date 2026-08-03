@@ -14,6 +14,7 @@ class SelectionState {
     required this.plotCardID,
     required this.plotZone,
     required this.assignmentCardID,
+    this.planningRewardSuit,
   });
 
   static const empty = SelectionState(
@@ -21,12 +22,14 @@ class SelectionState {
     plotCardID: null,
     plotZone: null,
     assignmentCardID: null,
+    planningRewardSuit: null,
   );
 
   final String? handCardID;
   final String? plotCardID;
   final String? plotZone;
   final String? assignmentCardID;
+  final String? planningRewardSuit;
 
   SelectionState copyWith({
     String? handCardID,
@@ -37,6 +40,8 @@ class SelectionState {
     bool clearPlotZone = false,
     String? assignmentCardID,
     bool clearAssignmentCardID = false,
+    String? planningRewardSuit,
+    bool clearPlanningRewardSuit = false,
   }) {
     return SelectionState(
       handCardID: clearHandCardID ? null : handCardID ?? this.handCardID,
@@ -45,6 +50,9 @@ class SelectionState {
       assignmentCardID: clearAssignmentCardID
           ? null
           : assignmentCardID ?? this.assignmentCardID,
+      planningRewardSuit: clearPlanningRewardSuit
+          ? null
+          : planningRewardSuit ?? this.planningRewardSuit,
     );
   }
 }
@@ -135,6 +143,7 @@ class GameUiState {
       actionPlayCard ||
       actionPassCard ||
       actionAssignReward ||
+      actionConfirmRewardSwaps ||
       actionSubmitAssignments ||
       actionContinueAfterRequisition ||
       actionSetTrump => SelectionState.empty,

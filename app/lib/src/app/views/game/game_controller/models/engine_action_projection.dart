@@ -125,6 +125,7 @@ String actionKindName(int kind) {
     kcActionRevealReward => actionRevealReward,
     kcActionRevealTrump => actionRevealTrump,
     kcActionAssignReward => actionAssignReward,
+    kcActionConfirmRewardSwaps => actionConfirmRewardSwaps,
     kcActionCompleteTutorialOrientation => actionCompleteTutorialOrientation,
     kcActionCompleteTutorialRewardLesson => actionCompleteTutorialRewardLesson,
     kcActionCompleteTutorialSaboteurFollowLesson =>
@@ -147,6 +148,7 @@ int? actionKindCode(String kind) {
     actionRevealReward => kcActionRevealReward,
     actionRevealTrump => kcActionRevealTrump,
     actionAssignReward => kcActionAssignReward,
+    actionConfirmRewardSwaps => kcActionConfirmRewardSwaps,
     actionCompleteTutorialOrientation => kcActionCompleteTutorialOrientation,
     actionCompleteTutorialRewardLesson => kcActionCompleteTutorialRewardLesson,
     actionCompleteTutorialSaboteurFollowLesson =>
@@ -168,7 +170,8 @@ String actionLabel(int kind) {
     kcActionPassCard => 'Pass',
     kcActionRevealReward => 'Reveal reward',
     kcActionRevealTrump => 'Reveal trump',
-    kcActionAssignReward => 'Assign reward',
+    kcActionAssignReward => 'Swap reward',
+    kcActionConfirmRewardSwaps => 'Confirm rewards',
     kcActionCompleteTutorialOrientation => 'Begin Year 1',
     kcActionCompleteTutorialRewardLesson => 'Continue to trump',
     kcActionCompleteTutorialSaboteurFollowLesson => 'Continue the trick',
@@ -200,6 +203,7 @@ String requisitionMessage(int kind) {
     2 => 'No matching card found.',
     3 => 'Drunkard exiled.',
     4 => 'Protected from requisition.',
+    5 => 'Saboteur compromised the Hero.',
     _ => 'Requisition resolved.',
   };
 }
