@@ -19,6 +19,7 @@ from .matchmaking import (
     bot_fill_choices,
     target_bot_rating,
 )
+from .model import ENGINE_REPLAY_CONTRACT_VERSION
 from .store import ConnectionPool
 
 if TYPE_CHECKING:
@@ -387,7 +388,10 @@ class PostgresPopulationRepository:
                 return None
             connection.execute(  # type: ignore[attr-defined]
                 """
-                insert into server_games (session_id, seed, variants, created_at, updated_at)
+                insert into server_games (
+                    session_id, seed, variants, engine_contract_version,
+                    created_at, updated_at
+                )
                 values (
                     %s::uuid, %s,
                     jsonb_build_object(
@@ -395,7 +399,7 @@ class PostgresPopulationRepository:
                         'controllers', %s::jsonb,
                         'populationKind', %s::text
                     ),
-                    to_timestamp(%s), to_timestamp(%s)
+                    %s, to_timestamp(%s), to_timestamp(%s)
                 )
                 on conflict (session_id) do nothing
                 """,
@@ -404,6 +408,7 @@ class PostgresPopulationRepository:
                     seed,
                     __import__("json").dumps(controllers),
                     spec.population_kind,
+                    ENGINE_REPLAY_CONTRACT_VERSION,
                     now,
                     now,
                 ),

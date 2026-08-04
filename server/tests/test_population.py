@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from server.kolkhoz_server.matchmaking import BotProfile, MatchmakingSession
+from server.kolkhoz_server.matchmaking import PopulationSeed
+from server.kolkhoz_server.model import ENGINE_REPLAY_CONTRACT_VERSION
 from server.kolkhoz_server.population import (
     PROFILE_BOT_TARGET_WAIT_SECONDS,
     IntervalClaim,
+    PostgresPopulationRepository,
     PopulationScheduler,
 )
 
@@ -66,6 +69,68 @@ class Repository:
         )
         self.active.add(profile.user_id)
         return True
+
+
+class _Result:
+    def __init__(self, row=None):
+        self.row = row
+
+    def fetchone(self):
+        return self.row
+
+
+class _Connection:
+    def __init__(self):
+        self.game_insert = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *unused):
+        return False
+
+    def transaction(self):
+        return self
+
+    def execute(self, query, parameters):
+        if "select 1 from population_intervals" in query:
+            return _Result((1,))
+        if "insert into server_games" in query:
+            self.game_insert = (query, parameters)
+            return _Result()
+        if "insert into server_sessions" in query:
+            return _Result((parameters[0],))
+        return _Result()
+
+
+class _Pool:
+    def __init__(self):
+        self.connection_value = _Connection()
+
+    def connection(self):
+        return self.connection_value
+
+
+def test_population_games_use_the_current_replay_contract() -> None:
+    pool = _Pool()
+    repository = PostgresPopulationRepository(pool)  # type: ignore[arg-type]
+
+    session_id = repository.seed_lobby(
+        PopulationSeed(ranked=False, open_human_seats=1),
+        [
+            BotProfile("a", "heuristicAI", 900),
+            BotProfile("b", "mediumAI", 1100),
+            BotProfile("c", "neuralAI", 1400),
+        ],
+        idempotency_key="population-contract",
+        now=1000,
+        claim=IntervalClaim("seed", 1, "worker", 1),
+    )
+
+    assert session_id is not None
+    query, parameters = pool.connection_value.game_insert
+    assert "engine_contract_version" in query
+    assert ENGINE_REPLAY_CONTRACT_VERSION in parameters
 
 
 def test_replicas_execute_each_interval_once_and_seed_ranked_and_casual() -> None:
