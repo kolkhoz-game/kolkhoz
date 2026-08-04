@@ -2296,12 +2296,14 @@ class _PhysicalDeckTextPainter extends CustomPainter {
     final inkCenterX = (right - left) * scaleX / 2;
     final inkCenterY = (descent - ascent) * scaleY / 2;
     final inkScale = visualHeight / (ascent + descent);
+    final horizontalInkScale = text == '10' ? 0.72 : 1.0;
+    final opticalOffsetY = text == '7' ? 14 * scaleY : 0.0;
 
     canvas
       ..save()
-      ..translate(center.dx, center.dy)
+      ..translate(center.dx, center.dy + opticalOffsetY)
       ..rotate(rotation)
-      ..scale(inkScale)
+      ..scale(inkScale * horizontalInkScale, inkScale)
       ..translate(-inkCenterX, -inkCenterY - baseline);
     painter.paint(canvas, Offset(-painter.width / 2, 0));
     canvas.restore();
