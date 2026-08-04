@@ -2711,7 +2711,8 @@ static void kc_transition_to_next_year(KCEngine *engine) {
         if (engine->variants.deck_type == 36 || engine->variants.northern_style) {
             continue;
         }
-        if (engine->has_revealed_job[suit]) {
+        /* Unclaimed managed rewards rejoin the next worker deck. */
+        if (engine->has_revealed_job[suit] && !engine->variants.managed_economy) {
             if (engine->variants.accumulate_jobs) {
                 kc_list_append(&engine->accumulated_job_cards[suit], engine->revealed_jobs[suit]);
             } else {

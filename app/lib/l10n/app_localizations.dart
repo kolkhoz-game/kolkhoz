@@ -359,7 +359,7 @@ abstract class AppLocalizations {
   /// No description provided for @variantManagedEconomyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Deal each player a hidden ace; the clubs ace chooses the first Planner. In years 1–4, the Planner may provisionally swap public rewards with matching hand cards, confirms the layout, then chooses trump. The Planner skips the player swap while everyone else may swap from year 1. Year 5 has no rewards.'**
+  /// **'Deal each player a hidden ace; the clubs ace chooses the first Planner. In years 1–4, the Planner may provisionally swap public rewards with matching hand cards, confirms the layout, then chooses trump. Unclaimed rewards return to the Workers Deck after each year. The Planner skips the player swap while everyone else may swap from year 1. Year 5 has no rewards.'**
   String get variantManagedEconomyDescription;
 
   /// No description provided for @variantDemoModeTitle.

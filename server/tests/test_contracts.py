@@ -538,6 +538,58 @@ class ProjectionContractTests(unittest.TestCase):
         finally:
             self.engine.free_engine(pointer)
 
+    def test_managed_economy_returns_unclaimed_rewards_to_worker_deck(self) -> None:
+        variants = variants_native(
+            normalize_variants({"managedEconomy": True, "lottoRewards": False})
+        )
+        pointer = self.engine.new_engine(
+            42046,
+            variants=variants,
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            for suit in range(4):
+                self.engine.apply_action(pointer, self.engine.legal_actions(pointer)[0])
+
+            state = self.engine.snapshot(pointer)
+            unclaimed_rewards = {
+                (state.revealed_jobs[suit].suit, state.revealed_jobs[suit].value)
+                for suit in range(4)
+            }
+            state.phase = 4
+            state.requisition_plan_count = 0
+            state.requisition_plan_index = 0
+
+            self.engine.apply_action(
+                pointer,
+                KCAction(
+                    7,
+                    0,
+                    -1,
+                    KCCard(-1, 0),
+                    KCCard(-1, 0),
+                    KCCard(-1, 0),
+                    -1,
+                    -1,
+                ),
+            )
+
+            state = self.engine.snapshot(pointer)
+            dealt_cards = {
+                (player.hand.cards[index].suit, player.hand.cards[index].value)
+                for player in state.players
+                for index in range(player.hand.count)
+            }
+            north_cards = {
+                (state.exiled[1].cards[index].suit, state.exiled[1].cards[index].value)
+                for index in range(state.exiled[1].count)
+            }
+            self.assertEqual(state.year, 2)
+            self.assertTrue(unclaimed_rewards <= dealt_cards)
+            self.assertTrue(unclaimed_rewards.isdisjoint(north_cards))
+        finally:
+            self.engine.free_engine(pointer)
+
     def test_managed_economy_completes_a_full_benchmark_game(self) -> None:
         variants = variants_native(
             normalize_variants({"managedEconomy": True, "lottoRewards": False})
@@ -593,6 +645,183 @@ class ProjectionContractTests(unittest.TestCase):
             state.controllers.seats[0] = 0
             self.engine.apply_action(pointer, confirm)
             self.assertTrue(self.engine.snapshot(pointer).managed_rewards_confirmed)
+        finally:
+            self.engine.free_engine(pointer)
+
+    def test_heuristic_redirects_after_pending_work_completes_a_job(self) -> None:
+        pointer = self.engine.new_engine(
+            42047,
+            variants=variants_native(normalize_variants(None)),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 3
+            state.last_winner = 0
+            state.current_player = 0
+            state.controllers.seats[0] = 1
+            state.last_trick_count = 4
+            state.players[0].plot_revealed.count = 0
+            state.players[0].plot_hidden.count = 0
+            cards = ((0, 6), (1, 7), (1, 8), (1, 9))
+            for index, (suit, value) in enumerate(cards):
+                state.last_trick[index].player_id = index
+                state.last_trick[index].card = KCCard(suit, value)
+                state.pending_assignment_targets[index] = -1
+            for suit in range(4):
+                state.claimed_jobs[suit] = False
+                state.work_hours[suit] = 0
+            state.work_hours[0] = 35
+            state.has_revealed_job[0] = True
+            state.revealed_jobs[0] = KCCard(0, 2)
+            state.has_revealed_job[1] = True
+            state.revealed_jobs[1] = KCCard(1, 5)
+
+            finishing_action = self.engine.heuristic_action(pointer)
+            self.assertEqual((finishing_action.kind, finishing_action.target_suit), (5, 0))
+            state.controllers.seats[0] = 0
+            self.engine.apply_action(pointer, finishing_action)
+            state.controllers.seats[0] = 1
+
+            redirected_action = self.engine.heuristic_action(pointer)
+            self.assertEqual((redirected_action.kind, redirected_action.target_suit), (5, 1))
+        finally:
+            self.engine.free_engine(pointer)
+
+    def test_heuristic_uses_exact_subset_to_complete_a_job(self) -> None:
+        pointer = self.engine.new_engine(
+            42048,
+            variants=variants_native(normalize_variants(None)),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 3
+            state.last_winner = 0
+            state.current_player = 0
+            state.controllers.seats[0] = 1
+            state.last_trick_count = 4
+            state.players[0].plot_revealed.count = 0
+            state.players[0].plot_hidden.count = 0
+            cards = ((0, 8), (1, 7), (1, 6), (0, 1))
+            for index, (suit, value) in enumerate(cards):
+                state.last_trick[index].player_id = index
+                state.last_trick[index].card = KCCard(suit, value)
+                state.pending_assignment_targets[index] = -1
+            for suit in range(4):
+                state.claimed_jobs[suit] = False
+                state.work_hours[suit] = 0
+                state.has_revealed_job[suit] = False
+            state.work_hours[0] = 27
+
+            first_action = self.engine.heuristic_action(pointer)
+            self.assertEqual(
+                (first_action.card.value, first_action.target_suit),
+                (7, 0),
+            )
+            state.controllers.seats[0] = 0
+            self.engine.apply_action(pointer, first_action)
+            state.controllers.seats[0] = 1
+
+            second_action = self.engine.heuristic_action(pointer)
+            self.assertEqual(
+                (second_action.card.value, second_action.target_suit),
+                (6, 0),
+            )
+            state.controllers.seats[0] = 0
+            self.engine.apply_action(pointer, second_action)
+            state.controllers.seats[0] = 1
+
+            redirected_action = self.engine.heuristic_action(pointer)
+            self.assertEqual(redirected_action.target_suit, 1)
+        finally:
+            self.engine.free_engine(pointer)
+
+    def test_heuristic_values_one_high_plot_card_over_two_low_cards(self) -> None:
+        pointer = self.engine.new_engine(
+            42049,
+            variants=variants_native(normalize_variants(None)),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 3
+            state.last_winner = 0
+            state.current_player = 0
+            state.controllers.seats[0] = 1
+            state.last_trick_count = 4
+            cards = ((0, 8), (1, 7), (1, 6), (0, 5))
+            for index, (suit, value) in enumerate(cards):
+                state.last_trick[index].player_id = index
+                state.last_trick[index].card = KCCard(suit, value)
+                state.pending_assignment_targets[index] = -1
+            for suit in range(4):
+                state.claimed_jobs[suit] = False
+                state.work_hours[suit] = 0
+                state.has_revealed_job[suit] = False
+
+            player = state.players[0]
+            player.plot_hidden.count = 0
+            player.plot_revealed.count = 3
+            player.has_won_trick_this_year = True
+            player.plot_revealed.cards[0] = KCCard(0, 13)
+            player.plot_revealed.cards[1] = KCCard(1, 1)
+            player.plot_revealed.cards[2] = KCCard(1, 2)
+
+            action = self.engine.heuristic_action(pointer)
+            self.assertEqual(action.target_suit, 0)
+        finally:
+            self.engine.free_engine(pointer)
+
+    def test_heuristic_starves_job_with_vulnerable_opponent_value(self) -> None:
+        pointer = self.engine.new_engine(
+            42050,
+            variants=variants_native(normalize_variants(None)),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 3
+            state.last_winner = 0
+            state.current_player = 0
+            state.controllers.seats[0] = 1
+            state.last_trick_count = 4
+            cards = ((0, 8), (1, 7), (1, 6), (0, 5))
+            for index, (suit, value) in enumerate(cards):
+                state.last_trick[index].player_id = index
+                state.last_trick[index].card = KCCard(suit, value)
+                state.pending_assignment_targets[index] = -1
+            for suit in range(4):
+                state.claimed_jobs[suit] = False
+                state.work_hours[suit] = 0
+                state.has_revealed_job[suit] = False
+            state.players[0].plot_revealed.count = 0
+            state.players[0].plot_hidden.count = 0
+
+            opponent = state.players[1]
+            opponent.plot_hidden.count = 0
+            opponent.plot_revealed.count = 1
+            opponent.plot_revealed.cards[0] = KCCard(0, 13)
+            opponent.medals = 0
+            ineligible_action = self.engine.heuristic_action(pointer)
+            self.assertEqual(ineligible_action.target_suit, 0)
+
+            opponent.medals = 1
+            vulnerable_action = self.engine.heuristic_action(pointer)
+            self.assertEqual(vulnerable_action.target_suit, 1)
+
+            state.work_hours[0] = 27
+            state.has_revealed_job[0] = True
+            state.revealed_jobs[0] = KCCard(0, 2)
+            added_to_vulnerable_job = 0
+            for _ in range(4):
+                action = self.engine.heuristic_action(pointer)
+                if action.target_suit == 0:
+                    added_to_vulnerable_job += action.card.value
+                state.controllers.seats[0] = 0
+                self.engine.apply_action(pointer, action)
+                state.controllers.seats[0] = 1
+            self.assertLess(added_to_vulnerable_job, 13)
         finally:
             self.engine.free_engine(pointer)
 

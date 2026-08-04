@@ -76,6 +76,8 @@ their plot swaps with the final rewards visible. A replaced reward enters the Pl
 hand, so the hand remains at five cards. If
 Saboteur is claimed as a reward, it enters the claimant's revealed plot normally. The
 four original offers remain public for the year, and the Planner skips their swap turn.
+At year end, every unclaimed reward is shuffled back into the worker deck instead of
+being sent North.
 Year 5 has no reward cards and uses the normal swap flow. Because every player begins
 with an ace in their plot, the other three players may swap starting in year 1. Managed
 Economy is mutually exclusive with Lotto Rewards and is unavailable with the 36-card

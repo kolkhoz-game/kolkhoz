@@ -123,6 +123,9 @@ claims rewards.
 There is no plot-selection phase. When a year is complete, the engine moves remaining
 hand cards into hidden plots before requisition.
 
+With Managed Economy, unclaimed rewards are shuffled back into the worker deck for the
+next deal instead of being sent North.
+
 ### 7. Requisition
 
 Failed jobs may reveal and exile matching plot cards. Drunkard, Informant, Party

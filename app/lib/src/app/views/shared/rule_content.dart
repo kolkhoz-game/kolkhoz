@@ -234,7 +234,9 @@ const kolkhozBaseRulebook = [
   RulebookBlock(RulebookBlockKind.groupTitle, 'Years 1-4'),
   RulebookBlock(
     RulebookBlockKind.bullet,
-    'All unclaimed reward cards for the year are sent to the north.',
+    'All unclaimed reward cards for the year are sent to the north. With '
+    'Five Year Plan in Four Years, shuffle them back into the Workers Deck '
+    'instead.',
   ),
   RulebookBlock(
     RulebookBlockKind.bullet,

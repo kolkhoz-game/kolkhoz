@@ -57,7 +57,7 @@
   "variantLottoRewardsTitle": "Lotto Rewards",
   "variantLottoRewardsDescription": "Each crop replaces its 5 reward with a hidden random card from 5 through King.",
   "variantManagedEconomyTitle": "Five Year Plan in Four Years",
-  "variantManagedEconomyDescription": "Deal each player a hidden ace; the clubs ace chooses the first Planner. In years 1–4, the Planner may provisionally swap public rewards with matching hand cards, confirms the layout, then chooses trump. The Planner skips the player swap while everyone else may swap from year 1. Year 5 has no rewards.",
+  "variantManagedEconomyDescription": "Deal each player a hidden ace; the clubs ace chooses the first Planner. In years 1–4, the Planner may provisionally swap public rewards with matching hand cards, confirms the layout, then chooses trump. Unclaimed rewards return to the Workers Deck after each year. The Planner skips the player swap while everyone else may swap from year 1. Year 5 has no rewards.",
   "variantDemoModeTitle": "Demo Mode",
   "variantDemoModeDescription": "5-year Kolkhoz with easy AI",
   "appsettingsDark": "DARK",

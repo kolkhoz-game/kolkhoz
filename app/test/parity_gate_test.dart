@@ -88,7 +88,15 @@ actions=
           expect(bridge.applyAIAction(engine, revealAction), 0);
         }
 
-        final confirmRewardsAction = bridge.heuristicAction(engine);
+        var rewardSwapCount = 0;
+        var confirmRewardsAction = bridge.heuristicAction(engine);
+        while (confirmRewardsAction?.kind == kcActionAssignReward) {
+          expect(bridge.applyAIAction(engine, confirmRewardsAction!), 0);
+          rewardSwapCount += 1;
+          expect(rewardSwapCount, lessThanOrEqualTo(4));
+          confirmRewardsAction = bridge.heuristicAction(engine);
+        }
+        expect(rewardSwapCount, greaterThan(0));
         expect(confirmRewardsAction, isNotNull);
         expect(confirmRewardsAction!.kind, kcActionConfirmRewardSwaps);
         expect(bridge.applyAIAction(engine, confirmRewardsAction), 0);
@@ -466,9 +474,9 @@ actions=
         expect(
           gameOverFingerprint(model, appliedActions),
           '''
-actions=67 winner=3
-scores=0:visible=8:final=33|1:visible=0:final=8|2:visible=0:final=0|3:visible=4:final=35
-exiled=1:beet-1,beet-4|2:beet-5,potato-11,potato-4,potato-5|3:beet-2,beet-6,potato-12,potato-13,potato-2,sunflower-1,sunflower-10,sunflower-11,sunflower-3,sunflower-5,sunflower-6|4:potato-3,potato-6,sunflower-2,sunflower-4,sunflower-7,sunflower-8|5:beet-13,beet-3,wheat-1,wheat-13,wheat-2,wheat-9
+actions=62 winner=3
+scores=0:visible=4:final=17|1:visible=13:final=13|2:visible=0:final=37|3:visible=28:final=52
+exiled=1:beet-1|2:beet-13,sunflower-10|3:wheat-13|4:potato-7,wheat-10,wheat-9|5:beet-10,sunflower-12,sunflower-9,wheat-6
 '''
               .trim(),
         );
@@ -502,7 +510,7 @@ exiled=1:beet-1,beet-4|2:beet-5,potato-11,potato-4,potato-5|3:beet-2,beet-6,pota
         stackFingerprint(model, appliedActions),
         '''
 actions=3
-stacks=2:0:revealed=beet-8:hidden=beet-11,beet-9,wheat-11,wheat-12,wheat-9|2:1:revealed=beet-6:hidden=potato-8,potato-9,sunflower-10,sunflower-12,wheat-8
+stacks=2:0:revealed=beet-8:hidden=beet-11,beet-9,sunflower-12,wheat-11,wheat-8,wheat-9|2:1:revealed=beet-6:hidden=potato-8,potato-9,sunflower-10,wheat-12
 '''
             .trim(),
       );
@@ -552,11 +560,11 @@ stacks=2:0:revealed=beet-8:hidden=beet-11,beet-9,wheat-11,wheat-12,wheat-9|2:1:r
       expect(
         variantFingerprint(result.model, result.appliedActions),
         '''
-actions=40 winner=2
-scores=0:visible=8:final=15|1:visible=0:final=0|2:visible=0:final=18|3:visible=0:final=8
-exiled=1:sunflower-13|2:beet-7,potato-13,potato-7|3:potato-11|4:wheat-12,wheat-13,wheat-7,wheat-9|5:beet-11,potato-1,potato-12,potato-6,potato-9,wheat-10,wheat-11
-claimed=sunflower
-visible=0:8:0|1:0:0|2:0:1|3:0:2
+actions=66 winner=0
+scores=0:visible=0:final=38|1:visible=0:final=0|2:visible=0:final=13|3:visible=0:final=7
+exiled=2:beet-7,potato-13,potato-7|3:beet-13,sunflower-6,sunflower-7,sunflower-8|4:beet-11,potato-6,potato-8,sunflower-11,sunflower-12|5:beet-8,sunflower-10,sunflower-13
+claimed=wheat
+visible=0:0:2|1:0:1|2:0:0|3:0:0
 '''
             .trim(),
       );
@@ -578,11 +586,11 @@ visible=0:8:0|1:0:0|2:0:1|3:0:2
         expect(
           variantFingerprint(result.model, result.appliedActions),
           '''
-actions=59 winner=3
-scores=0:visible=11:final=28|1:visible=8:final=19|2:visible=12:final=12|3:visible=11:final=32
-exiled=1:wheat-10,wheat-13|2:beet-7,wheat-12|3:beet-13,beet-8,sunflower-13,sunflower-3|4:beet-12,sunflower-10,sunflower-6,sunflower-8,wheat-6,wheat-7,wheat-9|5:sunflower-2,wheat-8
-claimed=potato
-visible=0:11:2|1:8:0|2:12:1|3:11:0
+actions=56 winner=1
+scores=0:visible=4:final=27|1:visible=42:final=65|2:visible=18:final=30|3:visible=13:final=37
+exiled=1:wheat-10,wheat-13|2:beet-7|3:beet-11,sunflower-13|4:wheat-12|5:wheat-11,wheat-5,wheat-9
+claimed=sunflower,potato,beet
+visible=0:4:0|1:42:3|2:18:0|3:13:0
 '''
               .trim(),
         );

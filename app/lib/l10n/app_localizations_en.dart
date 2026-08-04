@@ -156,7 +156,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get variantManagedEconomyDescription =>
-      'Deal each player a hidden ace; the clubs ace chooses the first Planner. In years 1–4, the Planner may provisionally swap public rewards with matching hand cards, confirms the layout, then chooses trump. The Planner skips the player swap while everyone else may swap from year 1. Year 5 has no rewards.';
+      'Deal each player a hidden ace; the clubs ace chooses the first Planner. In years 1–4, the Planner may provisionally swap public rewards with matching hand cards, confirms the layout, then chooses trump. Unclaimed rewards return to the Workers Deck after each year. The Planner skips the player swap while everyone else may swap from year 1. Year 5 has no rewards.';
 
   @override
   String get variantDemoModeTitle => 'Demo Mode';
