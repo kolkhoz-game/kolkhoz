@@ -43,10 +43,17 @@ class FlyingCard extends StatelessWidget {
     final flipDuration = flight.revealBeforeFlight
         ? motion.rewardFlip
         : Duration.zero;
-    final totalDuration = flipDuration + flightDuration;
+    final winnerCueDuration = flight.requisitionWinnerCue
+        ? motion.requisitionWinnerCue
+        : Duration.zero;
+    final totalDuration = flipDuration + winnerCueDuration + flightDuration;
     final flipFraction = totalDuration == Duration.zero
         ? 0.0
         : flipDuration.inMicroseconds / totalDuration.inMicroseconds;
+    final flightStartFraction = totalDuration == Duration.zero
+        ? 0.0
+        : (flipDuration + winnerCueDuration).inMicroseconds /
+              totalDuration.inMicroseconds;
     return PlayAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: totalDuration,
@@ -56,9 +63,20 @@ class FlyingCard extends StatelessWidget {
         final flipProgress = flipFraction == 0
             ? 1.0
             : (value / flipFraction).clamp(0.0, 1.0);
-        final rawFlightProgress = flipFraction >= 1
+        final rawFlightProgress = flightStartFraction >= 1
             ? 1.0
-            : ((value - flipFraction) / (1 - flipFraction)).clamp(0.0, 1.0);
+            : ((value - flightStartFraction) / (1 - flightStartFraction)).clamp(
+                0.0,
+                1.0,
+              );
+        final winnerCueProgress = winnerCueDuration == Duration.zero
+            ? 1.0
+            : ((value - flipFraction) / (flightStartFraction - flipFraction))
+                  .clamp(0.0, 1.0);
+        final winnerCueVisible =
+            winnerCueDuration != Duration.zero &&
+            value >= flipFraction &&
+            value < flightStartFraction;
         final flightProgress = GameMotion.cardFlightCurve.transform(
           rawFlightProgress,
         );
@@ -123,6 +141,67 @@ class FlyingCard extends StatelessWidget {
               scale: 1 + 0.12 * emphasis,
               child: presentedCard,
             ),
+          );
+        }
+        if (flight.destinationZone.kind == MotionZoneKind.finalTrump) {
+          final emphasis = math.sin(math.pi * value);
+          final settleTilt = -0.045 * math.sin(math.pi * rawFlightProgress);
+          presentedCard = Transform.translate(
+            offset: Offset(0, -6 * emphasis),
+            child: Transform.rotate(
+              angle: settleTilt,
+              child: Transform.scale(
+                scale: 1 + 0.08 * emphasis,
+                child: DecoratedBox(
+                  key: ValueKey('final-trump-reveal-card-${flight.card.id}'),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(cardViewCornerRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: tokens.colors.gold.withValues(
+                          alpha: 0.34 * emphasis,
+                        ),
+                        blurRadius: 14 * emphasis,
+                        spreadRadius: 2 * emphasis,
+                      ),
+                    ],
+                  ),
+                  child: presentedCard,
+                ),
+              ),
+            ),
+          );
+        }
+        if (winnerCueVisible) {
+          final flashOpacity = math.sin(math.pi * winnerCueProgress);
+          final flashScale = lerpDouble(
+            0.72,
+            1.08,
+            Curves.easeOutBack.transform(winnerCueProgress),
+          )!;
+          presentedCard = Stack(
+            fit: StackFit.expand,
+            children: [
+              presentedCard,
+              Center(
+                child: Opacity(
+                  opacity: flashOpacity,
+                  child: Transform.scale(
+                    scale: flashScale,
+                    child: Image.asset(
+                      'assets/art/field_plan/shared/pictograms/'
+                      'requisition-high-card-snowflake.png',
+                      key: ValueKey(
+                        'requisition-high-card-flash-${flight.card.id}',
+                      ),
+                      width: rect.width * 0.62,
+                      height: rect.width * 0.62,
+                      filterQuality: FilterQuality.medium,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         }
         final routeOpacity = entersJobGauge

@@ -20,6 +20,7 @@ class CardFlight {
     this.faceDown = false,
     this.revealBeforeFlight = false,
     this.requisitioned = false,
+    this.requisitionWinnerCue = false,
     this.rewardExchange = false,
   });
 
@@ -34,6 +35,7 @@ class CardFlight {
   final bool faceDown;
   final bool revealBeforeFlight;
   final bool requisitioned;
+  final bool requisitionWinnerCue;
   final bool rewardExchange;
 }
 
@@ -205,10 +207,21 @@ CardMotionPlan planCardFlights({
         (from.center - to.center).distance < minimumFlightDistance) {
       continue;
     }
+    final requisitionNomination =
+        (previousModel.table.phase == phaseRequisition ||
+            nextModel.table.phase == phaseRequisition) &&
+        previousZone?.isPlot == true &&
+        entry.value.kind == MotionZoneKind.trick;
     final requisitioned =
+        requisitionNomination ||
         entry.value.kind == MotionZoneKind.northExile ||
         (previousZone?.isPlot == true &&
             entry.value.kind == MotionZoneKind.exiled);
+    final requisitionWinnerCue =
+        previousZone?.kind == MotionZoneKind.trick &&
+        entry.value.kind == MotionZoneKind.northExile;
+    final finalTrumpReveal =
+        previousZone == null && entry.value.kind == MotionZoneKind.finalTrump;
     flights.add(
       CardFlight(
         id: nextFlightID++,
@@ -228,12 +241,14 @@ CardMotionPlan planCardFlights({
           nextModel: nextModel,
         ),
         revealBeforeFlight:
-            requisitioned &&
-            previousZone?.kind == MotionZoneKind.plotHidden &&
-            !(previousModel.table.phase == phaseRequisition &&
-                previousZone?.seatID != null &&
-                motionSeatIsViewer(previousModel, previousZone!.seatID!)),
+            finalTrumpReveal ||
+            (requisitioned &&
+                previousZone?.kind == MotionZoneKind.plotHidden &&
+                !(previousModel.table.phase == phaseRequisition &&
+                    previousZone?.seatID != null &&
+                    motionSeatIsViewer(previousModel, previousZone!.seatID!))),
         requisitioned: requisitioned,
+        requisitionWinnerCue: requisitionWinnerCue,
         rewardExchange: isManagedRewardExchange(previousZone, entry.value),
       ),
     );

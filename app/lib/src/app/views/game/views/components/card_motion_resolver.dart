@@ -37,6 +37,11 @@ class DefaultCardMotionGeometryResolver implements CardMotionGeometryResolver {
   }) {
     if (nextZone.kind == MotionZoneKind.northExile) {
       var source = current[MotionAnchor.card(cardID)];
+      if (source == null && previousZone?.kind == MotionZoneKind.trick) {
+        source =
+            previous[trickCardMotionSourceKey(cardID)] ??
+            previous[MotionAnchor.card(cardID)];
+      }
       if (source == null && previousZone?.isPlot == true) {
         source = cardFlightSourceRect(
           cardID: cardID,
@@ -109,12 +114,23 @@ MotionZone? provisionalTrickCardMotionZone(
   TableViewModel model,
   String cardID,
 ) {
-  if (model.table.phase != phaseTrick || model.selection.handCardID != cardID) {
-    return null;
+  if (model.table.phase == phaseTrick && model.selection.handCardID == cardID) {
+    for (final seat in model.table.seats) {
+      if (seat.isViewer && seat.hand.any((card) => card.id == cardID)) {
+        return MotionZone.trick(seat.id);
+      }
+    }
   }
-  for (final seat in model.table.seats) {
-    if (seat.isViewer && seat.hand.any((card) => card.id == cardID)) {
-      return MotionZone.trick(seat.id);
+  if (model.table.phase == phaseRequisition &&
+      model.selection.plotCardID == cardID) {
+    for (final seat in model.table.seats) {
+      if (seat.isViewer &&
+          [
+            ...seat.plot.hidden,
+            ...seat.plot.revealed,
+          ].any((card) => card.id == cardID)) {
+        return MotionZone.trick(seat.id);
+      }
     }
   }
   return null;

@@ -233,9 +233,8 @@
   },
   "sharedCorners": {
     "topRank": {
-      "x": 290.5,
-      "y": 257,
-      "visualHeight": 220
+      "y": 262,
+      "visualHeight": 202
     },
     "topSuit": {
       "x": 180.5,
@@ -244,9 +243,8 @@
       "height": 220
     },
     "bottomRank": {
-      "x": 1353.5,
-      "y": 1987,
-      "visualHeight": 220
+      "y": 1982,
+      "visualHeight": 202
     },
     "bottomSuit": {
       "x": 1243.5,
@@ -255,14 +253,12 @@
       "height": 220
     },
     "topValue": {
-      "x": 479,
-      "y": 258,
-      "visualHeight": 105
+      "y": 262,
+      "visualHeight": 86
     },
     "bottomValue": {
-      "x": 1165,
-      "y": 1986,
-      "visualHeight": 105
+      "y": 1982,
+      "visualHeight": 86
     },
     "topTrumpEmblem": {
       "x": 1186.6163054753424,
@@ -295,9 +291,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "Т",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 303.397284,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -305,9 +301,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "1",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 442.774762,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -334,9 +330,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "Т",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1340.602716,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -344,9 +340,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "1",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1201.225238,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -383,9 +379,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "2",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 292.107192,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -422,9 +418,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "2",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1351.892808,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -461,9 +457,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "3",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 285.670913,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -510,9 +506,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "3",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1358.329087,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -549,9 +545,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "4",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 293.194444,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -608,9 +604,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "4",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1350.805556,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -647,9 +643,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "5",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 287.45589,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -716,9 +712,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "5",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1356.54411,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -755,9 +751,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "6",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 289.297403,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -834,9 +830,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "6",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1354.702597,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -873,9 +869,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "7",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 293.349798,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0,
         "fontSize": 300
       },
@@ -963,9 +959,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "7",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1350.650202,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180,
         "fontSize": 300
       },
@@ -1003,9 +999,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "8",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 284.888434,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -1102,9 +1098,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "8",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1359.111566,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -1141,9 +1137,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "9",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 289.510578,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -1250,9 +1246,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "9",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1354.489422,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -1289,9 +1285,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "10",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 329.110775,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0,
         "fontSize": 240
       },
@@ -1409,9 +1405,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "10",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1314.889225,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180,
         "fontSize": 240
       },
@@ -1449,9 +1445,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "В",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 300.996604,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -1459,9 +1455,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "11",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 473.076895,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -1488,9 +1484,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "В",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1343.003396,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -1498,9 +1494,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "11",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1170.923105,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -1546,9 +1542,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "Д",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 297.226051,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -1556,9 +1552,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "12",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 467.836515,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -1585,9 +1581,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "Д",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1346.773949,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -1595,9 +1591,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "12",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1176.163485,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -1643,9 +1639,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "К",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 317.629881,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0,
         "fontSize": 300
       },
@@ -1654,9 +1650,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "13",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 504.025955,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -1683,9 +1679,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "К",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1326.370119,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180,
         "fontSize": 300
       },
@@ -1694,9 +1690,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "13",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1139.974045,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -1742,9 +1738,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "Т",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 303.397284,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -1752,9 +1748,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "1",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 442.774762,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -1781,9 +1777,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "Т",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1340.602716,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -1791,9 +1787,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "1",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1201.225238,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -1830,9 +1826,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "2",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 292.107192,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -1869,9 +1865,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "2",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1351.892808,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -1908,9 +1904,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "3",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 285.670913,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -1957,9 +1953,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "3",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1358.329087,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -1996,9 +1992,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "4",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 293.194444,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -2055,9 +2051,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "4",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1350.805556,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -2094,9 +2090,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "5",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 287.45589,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -2163,9 +2159,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "5",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1356.54411,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -2202,9 +2198,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "6",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 289.297403,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -2281,9 +2277,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "6",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1354.702597,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -2320,9 +2316,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "7",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 293.349798,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -2409,9 +2405,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "7",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1350.650202,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -2448,9 +2444,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "8",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 284.888434,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -2547,9 +2543,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "8",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1359.111566,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -2586,9 +2582,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "9",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 289.510578,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -2695,9 +2691,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "9",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1354.489422,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -2734,9 +2730,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "10",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 329.110775,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -2853,9 +2849,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "10",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1314.889225,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -2892,9 +2888,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "В",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 300.996604,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -2902,9 +2898,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "11",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 473.076895,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -2931,9 +2927,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "В",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1343.003396,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -2941,9 +2937,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "11",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1170.923105,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -2989,9 +2985,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "Д",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 297.226051,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -2999,9 +2995,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "12",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 467.836515,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -3028,9 +3024,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "Д",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1346.773949,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -3038,9 +3034,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "12",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1176.163485,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -3086,9 +3082,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "К",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 317.629881,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -3096,9 +3092,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "13",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 504.025955,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -3125,9 +3121,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "К",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1326.370119,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -3135,9 +3131,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "13",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1139.974045,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -3183,9 +3179,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "Т",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 303.397284,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -3193,9 +3189,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "1",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 442.774762,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -3222,9 +3218,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "Т",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1340.602716,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -3232,9 +3228,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "1",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1201.225238,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -3271,9 +3267,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "2",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 292.107192,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -3310,9 +3306,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "2",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1351.892808,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -3349,9 +3345,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "3",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 285.670913,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -3398,9 +3394,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "3",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1358.329087,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -3437,9 +3433,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "4",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 293.194444,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -3496,9 +3492,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "4",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1350.805556,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -3535,9 +3531,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "5",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 287.45589,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -3604,9 +3600,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "5",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1356.54411,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -3643,9 +3639,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "6",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 289.297403,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -3722,9 +3718,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "6",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1354.702597,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -3761,9 +3757,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "7",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 293.349798,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -3850,9 +3846,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "7",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1350.650202,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -3889,9 +3885,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "8",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 284.888434,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -3988,9 +3984,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "8",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1359.111566,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4027,9 +4023,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "9",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 289.510578,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -4136,9 +4132,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "9",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1354.489422,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4175,9 +4171,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "10",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 329.110775,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -4294,9 +4290,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "10",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1314.889225,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4333,9 +4329,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "В",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 300.996604,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -4343,9 +4339,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "11",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 473.076895,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -4372,9 +4368,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "В",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1343.003396,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -4382,9 +4378,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "11",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1170.923105,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4430,9 +4426,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "Д",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 297.226051,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -4440,9 +4436,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "12",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 467.836515,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -4469,9 +4465,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "Д",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1346.773949,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -4479,9 +4475,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "12",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1176.163485,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4527,9 +4523,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "К",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 317.629881,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -4537,9 +4533,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "13",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 504.025955,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -4566,9 +4562,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "К",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1326.370119,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -4576,9 +4572,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "13",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1139.974045,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4624,9 +4620,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "Т",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 303.397284,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -4634,9 +4630,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "1",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 442.774762,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -4663,9 +4659,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "Т",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1340.602716,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -4673,9 +4669,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "1",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1201.225238,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4712,9 +4708,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "2",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 292.107192,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -4751,9 +4747,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "2",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1351.892808,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4790,9 +4786,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "3",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 285.670913,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -4839,9 +4835,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "3",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1358.329087,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4878,9 +4874,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "4",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 293.194444,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -4937,9 +4933,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "4",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1350.805556,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -4976,9 +4972,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "5",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 287.45589,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -5045,9 +5041,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "5",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1356.54411,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -5084,9 +5080,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "6",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 289.297403,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -5163,9 +5159,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "6",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1354.702597,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -5202,9 +5198,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "7",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 293.349798,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -5291,9 +5287,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "7",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1350.650202,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -5330,9 +5326,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "8",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 284.888434,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -5429,9 +5425,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "8",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1359.111566,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -5468,9 +5464,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "9",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 289.510578,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -5577,9 +5573,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "9",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1354.489422,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -5616,9 +5612,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "10",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 329.110775,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topSuit": {
@@ -5735,9 +5731,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "10",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1314.889225,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomSuit": {
@@ -5774,9 +5770,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "В",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 300.996604,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -5784,9 +5780,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "11",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 473.076895,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -5813,9 +5809,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "В",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1343.003396,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -5823,9 +5819,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "11",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1170.923105,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -5871,9 +5867,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "Д",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 297.226051,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -5881,9 +5877,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "12",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 467.836515,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -5910,9 +5906,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "Д",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1346.773949,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -5920,9 +5916,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "12",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1176.163485,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -5968,9 +5964,9 @@
         "type": "rank",
         "label": "Top rank",
         "text": "К",
-        "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "x": 317.629881,
+        "y": 262,
+        "visualHeight": 202,
         "rotation": 0
       },
       "topValue": {
@@ -5978,9 +5974,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "13",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 504.025955,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -6007,9 +6003,9 @@
         "type": "rank",
         "label": "Bottom rank",
         "text": "К",
-        "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "x": 1326.370119,
+        "y": 1982,
+        "visualHeight": 202,
         "rotation": 180
       },
       "bottomValue": {
@@ -6017,9 +6013,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "13",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1139.974045,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -6066,8 +6062,8 @@
         "label": "Top rank icon",
         "href": "../../../app/assets/art/field_plan/cards/ranks/rank-saboteur-star.png",
         "x": 290.5,
-        "y": 257,
-        "visualHeight": 220,
+        "y": 262,
+        "visualHeight": 202,
         "aspectRatio": 1.0816115702479339,
         "rotation": 0,
         "text": "S",
@@ -6078,9 +6074,9 @@
         "textSource": "value",
         "label": "Top numerical value",
         "text": "0",
-        "x": 479,
-        "y": 258,
-        "visualHeight": 105,
+        "x": 462.015734,
+        "y": 262,
+        "visualHeight": 86,
         "rotation": 0
       },
       "topSuit": {
@@ -6096,11 +6092,11 @@
       "centralFace": {
         "type": "image",
         "label": "Saboteur portrait",
-        "href": "../faces/candidates/face-saboteur-poster-v5.png",
-        "x": 372.6186324259161,
-        "y": 625.2107712579545,
+        "href": "../faces/candidates/face-saboteur-poster-v7.png",
+        "x": 372,
+        "y": 445,
         "width": 900,
-        "height": 1120,
+        "height": 1300,
         "rotation": 0
       },
       "bottomRank": {
@@ -6108,8 +6104,8 @@
         "label": "Bottom rank icon",
         "href": "../../../app/assets/art/field_plan/cards/ranks/rank-saboteur-star.png",
         "x": 1353.5,
-        "y": 1987,
-        "visualHeight": 220,
+        "y": 1982,
+        "visualHeight": 202,
         "aspectRatio": 1.0816115702479339,
         "rotation": 180,
         "text": "S",
@@ -6120,9 +6116,9 @@
         "textSource": "value",
         "label": "Bottom numerical value",
         "text": "0",
-        "x": 1165,
-        "y": 1986,
-        "visualHeight": 105,
+        "x": 1181.984266,
+        "y": 1982,
+        "visualHeight": 86,
         "rotation": 180
       },
       "bottomSuit": {
@@ -6139,8 +6135,8 @@
         "type": "caption",
         "label": "Face caption",
         "text": "Вредитель",
-        "x": 821.8532058650369,
-        "y": 1762.0808825590848,
+        "x": 822,
+        "y": 1775,
         "visualHeight": 96,
         "rotation": 0
       },

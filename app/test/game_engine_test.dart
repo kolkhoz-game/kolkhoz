@@ -93,6 +93,75 @@ void main() {
     expect(engine.transitionEvents.first.toZone, kcObjectZoneCurrentTrick);
   });
 
+  test('requisition emits nominations before their comparison outcomes', () {
+    List<EngineTransitionEvent>? comparison;
+    for (var seed = 1; seed <= 40 && comparison == null; seed++) {
+      final engine = NativeGameEngine(
+        bridge: KolkhozCEngineBridge(),
+        seed: seed,
+        variants: KolkhozGameVariants.kolkhoz.copyWith(managedEconomy: false),
+        controllers: const [
+          KolkhozPlayerController.human,
+          KolkhozPlayerController.human,
+          KolkhozPlayerController.human,
+          KolkhozPlayerController.human,
+        ],
+      );
+      try {
+        for (
+          var step = 0;
+          step < 2500 && engine.phase != kcPhaseGameOver;
+          step++
+        ) {
+          if (engine.legalActions.isEmpty) {
+            expect(engine.stepAutomatic(), greaterThan(0));
+          } else {
+            final action =
+                engine.heuristicAction() ?? engine.legalActions.first;
+            expect(engine.applyManual(action), 0);
+          }
+          final events = engine.transitionEvents;
+          final nominations = events
+              .where(
+                (event) =>
+                    (event.fromZone == kcObjectZonePlotHidden ||
+                        event.fromZone == kcObjectZonePlotRevealed) &&
+                    event.toZone == kcObjectZoneCurrentTrick,
+              )
+              .toList();
+          if (nominations.isNotEmpty) {
+            comparison = events;
+            break;
+          }
+        }
+      } finally {
+        engine.dispose();
+      }
+    }
+
+    expect(comparison, isNotNull);
+    final nominations = comparison!
+        .where((event) => event.toZone == kcObjectZoneCurrentTrick)
+        .toList();
+    final outcomes = comparison
+        .where(
+          (event) =>
+              event.fromZone == kcObjectZoneCurrentTrick &&
+              (event.toZone == kcObjectZonePlotRevealed ||
+                  event.toZone == kcObjectZoneExiled),
+        )
+        .toList();
+    String cardID(EngineTransitionEvent event) =>
+        '${event.card.suit}-${event.card.value}';
+
+    expect(outcomes, hasLength(nominations.length));
+    expect(outcomes.map(cardID).toSet(), nominations.map(cardID).toSet());
+    expect(
+      comparison.indexOf(outcomes.first),
+      greaterThan(comparison.indexOf(nominations.last)),
+    );
+  });
+
   test('Saboteur field leaves the Hero fully protected', () {
     var foundScenario = false;
     for (var seed = 1; seed <= 250 && !foundScenario; seed += 1) {

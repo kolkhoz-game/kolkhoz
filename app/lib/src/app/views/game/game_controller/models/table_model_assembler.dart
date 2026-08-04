@@ -30,7 +30,12 @@ TableViewModel buildTableViewModel({
     table: TableState(
       year: year,
       phase: phase,
-      phasePrompt: phasePromptForPhase(phase, isFamine: isFamine),
+      phasePrompt: phasePromptForPhase(
+        phase,
+        isFamine: isFamine,
+        legalActions: legalActions,
+        selection: uiState.selection,
+      ),
       currentPlayerID: currentPlayerID,
       trump: trump,
       isFamine: isFamine,

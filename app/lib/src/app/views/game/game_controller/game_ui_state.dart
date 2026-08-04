@@ -121,6 +121,21 @@ class GameUiState {
     );
   }
 
+  GameUiState selectRequisitionCard(String cardID, String zone) {
+    if (!isPlotZone(zone)) {
+      return this;
+    }
+    return copyWith(
+      selection: selection.copyWith(plotCardID: cardID, plotZone: zone),
+    );
+  }
+
+  GameUiState clearRequisitionCard() {
+    return copyWith(
+      selection: selection.copyWith(clearPlotCardID: true, clearPlotZone: true),
+    );
+  }
+
   GameUiState selectAssignmentCard(String cardID) {
     return copyWith(selection: selection.copyWith(assignmentCardID: cardID));
   }

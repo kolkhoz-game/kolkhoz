@@ -28,6 +28,10 @@ class GameMotion {
       disableAnimations ? Duration.zero : speed.cardFlightDuration;
   Duration get cardLandingHold =>
       enabled ? const Duration(milliseconds: 140) : Duration.zero;
+  Duration get requisitionComparisonHold =>
+      enabled ? const Duration(milliseconds: 620) : Duration.zero;
+  Duration get requisitionWinnerCue =>
+      enabled ? const Duration(milliseconds: 480) : Duration.zero;
   Duration duration(Duration value) =>
       disableAnimations ? Duration.zero : value;
 

@@ -42,7 +42,7 @@ String activePanelForPhase(
 
 String actionPanelForPhase(String phase) {
   return switch (phase) {
-    phaseAssignment => panelJobs,
+    phaseAssignment => panelBrigade,
     phaseSwap || phaseRequisition => panelBrigade,
     _ => panelBrigade,
   };
@@ -85,13 +85,20 @@ bool viewerHasPhaseAction(String phase, List<LegalAction> legalActions) {
             action.kind == actionConfirmSwap,
       phaseAssignment =>
         action.kind == actionAssign || action.kind == actionSubmitAssignments,
-      phaseRequisition => action.kind == actionContinueAfterRequisition,
+      phaseRequisition =>
+        action.kind == actionSelectRequisitionCard ||
+            action.kind == actionContinueAfterRequisition,
       _ => true,
     };
   });
 }
 
-Prompt phasePromptForPhase(String phase, {required bool isFamine}) {
+Prompt phasePromptForPhase(
+  String phase, {
+  required bool isFamine,
+  List<LegalAction> legalActions = const [],
+  SelectionState selection = SelectionState.empty,
+}) {
   return switch (phase) {
     phasePlanning => Prompt(
       title: isFamine ? 'Famine year' : 'Choose Trump',
@@ -111,16 +118,44 @@ Prompt phasePromptForPhase(String phase, {required bool isFamine}) {
       title: 'Assign work',
       body: 'Assign the captured cards to valid jobs.',
     ),
-    phaseRequisition => const Prompt(
-      title: 'Requisition',
-      body: 'Review the audit and continue.',
-    ),
+    phaseRequisition => _requisitionPrompt(legalActions, selection),
     phaseGameOver => const Prompt(
       title: 'Game Over!',
       body: 'Final cellar and medal scores.',
     ),
     _ => const Prompt(title: 'Play cards', body: 'Follow suit if able.'),
   };
+}
+
+Prompt _requisitionPrompt(
+  List<LegalAction> legalActions,
+  SelectionState selection,
+) {
+  final nominations = legalActions
+      .where((action) => action.kind == actionSelectRequisitionCard)
+      .toList(growable: false);
+  if (nominations.isNotEmpty) {
+    if (selection.plotCardID != null) {
+      return const Prompt(
+        title: 'Nominate a card',
+        body: 'Confirm your highest eligible card.',
+      );
+    }
+    return const Prompt(
+      title: 'Nominate a card',
+      body: 'Choose one of the tied highest eligible cards.',
+    );
+  }
+  if (selection.plotCardID != null) {
+    return const Prompt(
+      title: 'Nomination locked',
+      body: 'Waiting for the other nominations.',
+    );
+  }
+  return const Prompt(
+    title: 'Requisition',
+    body: 'Review the audit and continue.',
+  );
 }
 
 Set<String> assignmentTargetSuits(List<LegalAction> actions) {

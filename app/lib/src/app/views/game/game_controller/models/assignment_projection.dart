@@ -32,6 +32,13 @@ Set<String> assignedAssignmentCardIDs(TableViewModel model) {
   };
 }
 
+bool assignmentCardHasLegalTarget(TableViewModel model, String? cardID) =>
+    cardID != null &&
+    model.legalActions.any(
+      (action) =>
+          action.kind == actionAssign && action.engineAction.card?.id == cardID,
+    );
+
 TableViewModel withAssignmentDraft(
   TableViewModel model,
   Iterable<EngineAction> draft, {

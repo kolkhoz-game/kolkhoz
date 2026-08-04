@@ -68,6 +68,28 @@ GameUiState autoSelectCards(GameUiState uiState, TableViewModel model) {
     }
     return uiState;
   }
+  if (model.table.phase == phaseRequisition) {
+    final nominations = model.legalActions
+        .where((action) => action.kind == actionSelectRequisitionCard)
+        .toList(growable: false);
+    final selectedIsLegal = nominations.any(
+      (action) =>
+          action.engineAction.card?.id == uiState.selection.plotCardID &&
+          action.engineAction.plotZone == uiState.selection.plotZone,
+    );
+    if (selectedIsLegal || nominations.isEmpty) {
+      return uiState;
+    }
+    if (nominations.length == 1) {
+      final action = nominations.single.engineAction;
+      final cardID = action.card?.id;
+      final plotZone = action.plotZone;
+      if (cardID != null && plotZone != null) {
+        return uiState.selectRequisitionCard(cardID, plotZone);
+      }
+    }
+    return uiState.clearRequisitionCard();
+  }
   if (model.table.phase == phaseAssignment) {
     final cards = assignmentControlCards(model);
     if (cards.isNotEmpty &&
@@ -180,6 +202,7 @@ class GameController extends ChangeNotifier {
   final GamePresentationQueue _presentationQueue = GamePresentationQueue();
   final Map<String, EngineAction> _assignmentDraft = {};
   final List<String> _assignmentDraftHistory = [];
+  Set<String> _heldRequisitionNominationCardIDs = {};
   Timer? _onlinePresentationPaceTimer;
   TableViewModel? get model => finishedGameLobby?.model ?? _model;
   FinishedGameLobby? finishedGameLobby;
@@ -677,7 +700,8 @@ class GameController extends ChangeNotifier {
           )
           .firstOrNull;
       if (action != null) {
-        applyLegalAction(action);
+        uiState = uiState.selectRequisitionCard(cardID, zone);
+        _sync();
       }
       return;
     }
@@ -731,6 +755,13 @@ class GameController extends ChangeNotifier {
 
   void _handleGameUpdate(GameEngineUpdate update) {
     final before = _authoritativeModel ?? _model;
+    _heldRequisitionNominationCardIDs = updatedHeldRequisitionNominationCardIDs(
+      _heldRequisitionNominationCardIDs,
+      update.transitions,
+    );
+    if (update.transitions.any(isRequisitionResolutionMove)) {
+      uiState = uiState.clearRequisitionCard();
+    }
     final after = _projectEngineModel();
     if (before == null || after == null) {
       _sync();
@@ -764,7 +795,12 @@ class GameController extends ChangeNotifier {
             event.kind == kcTransitionAssignmentTargeted &&
             cardID != null &&
             event.targetSuit >= 0;
-        final lastIndex = isAssignment
+        final isRequisitionMove =
+            isRequisitionNominationMove(event) ||
+            isRequisitionResolutionMove(event);
+        final lastIndex = isRequisitionMove
+            ? requisitionMoveRunEnd(update.transitions, index)
+            : isAssignment
             ? assignmentTargetRunEnd(update.transitions, index)
             : swapMoveRunEnd(update.transitions, index);
         final assignmentEvents = isAssignment
@@ -814,6 +850,14 @@ class GameController extends ChangeNotifier {
       return null;
     }
     nextModel = withRequisitionAdjustedHiddenCounts(nextModel);
+    if (nextModel.table.phase == phaseRequisition) {
+      nextModel = withHeldRequisitionNominations(
+        nextModel,
+        _heldRequisitionNominationCardIDs,
+      );
+    } else {
+      _heldRequisitionNominationCardIDs = {};
+    }
     if (nextModel.table.phase != phaseAssignment) {
       _clearAssignmentDraft();
     }
@@ -828,10 +872,14 @@ class GameController extends ChangeNotifier {
     );
     if (!identical(nextUiState, uiState)) {
       uiState = nextUiState;
-      nextModel = _withAssignmentDraft(
-        withRequisitionAdjustedHiddenCounts(engine.project()),
-        engine,
-      );
+      nextModel = withRequisitionAdjustedHiddenCounts(engine.project());
+      if (nextModel.table.phase == phaseRequisition) {
+        nextModel = withHeldRequisitionNominations(
+          nextModel,
+          _heldRequisitionNominationCardIDs,
+        );
+      }
+      nextModel = _withAssignmentDraft(nextModel, engine);
     }
     _lastSyncedPhase = phase;
     return nextModel;
@@ -1185,6 +1233,7 @@ class GameController extends ChangeNotifier {
     _authoritativeModel = null;
     _presentationQueue.clear();
     _clearAssignmentDraft();
+    _heldRequisitionNominationCardIDs = {};
   }
 
   int _newSeed() => DateTime.now().microsecondsSinceEpoch;

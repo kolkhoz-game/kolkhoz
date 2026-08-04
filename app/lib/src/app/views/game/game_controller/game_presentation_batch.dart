@@ -52,6 +52,40 @@ int swapMoveRunEnd(List<EngineTransitionEvent> events, int startIndex) {
   return firstIsSwapRoute && secondIsComplement ? startIndex + 1 : startIndex;
 }
 
+int requisitionMoveRunEnd(List<EngineTransitionEvent> events, int startIndex) {
+  final first = events[startIndex];
+  final nomination = isRequisitionNominationMove(first);
+  final resolution = isRequisitionResolutionMove(first);
+  if (!nomination && !resolution) {
+    return startIndex;
+  }
+  var endIndex = startIndex;
+  while (endIndex + 1 < events.length) {
+    final next = events[endIndex + 1];
+    if (nomination
+        ? !isRequisitionNominationMove(next)
+        : !isRequisitionResolutionMove(next)) {
+      break;
+    }
+    endIndex++;
+  }
+  return endIndex;
+}
+
+bool isRequisitionNominationMove(EngineTransitionEvent event) =>
+    event.kind == kcTransitionCardMoved &&
+    event.card.isValid &&
+    (event.fromZone == kcObjectZonePlotHidden ||
+        event.fromZone == kcObjectZonePlotRevealed) &&
+    event.toZone == kcObjectZoneCurrentTrick;
+
+bool isRequisitionResolutionMove(EngineTransitionEvent event) =>
+    event.kind == kcTransitionCardMoved &&
+    event.card.isValid &&
+    event.fromZone == kcObjectZoneCurrentTrick &&
+    (event.toZone == kcObjectZoneExiled ||
+        event.toZone == kcObjectZonePlotRevealed);
+
 bool _isHandExchangeRoute(int fromZone, int toZone) =>
     (fromZone == kcObjectZoneHand &&
         (toZone == kcObjectZonePlotHidden ||
@@ -97,22 +131,30 @@ List<TableViewModel> projectPresentationBatch({
         _eventCardID(event),
   };
   final assignedSoFar = <String>{};
-  var assignmentPlayerID = before.table.phase == phaseAssignment
-      ? before.table.currentPlayerID
-      : null;
   var visible = before;
   final projected = <TableViewModel>[];
 
   for (final event in events) {
-    if (event.kind == kcTransitionAssignmentOpened) {
-      assignmentPlayerID = event.playerID;
-    }
-    final assignmentPanel = assignmentPlayerID == after.viewer.seatID
-        ? panelJobs
-        : panelBrigade;
+    const assignmentPanel = panelBrigade;
+    final futureEvents = events.skip(projected.length + 1);
+    final hasFutureRequisitionMove = futureEvents.any(
+      _isRequisitionPresentationMove,
+    );
+    final cardHeldInFinalPresentation =
+        event.card.isValid &&
+        after.table.trick.plays.any(
+          (play) => play.card.id == _eventCardID(event),
+        );
     visible = switch (event.kind) {
       kcTransitionCardMoved when event.toZone == kcObjectZoneCurrentTrick =>
         _withPlayedTrickCard(visible, after, event),
+      kcTransitionCardMoved
+          when isRequisitionResolutionMove(event) &&
+              event.toZone == kcObjectZonePlotRevealed &&
+              (hasFutureRequisitionMove || cardHeldInFinalPresentation) =>
+        visible,
+      kcTransitionCardMoved when isRequisitionResolutionMove(event) =>
+        _withResolvedRequisitionCard(visible, after, event),
       kcTransitionTrickResolved => _withResolvedTrick(
         before: before,
         after: after,
@@ -138,12 +180,19 @@ List<TableViewModel> projectPresentationBatch({
         _holdBrigadePhase(after, previous: visible),
       _ => after,
     };
+    if (isRequisitionResolutionMove(event) && !hasFutureRequisitionMove) {
+      visible = _withReturnedRequisitionNominations(visible, after);
+    }
     visible = _withTable(
       visible,
       table: visible.table,
-      selection: before.selection,
+      selection: isRequisitionResolutionMove(event)
+          ? before.selection.copyWith(
+              clearPlotCardID: true,
+              clearPlotZone: true,
+            )
+          : before.selection,
     );
-    final futureEvents = events.skip(projected.length + 1);
     projected.add(
       _withoutFutureCellarMoves(
         _withoutFutureRewardClaims(
@@ -158,6 +207,71 @@ List<TableViewModel> projectPresentationBatch({
     );
   }
   return projected;
+}
+
+bool _isRequisitionPresentationMove(EngineTransitionEvent event) =>
+    isRequisitionNominationMove(event) || isRequisitionResolutionMove(event);
+
+Set<String> updatedHeldRequisitionNominationCardIDs(
+  Set<String> current,
+  Iterable<EngineTransitionEvent> events,
+) {
+  final held = Set<String>.of(current);
+  for (final event in events) {
+    if (!isRequisitionResolutionMove(event)) {
+      continue;
+    }
+    final cardID = _eventCardID(event);
+    if (event.toZone == kcObjectZonePlotRevealed) {
+      held.add(cardID);
+    } else if (event.toZone == kcObjectZoneExiled) {
+      held.remove(cardID);
+    }
+  }
+  return held;
+}
+
+TableViewModel withHeldRequisitionNominations(
+  TableViewModel model,
+  Set<String> heldCardIDs,
+) {
+  if (model.table.phase != phaseRequisition || heldCardIDs.isEmpty) {
+    return model;
+  }
+  var seats = model.table.seats;
+  final plays = [...model.table.trick.plays];
+  final visibleCardIDs = {for (final play in plays) play.card.id};
+  for (final seat in model.table.seats) {
+    for (final card in seat.plot.revealed) {
+      if (!heldCardIDs.contains(card.id) || visibleCardIDs.contains(card.id)) {
+        continue;
+      }
+      seats = [
+        for (final candidate in seats)
+          if (candidate.id == seat.id)
+            _seatWithoutNominatedCard(
+              candidate,
+              card.id,
+              kcObjectZonePlotRevealed,
+            )
+          else
+            candidate,
+      ];
+      plays.add(TrickPlay(seatID: seat.id, card: card));
+      visibleCardIDs.add(card.id);
+    }
+  }
+  if (plays.length == model.table.trick.plays.length) {
+    return model;
+  }
+  return _withTable(
+    model,
+    table: _copyTable(
+      model.table,
+      seats: seats,
+      trick: Trick(plays: plays, winnerSeatID: model.table.trick.winnerSeatID),
+    ),
+  );
 }
 
 TableViewModel withRequisitionAdjustedHiddenCounts(TableViewModel model) {
@@ -445,6 +559,18 @@ TableViewModel _withPlayedTrickCard(
           .expand((seat) => seat.hand)
           .where((card) => card.id == cardID)
           .firstOrNull ??
+      visible.table.seats
+          .expand((seat) => [...seat.plot.revealed, ...seat.plot.hidden])
+          .where((card) => card.id == cardID)
+          .firstOrNull ??
+      finalModel.table.seats
+          .expand((seat) => [...seat.plot.revealed, ...seat.plot.hidden])
+          .where((card) => card.id == cardID)
+          .firstOrNull ??
+      finalModel.table.exiledByYear.values
+          .expand((cards) => cards)
+          .where((card) => card.id == cardID)
+          .firstOrNull ??
       finalModel.table.lastTrick.plays
           .where((play) => play.card.id == cardID)
           .map((play) => play.card)
@@ -471,12 +597,18 @@ TableViewModel _withPlayedTrickCard(
       .firstOrNull;
   final seats = [
     for (final seat in visible.table.seats)
-      if (seat.id == event.playerID && finalSeat != null)
+      if (seat.id == event.playerID &&
+          event.fromZone == kcObjectZoneHand &&
+          finalSeat != null)
         _seatWithHand(
           seat,
           hand: finalSeat.hand,
           hiddenHandCount: finalSeat.hiddenHandCount,
         )
+      else if (seat.id == event.playerID &&
+          (event.fromZone == kcObjectZonePlotHidden ||
+              event.fromZone == kcObjectZonePlotRevealed))
+        _seatWithoutNominatedCard(seat, cardID, event.fromZone)
       else
         seat,
   ];
@@ -504,6 +636,128 @@ TableViewModel _withPlayedTrickCard(
       available: finalModel.panels.available,
     ),
     selection: finalModel.selection,
+  );
+}
+
+TableViewModel _withResolvedRequisitionCard(
+  TableViewModel visible,
+  TableViewModel finalModel,
+  EngineTransitionEvent event,
+) {
+  final cardID = _eventCardID(event);
+  final card =
+      visible.table.trick.plays
+          .where((play) => play.card.id == cardID)
+          .map((play) => play.card)
+          .firstOrNull ??
+      finalModel.table.seats
+          .expand((seat) => seat.plot.revealed)
+          .where((card) => card.id == cardID)
+          .firstOrNull ??
+      finalModel.table.exiledByYear.values
+          .expand((cards) => cards)
+          .where((card) => card.id == cardID)
+          .firstOrNull;
+  if (card == null) {
+    return visible;
+  }
+
+  final returning = event.toZone == kcObjectZonePlotRevealed;
+  final seats = [
+    for (final seat in visible.table.seats)
+      if (returning && seat.id == event.toOwner)
+        _seatWithReturnedNomination(seat, card)
+      else
+        seat,
+  ];
+  final exiledByYear = {
+    ...visible.table.exiledByYear,
+    if (!returning)
+      visible.table.year: [
+        ...visible.table.exiledByYear[visible.table.year] ??
+            const <TableCard>[],
+        if (!(visible.table.exiledByYear[visible.table.year] ??
+                const <TableCard>[])
+            .any((candidate) => candidate.id == cardID))
+          card,
+      ],
+  };
+  final requisitionEvent = finalModel.table.requisitionEvents
+      .where((candidate) => candidate.card?.id == cardID)
+      .firstOrNull;
+  return _withTable(
+    visible,
+    table: _copyTable(
+      visible.table,
+      seats: seats,
+      trick: Trick(
+        plays: [
+          for (final play in visible.table.trick.plays)
+            if (play.card.id != cardID) play,
+        ],
+        winnerSeatID: visible.table.trick.winnerSeatID,
+      ),
+      requisitionEvents: [
+        ...visible.table.requisitionEvents,
+        if (!returning &&
+            requisitionEvent != null &&
+            !visible.table.requisitionEvents.any(
+              (candidate) => candidate.card?.id == cardID,
+            ))
+          requisitionEvent,
+      ],
+      exiledByYear: exiledByYear,
+    ),
+    panels: Panels(
+      active: panelBrigade,
+      available: finalModel.panels.available,
+    ),
+    selection: finalModel.selection,
+  );
+}
+
+TableViewModel _withReturnedRequisitionNominations(
+  TableViewModel visible,
+  TableViewModel finalModel,
+) {
+  var seats = visible.table.seats;
+  final returnedCardIDs = <String>{};
+  for (final play in visible.table.trick.plays) {
+    final owner = finalModel.table.seats
+        .where(
+          (seat) => seat.plot.revealed.any(
+            (candidate) => candidate.id == play.card.id,
+          ),
+        )
+        .firstOrNull;
+    if (owner == null) {
+      continue;
+    }
+    returnedCardIDs.add(play.card.id);
+    seats = [
+      for (final seat in seats)
+        if (seat.id == owner.id)
+          _seatWithReturnedNomination(seat, play.card)
+        else
+          seat,
+    ];
+  }
+  if (returnedCardIDs.isEmpty) {
+    return visible;
+  }
+  return _withTable(
+    visible,
+    table: _copyTable(
+      visible.table,
+      seats: seats,
+      trick: Trick(
+        plays: [
+          for (final play in visible.table.trick.plays)
+            if (!returnedCardIDs.contains(play.card.id)) play,
+        ],
+        winnerSeatID: visible.table.trick.winnerSeatID,
+      ),
+    ),
   );
 }
 
@@ -596,6 +850,74 @@ Seat _seatWithHand(
   profileUserID: seat.profileUserID,
   statusText: seat.statusText,
 );
+
+Seat _seatWithoutNominatedCard(Seat seat, String cardID, int fromZone) {
+  final removedRevealedValue = seat.plot.revealed
+      .where((card) => card.id == cardID)
+      .fold<int>(0, (total, card) => total + card.value);
+  final hiddenCardCount = seat.plot.hiddenCardCount;
+  return Seat(
+    id: seat.id,
+    name: seat.name,
+    controller: seat.controller,
+    portraitAsset: seat.portraitAsset,
+    isViewer: seat.isViewer,
+    isCurrentTurn: seat.isCurrentTurn,
+    isBrigadeLeader: seat.isBrigadeLeader,
+    hand: seat.hand,
+    hiddenHandCount: seat.hiddenHandCount,
+    plot: PlotState(
+      revealed: [
+        for (final card in seat.plot.revealed)
+          if (card.id != cardID) card,
+      ],
+      hidden: [
+        for (final card in seat.plot.hidden)
+          if (card.id != cardID) card,
+      ],
+      stacks: seat.plot.stacks,
+      hiddenCardCount:
+          fromZone == kcObjectZonePlotHidden && hiddenCardCount != null
+          ? math.max(0, hiddenCardCount - 1)
+          : hiddenCardCount,
+    ),
+    medals: seat.medals,
+    bankedMedals: seat.bankedMedals,
+    visibleScore: seat.visibleScore - removedRevealedValue,
+    profileStats: seat.profileStats,
+    profileUserID: seat.profileUserID,
+    statusText: seat.statusText,
+  );
+}
+
+Seat _seatWithReturnedNomination(Seat seat, TableCard card) {
+  if (seat.plot.revealed.any((candidate) => candidate.id == card.id)) {
+    return seat;
+  }
+  return Seat(
+    id: seat.id,
+    name: seat.name,
+    controller: seat.controller,
+    portraitAsset: seat.portraitAsset,
+    isViewer: seat.isViewer,
+    isCurrentTurn: seat.isCurrentTurn,
+    isBrigadeLeader: seat.isBrigadeLeader,
+    hand: seat.hand,
+    hiddenHandCount: seat.hiddenHandCount,
+    plot: PlotState(
+      revealed: [...seat.plot.revealed, card],
+      hidden: seat.plot.hidden,
+      stacks: seat.plot.stacks,
+      hiddenCardCount: seat.plot.hiddenCardCount,
+    ),
+    medals: seat.medals,
+    bankedMedals: seat.bankedMedals,
+    visibleScore: seat.visibleScore + card.value,
+    profileStats: seat.profileStats,
+    profileUserID: seat.profileUserID,
+    statusText: seat.statusText,
+  );
+}
 
 Seat _seatWithAdjustedRequisitionCount(Seat seat, List<TableCard> exiledCards) {
   final hiddenCardCount = seat.plot.hiddenCardCount;

@@ -69,17 +69,20 @@ class PlotOverviewView extends StatelessWidget {
     final hiddenExiledCardIDs = hiddenExiledPlotCardIDs(model);
     final exiledCardIDs = requisitionExiledCardIDs(model);
     final viewer = localSeat(model);
+    final provisionalRequisitionCardID = model.table.phase == phaseRequisition
+        ? model.selection.plotCardID
+        : null;
     final otherSeats = model.table.seats
         .where((seat) => seat.id != viewer.id)
         .toList(growable: false);
     final viewerHiddenCards = visiblePlotCards(
       viewer.plot.hidden,
       hiddenExiledCardIDs,
-    );
+    ).where((card) => card.id != provisionalRequisitionCardID).toList();
     final viewerRevealedCards = visiblePlotCards(
       viewer.plot.revealed,
       hiddenExiledCardIDs,
-    );
+    ).where((card) => card.id != provisionalRequisitionCardID).toList();
     final viewerStacks = visiblePlotStacks(
       viewer.plot.stacks,
       hiddenExiledCardIDs,

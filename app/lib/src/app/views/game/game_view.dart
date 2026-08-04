@@ -10,6 +10,7 @@ import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/deadline_countdown.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/models/assignment_projection.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_presentation_transition.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
@@ -1274,7 +1275,9 @@ class BoardPlayArea extends StatelessWidget {
       context,
     );
     final handActionsEnabled =
-        model.panels.active == actionPanelForPhase(model.table.phase);
+        model.panels.active == actionPanelForPhase(model.table.phase) ||
+        (model.table.phase == phaseAssignment &&
+            model.panels.active == panelJobs);
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? metrics.playAreaHorizontalPadding : 0,
@@ -1702,6 +1705,7 @@ class BoardPlayArea extends StatelessWidget {
                                       metrics: metrics,
                                       language: language,
                                       animationSpeed: animationSpeed,
+                                      onAction: onAction,
                                       turnDeadlineAt: turnDeadlineAt,
                                       serverTime: serverTime,
                                     ),
@@ -1713,6 +1717,7 @@ class BoardPlayArea extends StatelessWidget {
                                   metrics: metrics,
                                   language: language,
                                   animationSpeed: animationSpeed,
+                                  onAction: onAction,
                                   turnDeadlineAt: turnDeadlineAt,
                                   serverTime: serverTime,
                                   floating: true,
@@ -1803,14 +1808,18 @@ class _PlanningTrumpFocusHostState extends State<PlanningTrumpFocusHost> {
     super.didUpdateWidget(oldWidget);
     final oldSelectorIsAI = planningTrumpSelectorIsAI(oldWidget.model);
     final nextSelectorIsAI = planningTrumpSelectorIsAI(widget.model);
+    final planningPhaseChanged =
+        oldWidget.model.table.phase != widget.model.table.phase;
     final selectorContextChanged =
         oldSelectorIsAI != nextSelectorIsAI ||
         oldWidget.model.table.currentPlayerID !=
             widget.model.table.currentPlayerID ||
-        oldWidget.model.table.phase != widget.model.table.phase;
+        planningPhaseChanged;
     if (selectorContextChanged) {
       selectedAction = null;
       hoveredSuit = null;
+    }
+    if (planningPhaseChanged) {
       rewardsRevealed = false;
     }
     if (selectorContextChanged ||
@@ -1892,6 +1901,7 @@ class TopInfoStrip extends StatefulWidget {
     required this.metrics,
     required this.language,
     required this.animationSpeed,
+    this.onAction,
     this.turnDeadlineAt,
     this.serverTime,
     this.floating = false,
@@ -1904,6 +1914,7 @@ class TopInfoStrip extends StatefulWidget {
   final ResponsiveBoardMetrics metrics;
   final KolkhozLanguage language;
   final GameAnimationSpeed animationSpeed;
+  final ValueChanged<LegalAction>? onAction;
   final double? turnDeadlineAt;
   final double? serverTime;
   final bool floating;
@@ -2109,40 +2120,19 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                                 child: Center(
                                   child: CompositedTransformTarget(
                                     link: jobGaugeLinks[job.suit]!,
-                                    child: Semantics(
-                                      button: true,
-                                      label:
-                                          '${widget.language.suitName(job.suit)} job',
+                                    child: _TopInfoJobGaugeControl(
+                                      model: model,
+                                      job: job,
+                                      tokens: tokens,
+                                      language: widget.language,
+                                      gaugeWidth:
+                                          gaugeWidth *
+                                          topInfo.gaugeContentWidthMultiplier,
+                                      gaugeHeight: gaugeHeight,
                                       expanded: openJobSuit == job.suit,
-                                      child: TactileControlSurface(
-                                        key: ValueKey(
-                                          'job-gauge-button-${job.suit}',
-                                        ),
-                                        onPressed: () =>
-                                            toggleJobOverlay(job.suit),
-                                        pressTravel: 2,
-                                        hoverLift: -1,
-                                        hoverScale: 1.025,
-                                        child: MotionTrackedRegion(
-                                          motionKey: jobGaugeMotionTargetKey(
-                                            job.suit,
-                                          ),
-                                          child: JobGauge(
-                                            job: job,
-                                            highlighted:
-                                                model.table.trump == job.suit,
-                                            width:
-                                                gaugeWidth *
-                                                topInfo
-                                                    .gaugeContentWidthMultiplier,
-                                            height: gaugeHeight,
-                                            tokens: tokens,
-                                            hideReward:
-                                                model.table.phase ==
-                                                phasePlanning,
-                                          ),
-                                        ),
-                                      ),
+                                      onInspect: () =>
+                                          toggleJobOverlay(job.suit),
+                                      onAction: widget.onAction,
                                     ),
                                   ),
                                 ),
@@ -2237,6 +2227,78 @@ class _TopInfoUnderlay extends StatelessWidget {
         border: Border.all(color: tokens.colors.gold.withValues(alpha: 0.62)),
       ),
       child: child,
+    );
+  }
+}
+
+class _TopInfoJobGaugeControl extends StatelessWidget {
+  const _TopInfoJobGaugeControl({
+    required this.model,
+    required this.job,
+    required this.tokens,
+    required this.language,
+    required this.gaugeWidth,
+    required this.gaugeHeight,
+    required this.expanded,
+    required this.onInspect,
+    this.onAction,
+  });
+
+  final TableViewModel model;
+  final Job job;
+  final DesignTokens tokens;
+  final KolkhozLanguage language;
+  final double gaugeWidth;
+  final double gaugeHeight;
+  final bool expanded;
+  final VoidCallback onInspect;
+  final ValueChanged<LegalAction>? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final control = Semantics(
+      button: true,
+      label: '${language.suitName(job.suit)} job',
+      expanded: expanded,
+      child: TactileControlSurface(
+        key: ValueKey('job-gauge-button-${job.suit}'),
+        onPressed: onInspect,
+        pressTravel: 2,
+        hoverLift: -1,
+        hoverScale: 1.025,
+        child: MotionTrackedRegion(
+          motionKey: jobGaugeMotionTargetKey(job.suit),
+          child: JobGauge(
+            job: job,
+            highlighted: model.table.trump == job.suit,
+            width: gaugeWidth,
+            height: gaugeHeight,
+            tokens: tokens,
+            hideReward: model.table.phase == phasePlanning,
+          ),
+        ),
+      ),
+    );
+    if (model.table.phase != phaseAssignment || onAction == null) {
+      return control;
+    }
+    return CardDropTarget(
+      key: ValueKey('assignment-gauge-drop-${job.suit}'),
+      highlightColor: tokens.colors.green,
+      borderRadius: tokens.radius.sm,
+      dragFeedbackSize: Size(gaugeWidth, gaugeHeight),
+      labelBuilder: assignmentCardDropLabel,
+      accepts: (data) =>
+          data.kind == CardDragKind.assignment &&
+          data.phase == phaseAssignment &&
+          assignmentActionForCardAndJob(model, data.cardID, job) != null,
+      onAccepted: (data) {
+        final action = assignmentActionForCardAndJob(model, data.cardID, job);
+        if (action != null) {
+          onAction!(action);
+        }
+      },
+      child: control,
     );
   }
 }
@@ -2365,7 +2427,7 @@ class _JobGaugeState extends State<JobGauge>
       for (final card in oldWidget.job.assignedCards) card.id,
     };
     for (final card in widget.job.assignedCards) {
-      if (!previousCardIDs.contains(card.id)) {
+      if (!card.provisional && !previousCardIDs.contains(card.id)) {
         pendingCardDeltas[card.id] = card.value;
       }
     }

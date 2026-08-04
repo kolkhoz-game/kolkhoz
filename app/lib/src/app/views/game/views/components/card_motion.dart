@@ -249,7 +249,9 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
     _removeFlight(
       id,
       transitionHold: flight.destinationZone.kind == MotionZoneKind.trick
-          ? _motion.cardLandingHold
+          ? flight.requisitioned
+                ? _motion.requisitionComparisonHold
+                : _motion.cardLandingHold
           : Duration.zero,
     );
   }

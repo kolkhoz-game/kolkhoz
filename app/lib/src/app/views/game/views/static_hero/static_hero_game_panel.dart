@@ -484,16 +484,25 @@ class _PosterTrickGrid extends StatelessWidget {
         final slotHeight = constraints.maxHeight / 2;
         final clusterVerticalShift = _trickClusterVerticalShift(contentScale);
         final viewerSeat = seats.where((seat) => seat.isViewer).firstOrNull;
-        final selectedCardID = phase == phaseTrick
-            ? model.selection.handCardID
-            : null;
+        final selectedCardID = switch (phase) {
+          phaseTrick => model.selection.handCardID,
+          phaseRequisition => model.selection.plotCardID,
+          _ => null,
+        };
+        final provisionalCards = viewerSeat == null
+            ? const <TableCard>[]
+            : [
+                ...viewerSeat.hand,
+                ...viewerSeat.plot.hidden,
+                ...viewerSeat.plot.revealed,
+              ];
         final provisionalCard = selectedCardID == null
             ? null
-            : viewerSeat?.hand
+            : provisionalCards
                   .where((card) => card.id == selectedCardID)
                   .firstOrNull;
         final displayedWinnerSeatID =
-            provisionalCard == null || viewerSeat == null
+            phase != phaseTrick || provisionalCard == null || viewerSeat == null
             ? winnerSeatID
             : provisionalTrickWinnerSeatID(
                 plays: plays,
@@ -569,8 +578,16 @@ class _PosterTrickGrid extends StatelessWidget {
                                 tokens: tokens,
                                 trump: trump,
                                 provisional: provisional,
+                                assignmentDraggable:
+                                    phase == phaseAssignment &&
+                                    assignmentCardHasLegalTarget(
+                                      model,
+                                      displayedCard.id,
+                                    ),
                                 onProvisionalReturned:
-                                    provisional && onHandCardTap != null
+                                    phase == phaseTrick &&
+                                        provisional &&
+                                        onHandCardTap != null
                                     ? () => onHandCardTap!(displayedCard.id)
                                     : null,
                                 winningTrick: seat.id == displayedWinnerSeatID,
@@ -1008,7 +1025,11 @@ class _BrigadePlotZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hiddenExiledCardIDs = hiddenExiledPlotCardIDs(model);
+    final hiddenExiledCardIDs = {
+      ...hiddenExiledPlotCardIDs(model),
+      if (seat.isViewer && model.table.phase == phaseRequisition)
+        ?model.selection.plotCardID,
+    };
     final revealedEntries = <_PosterCardEntry>[
       for (final card in visiblePlotCards(
         seat.plot.revealed,
@@ -1813,6 +1834,7 @@ class _SinglePosterCard extends StatelessWidget {
     required this.tokens,
     this.trump,
     this.provisional = false,
+    this.assignmentDraggable = false,
     this.onProvisionalReturned,
     this.winningTrick = false,
   });
@@ -1821,6 +1843,7 @@ class _SinglePosterCard extends StatelessWidget {
   final DesignTokens tokens;
   final String? trump;
   final bool provisional;
+  final bool assignmentDraggable;
   final VoidCallback? onProvisionalReturned;
   final bool winningTrick;
 
@@ -1894,9 +1917,12 @@ class _SinglePosterCard extends StatelessWidget {
               : DraggableCardSurface(
                   data: CardDragData(
                     cardID: card.id,
-                    kind: CardDragKind.trick,
-                    phase: phaseTrick,
-                    canDrop: false,
+                    kind: assignmentDraggable
+                        ? CardDragKind.assignment
+                        : CardDragKind.trick,
+                    phase: assignmentDraggable ? phaseAssignment : phaseTrick,
+                    canDrop: assignmentDraggable,
+                    actionLabel: assignmentDraggable ? 'DRAG TO ASSIGN' : null,
                     onAccepted: () {},
                   ),
                   feedback: cardPaint,

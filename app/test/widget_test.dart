@@ -348,6 +348,7 @@ TableViewModel runtimeModelWith({
   List<RequisitionEvent>? requisitionEvents,
   Map<int, List<TableCard>>? exiledByYear,
   List<LegalAction>? legalActions,
+  TableCard? finalYearTrumpCard,
 }) {
   final base = runtimeModel();
   return TableViewModel(
@@ -368,6 +369,7 @@ TableViewModel runtimeModelWith({
       exiledByYear: exiledByYear ?? base.table.exiledByYear,
       scoreboard: base.table.scoreboard,
       gameResult: gameResult ?? base.table.gameResult,
+      finalYearTrumpCard: finalYearTrumpCard,
     ),
     panels: base.panels,
     selection: selection,

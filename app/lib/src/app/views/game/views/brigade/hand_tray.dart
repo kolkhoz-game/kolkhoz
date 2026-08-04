@@ -244,6 +244,24 @@ LegalAction? selectedHandCardRewardAction(TableViewModel model) {
   return null;
 }
 
+LegalAction? selectedRequisitionCardAction(TableViewModel model) {
+  final selectedCardID = model.selection.plotCardID;
+  final selectedZone = model.selection.plotZone;
+  if (model.table.phase != phaseRequisition ||
+      selectedCardID == null ||
+      selectedZone == null) {
+    return null;
+  }
+  for (final action in model.legalActions) {
+    if (action.kind == actionSelectRequisitionCard &&
+        action.engineAction.card?.id == selectedCardID &&
+        action.engineAction.plotZone == selectedZone) {
+      return action;
+    }
+  }
+  return null;
+}
+
 LegalAction? handConsoleLegalAction(TableViewModel model, Set<String> kinds) {
   for (final action in model.legalActions) {
     if (kinds.contains(action.kind)) {
@@ -265,9 +283,9 @@ LegalAction? handConsoleConfirmAction(TableViewModel model) {
           : null,
     phasePass => selectedHandCardPassAction(model),
     phaseAssignment => handConsoleLegalAction(model, {actionSubmitAssignments}),
-    phaseRequisition => handConsoleLegalAction(model, {
-      actionContinueAfterRequisition,
-    }),
+    phaseRequisition =>
+      selectedRequisitionCardAction(model) ??
+          handConsoleLegalAction(model, {actionContinueAfterRequisition}),
     _ => null,
   };
 }
@@ -639,11 +657,14 @@ class HandTray extends StatelessWidget {
     final showAssignmentCommandBar =
         contentOverride == null &&
         actionsEnabled &&
+        model.panels.active == panelJobs &&
         assignmentCards.isNotEmpty &&
         assignmentCommandBarVisible(model);
     final confirmAction =
         confirmActionOverride ?? handConsoleConfirmAction(model);
-    final primaryLabel = model.table.phase == phaseRequisition
+    final primaryLabel =
+        model.table.phase == phaseRequisition &&
+            confirmAction?.kind == actionContinueAfterRequisition
         ? language.t(
             model.table.year >= finalGameYear
                 ? KolkhozText.lowerbaractionsFinish

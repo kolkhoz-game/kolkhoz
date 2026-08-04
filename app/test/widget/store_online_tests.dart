@@ -334,7 +334,7 @@ void registerStoreAndOnlineTests() {
     expect(states[0].table.jobs.first.reward?.id, reward.id);
     expect(states[0].table.jobs.first.claimed, isFalse);
     expect(states[0].table.phase, phaseAssignment);
-    expect(states[0].panels.active, panelJobs);
+    expect(states[0].panels.active, panelBrigade);
     expect(states[1].table.seats[0].plot.revealed.single.id, reward.id);
     expect(states[1].table.jobs.first.reward, isNull);
     expect(states[1].table.phase, phaseAssignment);
@@ -615,7 +615,7 @@ void registerStoreAndOnlineTests() {
       expect(states[1].table.lastTrick.plays, hasLength(4));
       expect(states[1].panels.active, panelBrigade);
       expect(states[2].table.phase, phaseAssignment);
-      expect(states[2].panels.active, panelJobs);
+      expect(states[2].panels.active, panelBrigade);
     },
   );
 
@@ -733,6 +733,391 @@ void registerStoreAndOnlineTests() {
       cardMotionZones(states[1])[secondCard.id]?.kind,
       MotionZoneKind.exiled,
     );
+  });
+
+  test('requisition compares nominations before resolving them together', () {
+    final base = runtimeModel();
+    final lowerCard = testCard(
+      id: 'wheat-7',
+      suit: 'wheat',
+      value: 7,
+      ownerSeatID: 0,
+    );
+    final highestCard = testCard(
+      id: 'beet-8',
+      suit: 'beet',
+      value: 8,
+      ownerSeatID: 1,
+    );
+    final beforeSeats = [
+      seatWithPlot(
+        base.table.seats[0],
+        PlotState(revealed: [lowerCard], hidden: const [], stacks: const []),
+      ),
+      seatWithPlot(
+        base.table.seats[1],
+        PlotState(revealed: [highestCard], hidden: const [], stacks: const []),
+      ),
+      ...base.table.seats.skip(2),
+    ];
+    final afterSeats = [
+      seatWithPlot(
+        base.table.seats[0],
+        PlotState(revealed: [lowerCard], hidden: const [], stacks: const []),
+      ),
+      seatWithPlot(
+        base.table.seats[1],
+        const PlotState(revealed: [], hidden: [], stacks: []),
+      ),
+      ...base.table.seats.skip(2),
+    ];
+    final before = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty.copyWith(
+        plotCardID: lowerCard.id,
+        plotZone: plotZoneRevealed,
+      ),
+      jobs: base.table.jobs,
+      seats: beforeSeats,
+    );
+    final after = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: afterSeats,
+      requisitionEvents: [
+        RequisitionEvent(
+          seatID: 1,
+          suit: highestCard.suit,
+          card: highestCard,
+          message: 'Requisitioned.',
+        ),
+      ],
+      exiledByYear: {
+        ...base.table.exiledByYear,
+        base.table.year: [highestCard],
+      },
+    );
+    final events = [
+      const EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 0,
+        card: EngineCardValue(suit: 0, value: 7),
+        fromZone: kcObjectZonePlotRevealed,
+        toZone: kcObjectZoneCurrentTrick,
+        fromOwner: 0,
+        toOwner: 0,
+        targetSuit: 0,
+      ),
+      const EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 1,
+        card: EngineCardValue(suit: 3, value: 8),
+        fromZone: kcObjectZonePlotRevealed,
+        toZone: kcObjectZoneCurrentTrick,
+        fromOwner: 1,
+        toOwner: 1,
+        targetSuit: 3,
+      ),
+      const EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 0,
+        card: EngineCardValue(suit: 0, value: 7),
+        fromZone: kcObjectZoneCurrentTrick,
+        toZone: kcObjectZonePlotRevealed,
+        fromOwner: 0,
+        toOwner: 0,
+        targetSuit: 0,
+      ),
+      const EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 1,
+        card: EngineCardValue(suit: 3, value: 8),
+        fromZone: kcObjectZoneCurrentTrick,
+        toZone: kcObjectZoneExiled,
+        fromOwner: 1,
+        toOwner: -1,
+        targetSuit: 3,
+      ),
+    ];
+
+    final states = projectPresentationBatch(
+      before: before,
+      after: after,
+      events: events,
+    );
+
+    expect(requisitionMoveRunEnd(events, 0), 1);
+    expect(requisitionMoveRunEnd(events, 2), 3);
+    expect(states[1].table.trick.plays.map((play) => play.card.id), {
+      lowerCard.id,
+      highestCard.id,
+    });
+    expect(states[1].table.seats[0].plot.revealed, isEmpty);
+    expect(states[1].table.seats[1].plot.revealed, isEmpty);
+    expect(states[1].selection.plotCardID, lowerCard.id);
+    expect(states[2].table.trick.plays.map((play) => play.card.id), {
+      lowerCard.id,
+      highestCard.id,
+    });
+    expect(states[2].table.seats[0].plot.revealed, isEmpty);
+    expect(states[2].selection.plotCardID, isNull);
+    expect(states[3].table.trick.plays, isEmpty);
+    expect(states[3].table.seats[0].plot.revealed.single.id, lowerCard.id);
+    expect(states[3].table.seats[1].plot.revealed, isEmpty);
+    expect(currentYearExiledCardIDs(states[3]), {highestCard.id});
+    expect(states[3].table.requisitionEvents.single.card?.id, highestCard.id);
+  });
+
+  test('requisition keeps standing nominations out across comparisons', () {
+    final base = runtimeModel();
+    final wheat9 = testCard(
+      id: 'wheat-9',
+      suit: 'wheat',
+      value: 9,
+      ownerSeatID: 0,
+    );
+    final beet8 = testCard(
+      id: 'beet-8',
+      suit: 'beet',
+      value: 8,
+      ownerSeatID: 1,
+    );
+    final potato7 = testCard(
+      id: 'potato-7',
+      suit: 'potato',
+      value: 7,
+      ownerSeatID: 2,
+    );
+    final beforeSeats = [
+      seatWithPlot(
+        base.table.seats[0],
+        PlotState(revealed: [wheat9], hidden: const [], stacks: const []),
+      ),
+      seatWithPlot(
+        base.table.seats[1],
+        PlotState(revealed: [beet8], hidden: const [], stacks: const []),
+      ),
+      seatWithPlot(
+        base.table.seats[2],
+        PlotState(revealed: [potato7], hidden: const [], stacks: const []),
+      ),
+      base.table.seats[3],
+    ];
+    final afterSeats = [
+      seatWithPlot(
+        base.table.seats[0],
+        const PlotState(revealed: [], hidden: [], stacks: []),
+      ),
+      seatWithPlot(
+        base.table.seats[1],
+        const PlotState(revealed: [], hidden: [], stacks: []),
+      ),
+      seatWithPlot(
+        base.table.seats[2],
+        PlotState(revealed: [potato7], hidden: const [], stacks: const []),
+      ),
+      base.table.seats[3],
+    ];
+    final before = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: beforeSeats,
+    );
+    final after = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: afterSeats,
+      requisitionEvents: [
+        RequisitionEvent(
+          seatID: 0,
+          suit: wheat9.suit,
+          card: wheat9,
+          message: 'Requisitioned.',
+        ),
+        RequisitionEvent(
+          seatID: 1,
+          suit: beet8.suit,
+          card: beet8,
+          message: 'Requisitioned.',
+        ),
+      ],
+      exiledByYear: {
+        ...base.table.exiledByYear,
+        base.table.year: [wheat9, beet8],
+      },
+    );
+    const events = [
+      EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 0,
+        card: EngineCardValue(suit: 0, value: 9),
+        fromZone: kcObjectZonePlotRevealed,
+        toZone: kcObjectZoneCurrentTrick,
+        fromOwner: 0,
+        toOwner: 0,
+        targetSuit: 0,
+      ),
+      EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 1,
+        card: EngineCardValue(suit: 3, value: 8),
+        fromZone: kcObjectZonePlotRevealed,
+        toZone: kcObjectZoneCurrentTrick,
+        fromOwner: 1,
+        toOwner: 1,
+        targetSuit: 3,
+      ),
+      EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 1,
+        card: EngineCardValue(suit: 3, value: 8),
+        fromZone: kcObjectZoneCurrentTrick,
+        toZone: kcObjectZonePlotRevealed,
+        fromOwner: 1,
+        toOwner: 1,
+        targetSuit: 3,
+      ),
+      EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 0,
+        card: EngineCardValue(suit: 0, value: 9),
+        fromZone: kcObjectZoneCurrentTrick,
+        toZone: kcObjectZoneExiled,
+        fromOwner: 0,
+        toOwner: -1,
+        targetSuit: 0,
+      ),
+      EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 1,
+        card: EngineCardValue(suit: 3, value: 8),
+        fromZone: kcObjectZonePlotRevealed,
+        toZone: kcObjectZoneCurrentTrick,
+        fromOwner: 1,
+        toOwner: 1,
+        targetSuit: 3,
+      ),
+      EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 2,
+        card: EngineCardValue(suit: 2, value: 7),
+        fromZone: kcObjectZonePlotRevealed,
+        toZone: kcObjectZoneCurrentTrick,
+        fromOwner: 2,
+        toOwner: 2,
+        targetSuit: 2,
+      ),
+      EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 1,
+        card: EngineCardValue(suit: 3, value: 8),
+        fromZone: kcObjectZoneCurrentTrick,
+        toZone: kcObjectZoneExiled,
+        fromOwner: 1,
+        toOwner: -1,
+        targetSuit: 3,
+      ),
+      EngineTransitionEvent(
+        kind: kcTransitionCardMoved,
+        playerID: 2,
+        card: EngineCardValue(suit: 2, value: 7),
+        fromZone: kcObjectZoneCurrentTrick,
+        toZone: kcObjectZonePlotRevealed,
+        fromOwner: 2,
+        toOwner: 2,
+        targetSuit: 2,
+      ),
+    ];
+
+    final states = projectPresentationBatch(
+      before: before,
+      after: after,
+      events: events,
+    );
+
+    expect(states[3].table.trick.plays.single.card.id, beet8.id);
+    expect(states[3].table.seats[1].plot.revealed, isEmpty);
+    expect(states[4].table.trick.plays.single.card.id, beet8.id);
+    expect(states[5].table.trick.plays.map((play) => play.card.id), {
+      beet8.id,
+      potato7.id,
+    });
+    expect(states[7].table.trick.plays, isEmpty);
+    expect(states[7].table.seats[2].plot.revealed.single.id, potato7.id);
+    expect(currentYearExiledCardIDs(states[7]), {wheat9.id, beet8.id});
+  });
+
+  test('requisition nomination hold persists across automatic updates', () {
+    final base = runtimeModel();
+    final card = testCard(id: 'beet-8', suit: 'beet', value: 8, ownerSeatID: 1);
+    const returned = EngineTransitionEvent(
+      kind: kcTransitionCardMoved,
+      playerID: 1,
+      card: EngineCardValue(suit: 3, value: 8),
+      fromZone: kcObjectZoneCurrentTrick,
+      toZone: kcObjectZonePlotRevealed,
+      fromOwner: 1,
+      toOwner: 1,
+      targetSuit: 3,
+    );
+    const nominatedAgain = EngineTransitionEvent(
+      kind: kcTransitionCardMoved,
+      playerID: 1,
+      card: EngineCardValue(suit: 3, value: 8),
+      fromZone: kcObjectZonePlotRevealed,
+      toZone: kcObjectZoneCurrentTrick,
+      fromOwner: 1,
+      toOwner: 1,
+      targetSuit: 3,
+    );
+    const exiled = EngineTransitionEvent(
+      kind: kcTransitionCardMoved,
+      playerID: 1,
+      card: EngineCardValue(suit: 3, value: 8),
+      fromZone: kcObjectZoneCurrentTrick,
+      toZone: kcObjectZoneExiled,
+      fromOwner: 1,
+      toOwner: -1,
+      targetSuit: 3,
+    );
+
+    var held = updatedHeldRequisitionNominationCardIDs({}, const [returned]);
+    expect(held, {card.id});
+
+    final returnedModel = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: [
+        base.table.seats[0],
+        seatWithPlot(
+          base.table.seats[1],
+          PlotState(revealed: [card], hidden: const [], stacks: const []),
+        ),
+        ...base.table.seats.skip(2),
+      ],
+    );
+    final heldModel = withHeldRequisitionNominations(returnedModel, held);
+    expect(heldModel.table.seats[1].plot.revealed, isEmpty);
+    expect(heldModel.table.trick.plays.single.card.id, card.id);
+    final returnStates = projectPresentationBatch(
+      before: heldModel,
+      after: heldModel,
+      events: const [returned],
+    );
+    expect(returnStates.single.table.seats[1].plot.revealed, isEmpty);
+    expect(returnStates.single.table.trick.plays.single.card.id, card.id);
+
+    held = updatedHeldRequisitionNominationCardIDs(held, const [
+      nominatedAgain,
+    ]);
+    expect(held, {card.id});
+
+    held = updatedHeldRequisitionNominationCardIDs(held, const [exiled]);
+    expect(held, isEmpty);
   });
 
   test('requisition immediately decrements a redacted online cellar', () {
@@ -1760,6 +2145,78 @@ void registerStoreAndOnlineTests() {
     final selected = autoSelectCards(const GameUiState(), model);
 
     expect(selected.selection.handCardID, 'wheat-9');
+  });
+
+  test('store stages a forced requisition card without submitting it', () {
+    final nomination = testLegalAction(
+      kind: actionSelectRequisitionCard,
+      label: 'Reveal for requisition',
+      engineAction: const EngineAction(
+        kind: actionSelectRequisitionCard,
+        playerID: 0,
+        card: EngineCard(suit: 'wheat', value: 9),
+        plotZone: plotZoneRevealed,
+      ),
+    );
+    final model = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty,
+      jobs: runtimeModel().table.jobs,
+      legalActions: [nomination],
+    );
+
+    final selected = autoSelectCards(const GameUiState(), model);
+    final selectedModel = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: selected.selection,
+      jobs: model.table.jobs,
+      legalActions: model.legalActions,
+    );
+
+    expect(selected.selection.plotCardID, 'wheat-9');
+    expect(selected.selection.plotZone, plotZoneRevealed);
+    expect(selectedRequisitionCardAction(selectedModel), same(nomination));
+    expect(handConsoleConfirmAction(selectedModel), same(nomination));
+  });
+
+  test('tied requisition cards wait for the human choice', () {
+    final nominations = [
+      testLegalAction(
+        kind: actionSelectRequisitionCard,
+        label: 'Reveal for requisition',
+        engineAction: const EngineAction(
+          kind: actionSelectRequisitionCard,
+          playerID: 0,
+          card: EngineCard(suit: 'wheat', value: 9),
+          plotZone: plotZoneRevealed,
+        ),
+      ),
+      testLegalAction(
+        kind: actionSelectRequisitionCard,
+        label: 'Reveal for requisition',
+        engineAction: const EngineAction(
+          kind: actionSelectRequisitionCard,
+          playerID: 0,
+          card: EngineCard(suit: 'beet', value: 9),
+          plotZone: plotZoneHidden,
+        ),
+      ),
+    ];
+    final model = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty,
+      jobs: runtimeModel().table.jobs,
+      legalActions: nominations,
+    );
+
+    final unselected = autoSelectCards(const GameUiState(), model);
+    final selected = autoSelectCards(
+      const GameUiState().selectRequisitionCard('beet-9', plotZoneHidden),
+      model,
+    );
+
+    expect(unselected.selection.plotCardID, isNull);
+    expect(selected.selection.plotCardID, 'beet-9');
   });
 
   test(
@@ -4058,6 +4515,85 @@ void registerStoreAndOnlineTests() {
     expect(focusedSuit, isNotNull);
   });
 
+  testWidgets('AI trump focus survives the post-reward player handoff', (
+    tester,
+  ) async {
+    final base = runtimeModel();
+    final aiSeats = [
+      seatWithController(
+        base.table.seats.first,
+        controller: controllerHeuristicAI,
+      ),
+      ...base.table.seats.skip(1),
+    ];
+    final confirm = testLegalAction(
+      kind: actionConfirmRewardSwaps,
+      label: 'Confirm rewards',
+      engineAction: const EngineAction(
+        kind: actionConfirmRewardSwaps,
+        playerID: 1,
+      ),
+    );
+    final trumpActions = [
+      for (final suit in displaySuitOrder)
+        testLegalAction(
+          kind: actionSetTrump,
+          label: suit,
+          engineAction: EngineAction(
+            kind: actionSetTrump,
+            playerID: 0,
+            suit: suit,
+          ),
+        ),
+    ];
+    TableViewModel planningModel({
+      required int currentPlayerID,
+      required List<LegalAction> actions,
+    }) => runtimeModelWith(
+      phase: phasePlanning,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      seats: aiSeats,
+      currentPlayerID: currentPlayerID,
+      legalActions: actions,
+    );
+    String? focusedSuit;
+    late VoidCallback reportRewardsRevealed;
+
+    Widget host(TableViewModel model) => MaterialApp(
+      home: PlanningTrumpFocusHost(
+        model: model,
+        builder:
+            (
+              context,
+              focused,
+              selected,
+              onActionSelected,
+              onSuitHovered,
+              onRewardsRevealed,
+            ) {
+              focusedSuit = focused;
+              reportRewardsRevealed = onRewardsRevealed;
+              return const SizedBox();
+            },
+      ),
+    );
+
+    await tester.pumpWidget(
+      host(planningModel(currentPlayerID: 1, actions: [confirm])),
+    );
+    reportRewardsRevealed();
+    await tester.pump();
+    expect(focusedSuit, isNull);
+
+    await tester.pumpWidget(
+      host(planningModel(currentPlayerID: 0, actions: trumpActions)),
+    );
+    await tester.pump();
+
+    expect(focusedSuit, isNotNull);
+  });
+
   testWidgets(
     'revealed reward cards preview trump on hover and select on tap',
     (tester) async {
@@ -5196,6 +5732,30 @@ void registerStoreAndOnlineTests() {
     expect(model.table.seats[1].hiddenHandCount, 0);
     expect(model.table.jobs.first.reward?.id, 'wheat-9');
     expect(model.legalActions.single.engineAction.suit, 'wheat');
+  });
+
+  test('online reconnect restores held requisition nominations', () {
+    final json = onlineUpdateJson();
+    final snapshot = json['snapshot']! as Map<String, Object?>;
+    snapshot['phase'] = kcPhaseRequisition;
+    final players = snapshot['players']! as List<Object?>;
+    final player = players[1]! as Map<String, Object?>;
+    player['revealedPlot'] = [onlineCardJson(1, 7)];
+    snapshot['requisitionHeldNominations'] = [
+      {'playerID': 1, 'card': onlineCardJson(1, 7)},
+    ];
+
+    final update = OnlineSessionUpdate.fromJson(json);
+    final model = OnlineTableProjection(
+      update: update,
+      lobby: gameLobbyFromOnlineUpdate(update, viewerSeatID: 0),
+      playerID: 0,
+      legalActions: const [],
+    ).project();
+
+    expect(model.table.trick.plays.single.seatID, 1);
+    expect(model.table.trick.plays.single.card.id, 'sunflower-7');
+    expect(model.table.seats[1].plot.revealed, isEmpty);
   });
 
   test('online store drops extra taps while an action is pending', () async {

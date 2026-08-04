@@ -111,7 +111,10 @@ void registerBoardTests() {
     );
 
     expect(afterPhaseChange.activePanel, isNull);
-    expect(panelsForPhase(afterPhaseChange, phaseAssignment).active, panelJobs);
+    expect(
+      panelsForPhase(afterPhaseChange, phaseAssignment).active,
+      panelBrigade,
+    );
     expect(panelsForPhase(afterPhaseChange, phaseTrick).active, panelBrigade);
     expect(
       panelsForPhase(
@@ -125,10 +128,10 @@ void registerBoardTests() {
       ).active,
       panelBrigade,
     );
-    expect(actionPanelForPhase(phaseAssignment), panelJobs);
+    expect(actionPanelForPhase(phaseAssignment), panelBrigade);
   });
 
-  test('phase panels open only the dedicated assignment surface', () {
+  test('assignment defaults to Brigade while Fields remains available', () {
     expect(
       panelsForPhase(
         const GameUiState(),
@@ -158,6 +161,14 @@ void registerBoardTests() {
     expect(
       panelsForPhase(
         const GameUiState(),
+        phaseAssignment,
+        legalActions: [testLegalAction(kind: actionAssign, label: 'Assign')],
+      ).active,
+      panelBrigade,
+    );
+    expect(
+      panelsForPhase(
+        const GameUiState(activePanel: panelJobs),
         phaseAssignment,
         legalActions: [testLegalAction(kind: actionAssign, label: 'Assign')],
       ).active,
@@ -719,6 +730,53 @@ void registerBoardTests() {
     expect(selectedPanel, panelNorth);
   });
 
+  testWidgets('requisition nomination uses the normal Confirm command', (
+    tester,
+  ) async {
+    LegalAction? confirmedAction;
+    final nomination = testLegalAction(
+      kind: actionSelectRequisitionCard,
+      label: 'Reveal for requisition',
+      engineAction: const EngineAction(
+        kind: actionSelectRequisitionCard,
+        playerID: 0,
+        card: EngineCard(suit: 'wheat', value: 9),
+        plotZone: plotZoneRevealed,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 520,
+          height: 180,
+          child: HandTray(
+            model: runtimeModelWith(
+              phase: phaseRequisition,
+              selection: SelectionState.empty.copyWith(
+                plotCardID: 'wheat-9',
+                plotZone: plotZoneRevealed,
+              ),
+              jobs: runtimeModel().table.jobs,
+              legalActions: [nomination],
+            ),
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+            visibleTrayHeight: 150,
+            onAction: (action) => confirmedAction = action,
+          ),
+        ),
+      ),
+    );
+
+    final primary = tester.widget<ActionIconButton>(
+      find.byKey(const Key('hand-console-primary')),
+    );
+    expect(primary.label, 'Confirm');
+    await tester.tap(find.byKey(const Key('hand-console-primary')));
+    expect(confirmedAction, same(nomination));
+  });
+
   testWidgets('brigade shows selected trick card as a pending play preview', (
     tester,
   ) async {
@@ -750,6 +808,82 @@ void registerBoardTests() {
       find.byKey(const Key('pending-trick-card-preview')),
     );
     expect(previewSize.width, greaterThan(70));
+  });
+
+  testWidgets('brigade stages a requisition nomination in the trick slot', (
+    tester,
+  ) async {
+    final base = runtimeModel();
+    final nomination = testCard(
+      id: 'wheat-9',
+      suit: 'wheat',
+      value: 9,
+      ownerSeatID: base.viewer.seatID,
+    );
+    final viewer = localSeat(base);
+    final seats = [
+      for (final seat in base.table.seats)
+        if (seat.id == viewer.id)
+          seatWithPlot(
+            seat,
+            PlotState(
+              revealed: [nomination],
+              hidden: const [],
+              stacks: const [],
+            ),
+          )
+        else
+          seat,
+    ];
+    final model = runtimeModelWith(
+      phase: phaseRequisition,
+      selection: SelectionState.empty.copyWith(
+        plotCardID: nomination.id,
+        plotZone: plotZoneRevealed,
+      ),
+      jobs: base.table.jobs,
+      seats: seats,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 900,
+          height: 360,
+          child: BrigadePanel(
+            model: model,
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+          ),
+        ),
+      ),
+    );
+
+    expect(selectedTrickPreviewCard(model, localSeat(model), null), nomination);
+    expect(find.byType(PendingTrickPreview), findsOneWidget);
+    expect(
+      provisionalTrickCardMotionZone(model, nomination.id),
+      MotionZone.trick(viewer.id),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 900,
+          height: 520,
+          child: StaticHeroGamePanel(
+            kind: StaticHeroGamePanelKind.brigade,
+            model: model,
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+          ),
+        ),
+      ),
+    );
+    expect(
+      find.byKey(Key('static-hero-trick-card-${nomination.id}')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('brigade pulses only the card currently winning the trick', (
@@ -1455,6 +1589,126 @@ void registerBoardTests() {
     expect(assignmentCardDropLabel(assignmentDrag.data!), 'DRAG TO ASSIGN');
   });
 
+  testWidgets('resolved trick cards are direct assignment drag sources', (
+    tester,
+  ) async {
+    final base = runtimeModel();
+    final card = testCard(id: 'beet-10', suit: 'beet', value: 10);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 220,
+          height: 260,
+          child: BrigadePlayerColumn(
+            seat: base.table.seats.first,
+            play: TrickPlay(seatID: 0, card: card),
+            pendingPlayCard: null,
+            columnWidth: 220,
+            columnHeight: 260,
+            playerPanelWidth: 160,
+            playerPanelHeight: 54,
+            playObjectWidth: 96,
+            playObjectHeight: 136,
+            maxTricks: base.table.maxTricks,
+            heroOfSovietUnion: true,
+            trump: 'wheat',
+            phase: phaseAssignment,
+            assignmentDraggable: true,
+            winning: true,
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+          ),
+        ),
+      ),
+    );
+
+    final drag = tester.widget<Draggable<CardDragData>>(
+      find.byType(Draggable<CardDragData>),
+    );
+    expect(drag.data?.cardID, card.id);
+    expect(drag.data?.kind, CardDragKind.assignment);
+    expect(drag.data?.phase, phaseAssignment);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 180,
+          height: 220,
+          child: FarmsteadTrickCard(
+            seat: base.table.seats.first,
+            play: TrickPlay(seatID: 0, card: card),
+            pendingPlayCard: null,
+            phase: phaseAssignment,
+            assignmentDraggable: true,
+            winning: true,
+            trump: 'wheat',
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+          ),
+        ),
+      ),
+    );
+
+    final farmsteadDrag = tester.widget<Draggable<CardDragData>>(
+      find.byType(Draggable<CardDragData>),
+    );
+    expect(farmsteadDrag.data?.cardID, card.id);
+    expect(farmsteadDrag.data?.kind, CardDragKind.assignment);
+  });
+
+  testWidgets('Brigade poster exposes legal assignment trick drags', (
+    tester,
+  ) async {
+    final base = runtimeModel();
+    final card = testCard(id: 'beet-10', suit: 'beet', value: 10);
+    final model = runtimeModelWith(
+      phase: phaseAssignment,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      lastTrick: Trick(
+        plays: [TrickPlay(seatID: 0, card: card)],
+        winnerSeatID: 0,
+      ),
+      legalActions: [
+        testLegalAction(
+          kind: actionAssign,
+          label: 'Assign to wheat',
+          engineAction: EngineAction(
+            kind: actionAssign,
+            playerID: 0,
+            card: EngineCard(suit: card.suit, value: card.value),
+            targetSuit: 'wheat',
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 900,
+          height: 520,
+          child: StaticHeroGamePanel(
+            kind: StaticHeroGamePanelKind.brigade,
+            model: model,
+            tokens: defaultDesignTokens,
+            language: KolkhozLanguage.en,
+          ),
+        ),
+      ),
+    );
+
+    final drag = tester
+        .widgetList<Draggable<CardDragData>>(
+          find.byType(Draggable<CardDragData>),
+        )
+        .where((candidate) => candidate.data?.cardID == card.id)
+        .single;
+    expect(drag.data?.kind, CardDragKind.assignment);
+    expect(drag.data?.canDrop, isTrue);
+  });
+
   testWidgets('hand and assignment cards share one vertical baseline', (
     tester,
   ) async {
@@ -1467,14 +1721,17 @@ void registerBoardTests() {
           width: 900,
           height: 180,
           child: HandTray(
-            model: runtimeModelWith(
-              phase: phaseAssignment,
-              selection: SelectionState.empty,
-              jobs: base.table.jobs,
-              lastTrick: Trick(
-                plays: [TrickPlay(seatID: 1, card: assignmentCard)],
-                winnerSeatID: 0,
+            model: modelWithActivePanel(
+              runtimeModelWith(
+                phase: phaseAssignment,
+                selection: SelectionState.empty,
+                jobs: base.table.jobs,
+                lastTrick: Trick(
+                  plays: [TrickPlay(seatID: 1, card: assignmentCard)],
+                  winnerSeatID: 0,
+                ),
               ),
+              panelJobs,
             ),
             tokens: defaultDesignTokens,
             language: KolkhozLanguage.en,
@@ -2873,6 +3130,70 @@ void registerBoardTests() {
     },
   );
 
+  testWidgets('requisition winner flashes a snowflake before flying North', (
+    tester,
+  ) async {
+    final card = testCard(
+      id: 'high-requisition-card',
+      suit: 'wheat',
+      value: 11,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 320,
+          height: 240,
+          child: Stack(
+            children: [
+              FlyingCard(
+                flight: CardFlight(
+                  id: 3,
+                  card: card,
+                  from: const Rect.fromLTWH(20, 20, 48, 68),
+                  to: const Rect.fromLTWH(220, 140, 48, 68),
+                  destinationZone: const MotionZone.northExile(),
+                  requisitioned: true,
+                  requisitionWinnerCue: true,
+                ),
+                tokens: defaultDesignTokens,
+                duration: const Duration(milliseconds: 520),
+                onDone: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    Positioned flightPosition() => tester
+        .widgetList<Positioned>(
+          find.descendant(
+            of: find.byType(FlyingCard),
+            matching: find.byType(Positioned),
+          ),
+        )
+        .firstWhere(
+          (positioned) =>
+              positioned.left != null &&
+              positioned.top != null &&
+              positioned.width == 48 &&
+              positioned.height == 68,
+        );
+    final flash = find.byKey(
+      const ValueKey('requisition-high-card-flash-high-requisition-card'),
+    );
+
+    expect(flash, findsOneWidget);
+    expect(flightPosition().left, 20);
+    await tester.pump(const Duration(milliseconds: 240));
+    expect(flash, findsOneWidget);
+    expect(flightPosition().left, 20);
+
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(flash, findsNothing);
+    expect(flightPosition().left, greaterThan(20));
+  });
+
   test('fourth card flight precedes prefilled assignment flights', () {
     final base = runtimeModel();
     final finalCard = base.table.seats[0].hand.single;
@@ -2968,6 +3289,55 @@ void registerBoardTests() {
     expect(plan.stages[2].map((flight) => flight.card.id), [
       secondAssignment.id,
     ]);
+  });
+
+  test('final-year worker card flips before settling as trump', () {
+    final base = runtimeModel();
+    final trumpCard = testCard(
+      id: 'final-worker-trump',
+      suit: 'beet',
+      value: 8,
+    );
+    final before = runtimeModelWith(
+      phase: phasePlanning,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      isFamine: true,
+    );
+    final after = runtimeModelWith(
+      phase: phasePlanning,
+      selection: SelectionState.empty,
+      jobs: base.table.jobs,
+      isFamine: true,
+      finalYearTrumpCard: trumpCard,
+    );
+    final plan = planCardFlights(
+      motionEnabled: true,
+      minimumFlightDistance: 8,
+      previousModel: before,
+      nextModel: after,
+      previousZones: cardMotionZones(before),
+      nextZones: cardMotionZones(after),
+      previousCards: cardMotionCards(before),
+      nextCards: cardMotionCards(after),
+      previousGeometry: MotionGeometry({
+        finalTrumpMotionSourceKey: Rect.fromLTWH(20, 20, 48, 68),
+      }),
+      currentGeometry: MotionGeometry({
+        MotionAnchor.card(trumpCard.id): const Rect.fromLTWH(82, 20, 48, 68),
+      }),
+      geometry: const DefaultCardMotionGeometryResolver(defaultDesignTokens),
+      transitionID: 1,
+      assignmentCardIDs: const [],
+      assignmentTargets: const {},
+      suppressedCardIDs: const {},
+      presentedAssignmentCardIDs: const {},
+      initialFlightID: 0,
+    );
+
+    expect(plan.flights, hasLength(1));
+    expect(plan.flights.single.destinationZone.kind, MotionZoneKind.finalTrump);
+    expect(plan.flights.single.revealBeforeFlight, isTrue);
   });
 
   test('one-suit trick assignment flights move in parallel', () {
@@ -5698,6 +6068,48 @@ void registerBoardTests() {
     expect(findAppText('17/40'), findsWidgets);
   });
 
+  testWidgets('top job gauge previews a newly drafted assignment immediately', (
+    tester,
+  ) async {
+    Widget gauge(List<TableCard> assignedCards) => MaterialApp(
+      home: JobGauge(
+        key: const ValueKey('draft-preview-gauge'),
+        job: Job(
+          suit: 'wheat',
+          hours: 10,
+          requiredHours: jobRequiredHours,
+          claimed: false,
+          reward: null,
+          assignedCards: assignedCards,
+          validAssignmentTarget: false,
+          highlighted: false,
+        ),
+        highlighted: false,
+        width: 101,
+        height: 38,
+        tokens: defaultDesignTokens,
+      ),
+    );
+
+    await tester.pumpWidget(gauge(const []));
+    expect(findAppText('10/40'), findsWidgets);
+
+    await tester.pumpWidget(
+      gauge([
+        testCard(
+          id: 'wheat-7',
+          suit: 'wheat',
+          value: 7,
+          pending: true,
+          provisional: true,
+        ),
+      ]),
+    );
+    await tester.pump();
+
+    expect(findAppText('17/40'), findsWidgets);
+  });
+
   testWidgets('tapping a top job gauge opens its assigned-card column', (
     tester,
   ) async {
@@ -5755,6 +6167,136 @@ void registerBoardTests() {
     await tester.tapAt(const Offset(700, 450));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('job-gauge-overlay-wheat')), findsNothing);
+  });
+
+  testWidgets('top job gauges accept resolved trick cards for assignment', (
+    tester,
+  ) async {
+    final base = runtimeModel();
+    final card = testCard(id: 'beet-10', suit: 'beet', value: 10);
+    final assignment = testLegalAction(
+      kind: actionAssign,
+      label: 'Assign to wheat',
+      engineAction: EngineAction(
+        kind: actionAssign,
+        playerID: 0,
+        card: EngineCard(suit: card.suit, value: card.value),
+        targetSuit: 'wheat',
+      ),
+    );
+    final model = modelWithActivePanel(
+      runtimeModelWith(
+        phase: phaseAssignment,
+        selection: SelectionState.empty,
+        jobs: base.table.jobs,
+        lastTrick: Trick(
+          plays: [TrickPlay(seatID: 0, card: card)],
+          winnerSeatID: 0,
+        ),
+        legalActions: [assignment],
+      ),
+      panelBrigade,
+    );
+    LegalAction? dispatched;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 800,
+          height: 500,
+          child: TopInfoStrip(
+            model: model,
+            tokens: defaultDesignTokens,
+            metrics: ResponsiveBoardMetrics.fromSize(
+              const Size(800, 500),
+              defaultDesignTokens,
+            ),
+            language: KolkhozLanguage.en,
+            animationSpeed: defaultGameAnimationSpeed,
+            onAction: (action) => dispatched = action,
+          ),
+        ),
+      ),
+    );
+
+    final target = tester.widget<CardDropTarget>(
+      find.byKey(const ValueKey('assignment-gauge-drop-wheat')),
+    );
+    final drag = CardDragData(
+      cardID: card.id,
+      kind: CardDragKind.assignment,
+      phase: phaseAssignment,
+      onAccepted: () {},
+    );
+    expect(target.accepts(drag), isTrue);
+    target.onAccepted(drag);
+    expect(dispatched, same(assignment));
+  });
+
+  testWidgets('phone board drags a resolved trick card onto a job gauge', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final base = runtimeModel();
+    final card = testCard(id: 'beet-10', suit: 'beet', value: 10);
+    final assignment = testLegalAction(
+      kind: actionAssign,
+      label: 'Assign to wheat',
+      engineAction: EngineAction(
+        kind: actionAssign,
+        playerID: 0,
+        card: EngineCard(suit: card.suit, value: card.value),
+        targetSuit: 'wheat',
+      ),
+    );
+    final model = modelWithActivePanel(
+      runtimeModelWith(
+        phase: phaseAssignment,
+        selection: SelectionState.empty,
+        jobs: base.table.jobs,
+        lastTrick: Trick(
+          plays: [TrickPlay(seatID: 0, card: card)],
+          winnerSeatID: 0,
+        ),
+        legalActions: [assignment],
+      ),
+      panelBrigade,
+    );
+    LegalAction? dispatched;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: KolkhozBoard(
+          model: model,
+          tokens: defaultDesignTokens,
+          language: KolkhozLanguage.en,
+          appearance: KolkhozAppearance.dark,
+          animationSpeed: GameAnimationSpeed.instant,
+          onAction: (action) => dispatched = action,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final source = find.byKey(const Key('static-hero-trick-card-beet-10'));
+    final target = find.byKey(const ValueKey('assignment-gauge-drop-wheat'));
+    expect(source, findsOneWidget);
+    expect(target, findsOneWidget);
+
+    final sourceCenter = tester.getCenter(source);
+    final touch = await tester.startGesture(sourceCenter);
+    await touch.moveBy(const Offset(0, -24));
+    await tester.pump();
+    expect(activeCardDrag.value?.cardID, card.id);
+    await touch.moveTo(tester.getCenter(target));
+    await tester.pump();
+    expect(find.byKey(const Key('card-drop-zone-highlight')), findsOneWidget);
+    await touch.up();
+    await tester.pump();
+
+    expect(dispatched, same(assignment));
   });
 
   testWidgets('online turn clock uses the server clock anchor', (tester) async {
@@ -6416,12 +6958,72 @@ void registerBoardTests() {
 
     expect(plan.flights.single.revealBeforeFlight, isTrue);
     expect(plan.flights.single.requisitioned, isTrue);
+    expect(plan.flights.single.requisitionWinnerCue, isFalse);
 
     final requisitionModel = runtimeModelWith(
       phase: phaseRequisition,
       selection: SelectionState.empty,
       jobs: runtimeModel().table.jobs,
     );
+    final nominationPlan = planCardFlights(
+      motionEnabled: true,
+      minimumFlightDistance: GameMotion.minimumFlightDistance,
+      previousModel: requisitionModel,
+      nextModel: requisitionModel,
+      previousZones: {card.id: const MotionZone.plotHidden(1)},
+      nextZones: {card.id: const MotionZone.trick(1)},
+      previousCards: {card.id: card},
+      nextCards: {card.id: card},
+      previousGeometry: MotionGeometry({
+        MotionAnchor.card(card.id): const Rect.fromLTWH(120, 240, 48, 68),
+      }),
+      currentGeometry: MotionGeometry({
+        trickCardMotionTargetKey(1): const Rect.fromLTWH(420, 240, 48, 68),
+      }),
+      geometry: const DefaultCardMotionGeometryResolver(defaultDesignTokens),
+      transitionID: 2,
+      assignmentCardIDs: const [],
+      assignmentTargets: const {},
+      suppressedCardIDs: const {},
+      presentedAssignmentCardIDs: const {},
+      initialFlightID: 1,
+    );
+
+    expect(nominationPlan.flights.single.requisitioned, isTrue);
+    expect(nominationPlan.flights.single.requisitionWinnerCue, isFalse);
+    expect(nominationPlan.flights.single.revealBeforeFlight, isTrue);
+    expect(
+      nominationPlan.flights.single.destinationZone.kind,
+      MotionZoneKind.trick,
+    );
+
+    final winnerPlan = planCardFlights(
+      motionEnabled: true,
+      minimumFlightDistance: GameMotion.minimumFlightDistance,
+      previousModel: requisitionModel,
+      nextModel: requisitionModel,
+      previousZones: {card.id: const MotionZone.trick(1)},
+      nextZones: {card.id: const MotionZone.northExile()},
+      previousCards: {card.id: card},
+      nextCards: {card.id: card},
+      previousGeometry: MotionGeometry({
+        MotionAnchor.card(card.id): const Rect.fromLTWH(420, 240, 48, 68),
+      }),
+      currentGeometry: MotionGeometry({
+        northConsoleCardMotionTargetKey: northConsoleRect,
+      }),
+      geometry: const DefaultCardMotionGeometryResolver(defaultDesignTokens),
+      transitionID: 3,
+      assignmentCardIDs: const [],
+      assignmentTargets: const {},
+      suppressedCardIDs: const {},
+      presentedAssignmentCardIDs: const {},
+      initialFlightID: 2,
+    );
+
+    expect(winnerPlan.flights.single.requisitioned, isTrue);
+    expect(winnerPlan.flights.single.requisitionWinnerCue, isTrue);
+
     final alreadyRevealedPlan = planCardFlights(
       motionEnabled: true,
       minimumFlightDistance: GameMotion.minimumFlightDistance,
@@ -6438,12 +7040,12 @@ void registerBoardTests() {
         northConsoleCardMotionTargetKey: northConsoleRect,
       }),
       geometry: const DefaultCardMotionGeometryResolver(defaultDesignTokens),
-      transitionID: 2,
+      transitionID: 3,
       assignmentCardIDs: const [],
       assignmentTargets: const {},
       suppressedCardIDs: const {},
       presentedAssignmentCardIDs: const {},
-      initialFlightID: 1,
+      initialFlightID: 2,
     );
 
     expect(alreadyRevealedPlan.flights.single.revealBeforeFlight, isFalse);

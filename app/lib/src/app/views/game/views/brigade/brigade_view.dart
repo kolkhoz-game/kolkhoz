@@ -262,6 +262,12 @@ class _BrigadePanelState extends State<BrigadePanel> {
                         heroOfSovietUnion: widget.heroOfSovietUnion,
                         trump: model.table.trump,
                         phase: model.table.phase,
+                        assignmentDraggable:
+                            model.table.phase == phaseAssignment &&
+                            assignmentCardHasLegalTarget(
+                              model,
+                              trick.playForSeat(playerOrder[index].id)?.card.id,
+                            ),
                         winning: trick.winnerSeatID == playerOrder[index].id,
                         tokens: tokens,
                         language: language,
@@ -554,6 +560,12 @@ class CompactBrigadeGrid extends StatelessWidget {
       heroOfSovietUnion: heroOfSovietUnion,
       trump: model.table.trump,
       phase: model.table.phase,
+      assignmentDraggable:
+          model.table.phase == phaseAssignment &&
+          assignmentCardHasLegalTarget(
+            model,
+            trick.playForSeat(seat.id)?.card.id,
+          ),
       winning: trick.winnerSeatID == seat.id,
       tokens: tokens,
       language: language,
@@ -852,6 +864,12 @@ class FarmsteadBrigadePlotBoard extends StatelessWidget {
                     trick.playForSeat(playerOrder[index].id),
                   ),
                   phase: model.table.phase,
+                  assignmentDraggable:
+                      model.table.phase == phaseAssignment &&
+                      assignmentCardHasLegalTarget(
+                        model,
+                        trick.playForSeat(playerOrder[index].id)?.card.id,
+                      ),
                   winning: trick.winnerSeatID == playerOrder[index].id,
                   trump: model.table.trump,
                   tokens: tokens,
@@ -1131,7 +1149,14 @@ class FarmsteadPlotCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hiddenExiledCardIDs = hiddenExiledPlotCardIDs(model);
-    final cards = visiblePlotCards(seat.plot.revealed, hiddenExiledCardIDs);
+    final provisionalRequisitionCardID =
+        seat.isViewer && model.table.phase == phaseRequisition
+        ? model.selection.plotCardID
+        : null;
+    final cards = visiblePlotCards(
+      seat.plot.revealed,
+      hiddenExiledCardIDs,
+    ).where((card) => card.id != provisionalRequisitionCardID).toList();
     final stacks = visiblePlotStacks(seat.plot.stacks, hiddenExiledCardIDs);
     final exiledCardIDs = requisitionExiledCardIDs(model);
     final selectable =
@@ -1236,6 +1261,7 @@ class FarmsteadTrickCard extends StatelessWidget {
     required this.play,
     required this.pendingPlayCard,
     required this.phase,
+    this.assignmentDraggable = false,
     required this.winning,
     required this.trump,
     required this.tokens,
@@ -1247,6 +1273,7 @@ class FarmsteadTrickCard extends StatelessWidget {
   final TrickPlay? play;
   final TableCard? pendingPlayCard;
   final String phase;
+  final bool assignmentDraggable;
   final bool winning;
   final String? trump;
   final DesignTokens tokens;
@@ -1300,6 +1327,28 @@ class FarmsteadTrickCard extends StatelessWidget {
         child: child,
       ),
     );
+    if (assignmentDraggable && play != null) {
+      return DraggableCardSurface(
+        data: CardDragData(
+          cardID: play!.card.id,
+          kind: CardDragKind.assignment,
+          phase: phaseAssignment,
+          actionLabel: language == KolkhozLanguage.en
+              ? 'DRAG TO ASSIGN'
+              : 'ПЕРЕТАЩИТЕ ДЛЯ НАЗНАЧЕНИЯ',
+          onAccepted: () {},
+        ),
+        feedback: GameCard(
+          card: play!.card,
+          tokens: tokens,
+          trump: trump,
+          sizeOverride: tokens.card.medium,
+          motionTracked: false,
+          winningTrick: winning,
+        ),
+        child: trackedCard,
+      );
+    }
     if (!active || !seat.isViewer) {
       return trackedCard;
     }
@@ -1321,14 +1370,22 @@ TableCard? selectedTrickPreviewCard(
   Seat seat,
   TrickPlay? play,
 ) {
-  final selectedCardID = model.selection.handCardID;
-  if (model.table.phase != phaseTrick ||
-      selectedCardID == null ||
-      seat.id != model.table.currentPlayerID ||
-      play != null) {
+  if (play != null) {
     return null;
   }
-  for (final card in seat.hand) {
+  final selectedCardID = switch (model.table.phase) {
+    phaseTrick when seat.id == model.table.currentPlayerID =>
+      model.selection.handCardID,
+    phaseRequisition when seat.isViewer => model.selection.plotCardID,
+    _ => null,
+  };
+  if (selectedCardID == null) {
+    return null;
+  }
+  final cards = model.table.phase == phaseTrick
+      ? seat.hand
+      : [...seat.plot.hidden, ...seat.plot.revealed];
+  for (final card in cards) {
     if (card.id == selectedCardID) {
       return card;
     }
@@ -1351,6 +1408,7 @@ class BrigadePlayerColumn extends StatelessWidget {
     required this.heroOfSovietUnion,
     required this.trump,
     required this.phase,
+    this.assignmentDraggable = false,
     required this.winning,
     required this.tokens,
     required this.language,
@@ -1380,6 +1438,7 @@ class BrigadePlayerColumn extends StatelessWidget {
   final bool heroOfSovietUnion;
   final String? trump;
   final String phase;
+  final bool assignmentDraggable;
   final bool winning;
   final DesignTokens tokens;
   final KolkhozLanguage language;
@@ -1400,7 +1459,7 @@ class BrigadePlayerColumn extends StatelessWidget {
     final active = phase == phaseTrick && seat.isCurrentTurn && play == null;
     final activeColumn = active || (phase == phaseAssignment && play != null);
     final human = seat.isViewer;
-    final playAreaChild = play == null
+    final visiblePlayAreaChild = play == null
         ? pendingPlayCard == null
               ? CardSlot(
                   active: active,
@@ -1432,6 +1491,28 @@ class BrigadePlayerColumn extends StatelessWidget {
                 winningTrick: winning,
               ),
             ),
+          );
+    final playAreaChild = play == null || !assignmentDraggable
+        ? visiblePlayAreaChild
+        : DraggableCardSurface(
+            data: CardDragData(
+              cardID: play!.card.id,
+              kind: CardDragKind.assignment,
+              phase: phaseAssignment,
+              actionLabel: language == KolkhozLanguage.en
+                  ? 'DRAG TO ASSIGN'
+                  : 'ПЕРЕТАЩИТЕ ДЛЯ НАЗНАЧЕНИЯ',
+              onAccepted: () {},
+            ),
+            feedback: GameCard(
+              card: play!.card,
+              tokens: tokens,
+              trump: trump,
+              sizeOverride: tokens.card.large,
+              motionTracked: false,
+              winningTrick: winning,
+            ),
+            child: visiblePlayAreaChild,
           );
     final presentedPlayAreaChild = hidePlayArea
         ? const SizedBox.shrink()

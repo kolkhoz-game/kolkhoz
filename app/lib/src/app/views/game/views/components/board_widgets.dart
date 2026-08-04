@@ -252,6 +252,7 @@ class _DraggableCardSurfaceState extends State<DraggableCardSurface> {
         child: Draggable<CardDragData>(
           data: widget.data,
           affinity: Axis.vertical,
+          hitTestBehavior: HitTestBehavior.opaque,
           maxSimultaneousDrags: widget.enabled ? 1 : 0,
           dragAnchorStrategy: childDragAnchorStrategy,
           ignoringFeedbackSemantics: true,
