@@ -52,7 +52,10 @@ class KolkhozCEngine:
     ) -> None:
         self._engine = engine
         self._pointer = engine.new_engine(
-            seed, variants=variants, controllers=controllers
+            seed,
+            variants=variants,
+            controllers=controllers,
+            stepwise_controllers=True,
         )
 
     def apply(self, action: JsonObject) -> None:
@@ -89,7 +92,9 @@ class KolkhozCEngine:
     def apply_ai_action(self, action: JsonObject) -> None:
         from .contracts import action_from_json
 
-        self._engine.apply_ai_action(self._pointer, action_from_json(action))
+        self._engine.apply_ai_action_stepwise(
+            self._pointer, action_from_json(action)
+        )
 
     def controller(self, player_id: int) -> str:
         from .contracts import CONTROLLER_CODES

@@ -10,6 +10,66 @@ from server.kolkhoz_server.store import SQLiteEventStore
 
 
 class RealCEngineRecoveryTests(unittest.TestCase):
+    def test_server_keeps_nonhuman_managed_planner_stepwise(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = GameRuntime(
+                SQLiteEventStore(Path(temporary) / "ai-planner.sqlite3"),
+                shard_count=1,
+                automatic_advancer=AutomaticAdvancer(
+                    ModelCache({}, lambda path: object())
+                ),
+            )
+            try:
+                created = runtime.create_game(
+                    seed=1,
+                    variants={
+                        "variants": {},
+                        "controllers": [
+                            "human",
+                            "heuristicAI",
+                            "heuristicAI",
+                            "heuristicAI",
+                        ],
+                    },
+                    session_id="ai-planner",
+                )
+
+                self.assertEqual(created.revision, 0)
+                self.assertEqual(created.state["phase"], 0)
+                self.assertEqual(created.state["legalActions"][0]["kind"], 10)
+                self.assertNotEqual(
+                    created.state["legalActions"][0]["playerID"], 0
+                )
+
+                applied = runtime.advance_automatic("ai-planner", now=0)
+                planning = runtime.state("ai-planner")
+                waiting = runtime.advance_automatic("ai-planner", now=0)
+                next_applied = runtime.advance_automatic("ai-planner", now=10)
+                next_planning = runtime.state("ai-planner")
+                events = runtime.events("ai-planner")
+            finally:
+                runtime.close()
+
+            self.assertEqual(applied, 4)
+            self.assertEqual(planning.revision, 4)
+            self.assertEqual(planning.state["phase"], 0)
+            self.assertEqual(
+                [event.payload["kind"] for event in events[:4]],
+                [10, 10, 10, 10],
+            )
+            self.assertTrue(planning.state["managedRewardOffers"])
+            self.assertTrue(
+                all(
+                    action["kind"] in (15, 16)
+                    for action in planning.state["legalActions"]
+                )
+            )
+            self.assertEqual(waiting, 0)
+            self.assertEqual(next_applied, 1)
+            self.assertEqual(next_planning.revision, 5)
+            self.assertEqual(next_planning.state["phase"], 0)
+            self.assertEqual(len(events), 5)
+
     def test_server_reveals_default_managed_rewards_before_human_planning(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             database = Path(temporary) / "central-planner.sqlite3"

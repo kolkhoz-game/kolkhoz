@@ -542,6 +542,13 @@ class CEngine:
             KCControllers,
         ]
         self.lib.kc_engine_init_with_controllers.restype = None
+        self.lib.kc_engine_init_with_controllers_stepwise.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_uint64,
+            KCVariants,
+            KCControllers,
+        ]
+        self.lib.kc_engine_init_with_controllers_stepwise.restype = None
         self.lib.kc_engine_init_curriculum.argtypes = [
             ctypes.c_void_p,
             ctypes.c_uint64,
@@ -591,6 +598,11 @@ class CEngine:
         self.lib.kc_engine_policy_action_with_workspace.restype = ctypes.c_bool
         self.lib.kc_engine_apply_ai_action.argtypes = [ctypes.c_void_p, KCAction]
         self.lib.kc_engine_apply_ai_action.restype = ctypes.c_int32
+        self.lib.kc_engine_apply_ai_action_stepwise.argtypes = [
+            ctypes.c_void_p,
+            KCAction,
+        ]
+        self.lib.kc_engine_apply_ai_action_stepwise.restype = ctypes.c_int32
         self.lib.kc_engine_apply_policy_action.argtypes = [ctypes.c_void_p, KCAction]
         self.lib.kc_engine_apply_policy_action.restype = ctypes.c_int32
         self.lib.kc_engine_apply.argtypes = [ctypes.c_void_p, KCAction]
@@ -696,6 +708,7 @@ class CEngine:
         *,
         variants: KCVariants | None = None,
         controllers: KCControllers | None = None,
+        stepwise_controllers: bool = False,
         round_curriculum: bool = False,
         round_plot_cards: int = 0,
         round_famine_rate: float = 0.0,
@@ -714,7 +727,12 @@ class CEngine:
                 ctypes.c_int32(curriculum_rounds),
             )
         elif controllers is not None:
-            self.lib.kc_engine_init_with_controllers(
+            initializer = (
+                self.lib.kc_engine_init_with_controllers_stepwise
+                if stepwise_controllers
+                else self.lib.kc_engine_init_with_controllers
+            )
+            initializer(
                 pointer,
                 ctypes.c_uint64(seed),
                 variants or self.kolkhoz_variants(),
@@ -1006,6 +1024,13 @@ class CEngine:
 
     def apply_ai_action(self, pointer: ctypes.c_void_p, action: KCAction) -> None:
         status = int(self.lib.kc_engine_apply_ai_action(pointer, action))
+        if status != 0:
+            raise RuntimeError(f"C engine rejected AI action with status {status}")
+
+    def apply_ai_action_stepwise(
+        self, pointer: ctypes.c_void_p, action: KCAction
+    ) -> None:
+        status = int(self.lib.kc_engine_apply_ai_action_stepwise(pointer, action))
         if status != 0:
             raise RuntimeError(f"C engine rejected AI action with status {status}")
 
