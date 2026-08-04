@@ -157,14 +157,6 @@ class VariantRowData {
     valueOf: (variants) => variants.passCards,
     withValue: (variants, value) => variants.copyWith(passCards: value),
   );
-  static final highestCardsRequisition = VariantRowData(
-    titleKey: KolkhozText.variantHighestCardsRequisitionTitle,
-    descriptionKey: KolkhozText.variantHighestCardsRequisitionDescription,
-    iconAsset: fieldPlanVariantHighestCardsRequisition.fieldPlanPath,
-    valueOf: (variants) => variants.highestCardsRequisition,
-    withValue: (variants, value) =>
-        variants.copyWith(highestCardsRequisition: value),
-  );
   static final lottoRewards = VariantRowData(
     titleKey: KolkhozText.variantLottoRewardsTitle,
     descriptionKey: KolkhozText.variantLottoRewardsDescription,
@@ -209,7 +201,6 @@ class VariantRowData {
     wrecker,
     finalYearTrump,
     passCards,
-    highestCardsRequisition,
     lottoRewards,
     managedEconomy,
   ];

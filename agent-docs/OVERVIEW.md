@@ -94,12 +94,13 @@ card that matches every crop suit. It can follow any suit, can make any crop ass
 target legal, adds 0 work hours, and still causes any job bucket containing it to be
 processed as failed during requisition.
 
-Default Kolkhoz also enables Final Year Trump, Highest Cards Requisition, and Managed
+Default Kolkhoz also enables Final Year Trump, Hero of Socialist Labor, and Managed
 Economy. Passing and Lotto Rewards remain available in Custom games. Lotto job piles
 contain ranks 1-4 plus one seeded random rank from 5-K
-per crop. Highest Cards Requisition takes a vulnerable player's highest cards across all
-active failed crops, with a quota equal to the number of those crops; Party Official adds
-one and Drunkard removes its crop before the quota is counted.
+per crop. Requisition compares each medal holder's highest card across all active failed
+crops once per failed field. The highest nomination goes North, including all global ties;
+losing hidden nominations remain revealed. Party Official adds one comparison and Drunkard
+removes its crop before the comparison count is calculated.
 
 ## Key Files To Read First
 

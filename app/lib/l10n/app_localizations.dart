@@ -287,7 +287,7 @@ abstract class AppLocalizations {
   /// No description provided for @variantHeroDescription.
   ///
   /// In en, this message translates to:
-  /// **'Win every trick in a year: you are protected and every other player is vulnerable.'**
+  /// **'Win every possible trick in a year: you are fully protected and every other player loses their own highest eligible card.'**
   String get variantHeroDescription;
 
   /// No description provided for @variantAccumulationTitle.
@@ -337,18 +337,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pass one hidden card left, then right, alternating from years 2 through 5.'**
   String get variantPassCardsDescription;
-
-  /// No description provided for @variantHighestCardsRequisitionTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Highest Cards Requisition'**
-  String get variantHighestCardsRequisitionTitle;
-
-  /// No description provided for @variantHighestCardsRequisitionDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Lose your highest cards across failed crops, one for each failed job.'**
-  String get variantHighestCardsRequisitionDescription;
 
   /// No description provided for @variantLottoRewardsTitle.
   ///

@@ -1,5 +1,23 @@
 #include "KolkhozCEngineInternal.h"
 
+static KCAction kc_requisition_progress_action(const KCEngine *engine) {
+    KCAction actions[256];
+    int32_t count = kc_engine_legal_actions(engine, actions, 256);
+    for (int32_t i = 0; i < count; i++) {
+        if (actions[i].kind == KC_ACTION_SELECT_REQUISITION_CARD) return actions[i];
+    }
+    return (KCAction){
+        .kind = KC_ACTION_CONTINUE_AFTER_REQUISITION,
+        .player_id = 0,
+        .suit = -1,
+        .card = { .suit = -1, .value = 0 },
+        .hand_card = { .suit = -1, .value = 0 },
+        .plot_card = { .suit = -1, .value = 0 },
+        .plot_zone = -1,
+        .target_suit = -1
+    };
+}
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1252,7 +1270,8 @@ int32_t kc_engine_state_features(const KCEngine *engine, int32_t perspective_pla
     kc_state_add_feature(features, limit, 49, engine->variants.wrecker ? 1.0 : 0.0);
     kc_state_add_feature(features, limit, 50, engine->variants.final_year_trump ? 1.0 : 0.0);
     kc_state_add_feature(features, limit, 51, engine->variants.pass_cards ? 1.0 : 0.0);
-    kc_state_add_feature(features, limit, 52, engine->variants.highest_cards_requisition ? 1.0 : 0.0);
+    /* Retain the promoted-policy slot now that highest-card requisition is core. */
+    kc_state_add_feature(features, limit, 52, 1.0);
     kc_state_add_feature(features, limit, 53, engine->variants.lotto_rewards ? 1.0 : 0.0);
 
     for (int32_t seat = 0; seat < KC_PLAYER_COUNT; seat++) {
@@ -2343,7 +2362,7 @@ static int32_t kc_run_greedy_model_game(uint64_t seed, KCVariants variants, KCPo
     while (engine.phase != KC_PHASE_GAME_OVER && guard_count < 2000) {
         guard_count++;
         if (engine.phase == KC_PHASE_REQUISITION) {
-            KCAction action = { .kind = KC_ACTION_CONTINUE_AFTER_REQUISITION, .player_id = 0, .suit = -1, .card = kc_no_card(), .hand_card = kc_no_card(), .plot_card = kc_no_card(), .plot_zone = -1, .target_suit = -1 };
+            KCAction action = kc_requisition_progress_action(&engine);
             kc_engine_apply(&engine, action);
             continue;
         }
@@ -2406,7 +2425,7 @@ int32_t kc_run_greedy_matchup_game(
     while (engine.phase != KC_PHASE_GAME_OVER && kc_curriculum_should_continue(&engine, round_curriculum, starting_year) && guard_count < 2000) {
         guard_count++;
         if (engine.phase == KC_PHASE_REQUISITION) {
-            KCAction action = { .kind = KC_ACTION_CONTINUE_AFTER_REQUISITION, .player_id = 0, .suit = -1, .card = kc_no_card(), .hand_card = kc_no_card(), .plot_card = kc_no_card(), .plot_zone = -1, .target_suit = -1 };
+            KCAction action = kc_requisition_progress_action(&engine);
             kc_engine_apply(&engine, action);
             continue;
         }
@@ -2509,7 +2528,7 @@ KCPolicyMatchupGameResult kc_run_policy_matchup_game(
     while (engine.phase != KC_PHASE_GAME_OVER && kc_curriculum_should_continue(&engine, round_curriculum, starting_year) && guard_count < 2000) {
         guard_count++;
         if (engine.phase == KC_PHASE_REQUISITION) {
-            KCAction action = { .kind = KC_ACTION_CONTINUE_AFTER_REQUISITION, .player_id = 0, .suit = -1, .card = kc_no_card(), .hand_card = kc_no_card(), .plot_card = kc_no_card(), .plot_zone = -1, .target_suit = -1 };
+            KCAction action = kc_requisition_progress_action(&engine);
             int32_t error = kc_engine_apply(&engine, action);
             if (error != 0) {
                 free(hidden_cache);

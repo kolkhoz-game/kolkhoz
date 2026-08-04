@@ -1134,7 +1134,12 @@ class FarmsteadPlotCards extends StatelessWidget {
     final cards = visiblePlotCards(seat.plot.revealed, hiddenExiledCardIDs);
     final stacks = visiblePlotStacks(seat.plot.stacks, hiddenExiledCardIDs);
     final exiledCardIDs = requisitionExiledCardIDs(model);
-    final selectable = seat.isViewer && model.table.phase == phaseSwap;
+    final selectable =
+        seat.isViewer &&
+        (model.table.phase == phaseSwap ||
+            model.legalActions.any(
+              (action) => action.kind == actionSelectRequisitionCard,
+            ));
     return LayoutBuilder(
       builder: (context, constraints) {
         final scale = constraints.maxHeight / tokens.card.small.height;

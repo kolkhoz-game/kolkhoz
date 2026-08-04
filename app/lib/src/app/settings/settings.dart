@@ -321,7 +321,7 @@ class KolkhozFavoriteSetup {
           finalYearTrump: variantsJson['finalYearTrump'] as bool? ?? false,
           passCards: variantsJson['passCards'] as bool? ?? false,
           highestCardsRequisition:
-              variantsJson['highestCardsRequisition'] as bool? ?? false,
+              variantsJson['highestCardsRequisition'] as bool? ?? true,
           lottoRewards: variantsJson['lottoRewards'] as bool? ?? false,
           managedEconomy: variantsJson['managedEconomy'] as bool? ?? false,
         ),

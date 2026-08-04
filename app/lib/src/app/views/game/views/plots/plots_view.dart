@@ -84,7 +84,11 @@ class PlotOverviewView extends StatelessWidget {
       viewer.plot.stacks,
       hiddenExiledCardIDs,
     );
-    final selectable = model.table.phase == phaseSwap;
+    final selectable =
+        model.table.phase == phaseSwap ||
+        model.legalActions.any(
+          (action) => action.kind == actionSelectRequisitionCard,
+        );
     const revealViewerCellar = true;
     final revealOpponentCellars = model.table.phase == phaseGameOver;
     return LayoutBuilder(

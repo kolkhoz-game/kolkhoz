@@ -62,7 +62,7 @@ void main() {
       content.steps
           .singleWhere((step) => step.id == 'hero-of-socialist-labor')
           .body(KolkhozLanguage.en),
-      contains('protected from ordinary requisition'),
+      contains('completely protected from requisition'),
     );
   });
 

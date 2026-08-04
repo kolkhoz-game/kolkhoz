@@ -114,7 +114,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get variantHeroDescription =>
-      'Win every trick in a year: you are protected and every other player is vulnerable.';
+      'Win every possible trick in a year: you are fully protected and every other player loses their own highest eligible card.';
 
   @override
   String get variantAccumulationTitle => 'In the Common Pot';
@@ -143,13 +143,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get variantPassCardsDescription =>
       'Pass one hidden card left, then right, alternating from years 2 through 5.';
-
-  @override
-  String get variantHighestCardsRequisitionTitle => 'Highest Cards Requisition';
-
-  @override
-  String get variantHighestCardsRequisitionDescription =>
-      'Lose your highest cards across failed crops, one for each failed job.';
 
   @override
   String get variantLottoRewardsTitle => 'Lotto Rewards';

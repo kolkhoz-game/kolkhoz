@@ -1305,9 +1305,6 @@ class _FieldPlanVariantLedger extends StatelessWidget {
     if (identical(row, VariantRowData.finalYearTrump)) {
       return fieldPlanVariantFinalYearTrump;
     }
-    if (identical(row, VariantRowData.highestCardsRequisition)) {
-      return fieldPlanVariantHighestCardsRequisition;
-    }
     if (identical(row, VariantRowData.lottoRewards)) {
       return fieldPlanVariantLottoRewards;
     }

@@ -208,19 +208,24 @@ const kolkhozBaseRulebook = [
   RulebookBlock(
     RulebookBlockKind.bullet,
     'Count the number of failed fields (fields with fewer than the required '
-    'work hours assigned, or containing the joker). Each player who was '
-    'a brigadier during the year (they will have a medal) sends to the '
-    'North (отправить на Север) that many cards: the highest cards they '
-    'possess in their cellar and plot among all suits corresponding to '
-    'failed fields. If a player has fewer eligible cards than the number '
-    'of failed jobs, they send all of them. If a player has equally '
-    'ranked eligible cards, they may decide which one(s) are sent north.',
+    'work hours assigned, or containing the joker). The suits of all failed '
+    'fields form one eligible pool. For each failed field, every player who '
+    'was a brigadier during the year secretly identifies their highest '
+    'remaining card in their cellar or plot from that pool. A player with '
+    'equally ranked highest cards chooses one. Reveal all identified cards '
+    'together; identified cellar cards remain face up in the plot. Send the '
+    'highest identified card to the North (отправить на Север). If multiple '
+    'identified cards tie for highest, send all tied cards North. Repeat '
+    'with the remaining cards once for each failed field.',
   ),
   RulebookBlock(
     RulebookBlockKind.bullet,
-    'Hero of Socialist Labor (стахановец): If a player won every trick in '
-    'the year, all other players are requisitioned instead of them, '
-    'regardless of if they were a brigadier or not.',
+    'Hero of Socialist Labor (стахановец): When playing with this variant, '
+    'a player who won every possible trick in the year is protected. For '
+    'each failed field, every other player sends their own highest remaining '
+    'eligible card North. Players choose between their own equally ranked '
+    'cards. The Hero is completely protected, including from a field '
+    'containing the joker.',
   ),
   RulebookBlock(
     RulebookBlockKind.subsectionTitle,

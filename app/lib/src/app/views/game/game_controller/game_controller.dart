@@ -667,6 +667,20 @@ class GameController extends ChangeNotifier {
   }
 
   void selectPlotCard(String cardID, String zone) {
+    if (model?.table.phase == phaseRequisition) {
+      final action = model?.legalActions
+          .where(
+            (candidate) =>
+                candidate.kind == actionSelectRequisitionCard &&
+                candidate.engineAction.card?.id == cardID &&
+                candidate.engineAction.plotZone == zone,
+          )
+          .firstOrNull;
+      if (action != null) {
+        applyLegalAction(action);
+      }
+      return;
+    }
     if (model?.table.phase != phaseSwap) {
       return;
     }

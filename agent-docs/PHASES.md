@@ -128,11 +128,13 @@ hand cards into hidden plots before requisition.
 Failed jobs may reveal and exile matching plot cards. Drunkard, Informant, Party
 Official, mice, northern style, and hero immunity behavior all live in the C engine.
 
-With Highest Cards Requisition, each vulnerable player's quota is the number of active
-failed crop suits and the engine takes that player's highest cards across the combined
-eligible suits. Party Official adds one to the quota. Drunkard removes its crop from both
-the pool and the quota. A selected hidden card is revealed by being sent North; there is
-no separate reveal step for cards selected for exile.
+The active failed crop suits form one eligible pool. Medal holders privately nominate
+their highest remaining eligible card, all nominations reveal together, and the global
+highest goes North, including all global ties. Losing Cellar nominations remain face up.
+The comparison repeats once per active failed crop. Hero replaces the comparison with one
+individual loss for every opponent; Northern Style and Mice do the same for every player.
+Party Official adds one comparison. Drunkard removes its crop from both the pool and the
+comparison count.
 
 ### 8. Game Over
 
@@ -165,9 +167,8 @@ the requisition screen until the user continues.
 
 A job containing Saboteur is requisitioned as failed even if it reached 40 work hours and
 claimed its reward. A plot Saboteur matches any failed job, but a specific Saboteur card is
-exiled only once in a year's requisition report. Hero immunity does not fully stop this
-failure: the Hero loses their single highest Plot or Cellar card matching the Saboteur
-field's crop, if they have one.
+exiled only once in a year's requisition report. Hero immunity fully protects the Hero
+from that failure.
 
 ### Swap Is Sequential
 

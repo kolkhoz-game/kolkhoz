@@ -57,11 +57,14 @@ Set<String> plotActionCardIDs(
 }) {
   return {
     for (final action in actions)
-      if (action.kind == kcActionSwap &&
+      if ((action.kind == kcActionSwap ||
+              action.kind == kcActionSelectRequisitionCard) &&
           (playerID == null || action.playerID == playerID) &&
-          action.plotCard.isValid &&
+          (action.kind == kcActionSwap
+              ? action.plotCard.isValid
+              : action.card.isValid) &&
           plotZoneName(action.plotZone) == zone)
-        cardID(action.plotCard),
+        cardID(action.kind == kcActionSwap ? action.plotCard : action.card),
   };
 }
 
@@ -126,6 +129,7 @@ String actionKindName(int kind) {
     kcActionRevealTrump => actionRevealTrump,
     kcActionAssignReward => actionAssignReward,
     kcActionConfirmRewardSwaps => actionConfirmRewardSwaps,
+    kcActionSelectRequisitionCard => actionSelectRequisitionCard,
     kcActionCompleteTutorialOrientation => actionCompleteTutorialOrientation,
     kcActionCompleteTutorialRewardLesson => actionCompleteTutorialRewardLesson,
     kcActionCompleteTutorialSaboteurFollowLesson =>
@@ -149,6 +153,7 @@ int? actionKindCode(String kind) {
     actionRevealTrump => kcActionRevealTrump,
     actionAssignReward => kcActionAssignReward,
     actionConfirmRewardSwaps => kcActionConfirmRewardSwaps,
+    actionSelectRequisitionCard => kcActionSelectRequisitionCard,
     actionCompleteTutorialOrientation => kcActionCompleteTutorialOrientation,
     actionCompleteTutorialRewardLesson => kcActionCompleteTutorialRewardLesson,
     actionCompleteTutorialSaboteurFollowLesson =>
@@ -172,6 +177,7 @@ String actionLabel(int kind) {
     kcActionRevealTrump => 'Reveal trump',
     kcActionAssignReward => 'Swap reward',
     kcActionConfirmRewardSwaps => 'Confirm rewards',
+    kcActionSelectRequisitionCard => 'Reveal for requisition',
     kcActionCompleteTutorialOrientation => 'Begin Year 1',
     kcActionCompleteTutorialRewardLesson => 'Continue to trump',
     kcActionCompleteTutorialSaboteurFollowLesson => 'Continue the trick',

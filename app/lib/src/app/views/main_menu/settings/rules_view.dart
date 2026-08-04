@@ -576,7 +576,7 @@ class _YearOverview extends StatelessWidget {
     ),
     _HowStep(
       title: 'BANK & REQUISITION',
-      body: 'Bank the last card, resolve failed fields, then pass left.',
+      body: 'Bank the last card, then compare medalists’ highest cards.',
       iconPath:
           'assets/art/field_plan/ledger/variants/'
           'variant_highest_cards_requisition.png',
@@ -773,7 +773,7 @@ class _QuickReferenceOverview extends StatelessWidget {
     ),
     _QuickEntry(
       title: 'REQUISITION',
-      body: 'Take the highest eligible cards from failed suits.',
+      body: 'Medalists reveal; the global highest goes North.',
       iconPath:
           'assets/art/field_plan/ledger/variants/'
           'variant_highest_cards_requisition.png',

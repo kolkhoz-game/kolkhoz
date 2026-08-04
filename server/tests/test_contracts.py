@@ -133,11 +133,163 @@ class ActionContractTests(unittest.TestCase):
         self.assertEqual(owner["card"], {"suit": 3, "value": 12})
         self.assertEqual(finished["card"], {"suit": -1, "value": -1})
 
+    def test_requisition_choice_is_private_until_engine_resolution(self) -> None:
+        action = action_to_json(
+            KCAction(17, 2, -1, KCCard(3, 12), KCCard(-1, 0), KCCard(-1, 0), 0, -1)
+        )
+        other = privacy_safe_action_log([action], 0, game_over=False)[0]
+        owner = privacy_safe_action_log([action], 2, game_over=False)[0]
+        self.assertEqual(other["card"], {"suit": -1, "value": -1})
+        self.assertEqual(owner["card"], {"suit": 3, "value": 12})
+
 
 class ProjectionContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.engine = CEngine(build_shared_library())
+
+    def test_requisition_compares_medalists_once_per_failed_field(self) -> None:
+        pointer = self.engine.new_engine(
+            81001,
+            variants=variants_native(
+                normalize_variants({"heroOfSovietUnion": False})
+            ),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 3
+            state.last_winner = 0
+            state.current_player = 0
+            state.trick_count = 4
+            state.last_trick_count = 0
+            for suit in range(4):
+                state.work_hours[suit] = 40 if suit >= 2 else 0
+                state.job_buckets[suit].count = 0
+            for player_id in range(4):
+                state.players[player_id].hand.count = 0
+                state.players[player_id].plot_hidden.count = 0
+                state.players[player_id].plot_revealed.count = 0
+                state.players[player_id].medals = 1 if player_id < 2 else 0
+
+            player_zero = state.players[0]
+            player_zero.plot_hidden.count = 3
+            player_zero.plot_hidden.cards[0] = KCCard(0, 10)
+            player_zero.plot_hidden.cards[1] = KCCard(1, 10)
+            player_zero.plot_hidden.cards[2] = KCCard(1, 8)
+            player_one = state.players[1]
+            player_one.plot_hidden.count = 2
+            player_one.plot_hidden.cards[0] = KCCard(0, 10)
+            player_one.plot_hidden.cards[1] = KCCard(1, 7)
+
+            self.engine.apply_action(
+                pointer,
+                KCAction(6, 0, -1, KCCard(-1, 0), KCCard(-1, 0), KCCard(-1, 0), -1, -1),
+            )
+
+            actions = self.engine.legal_actions(pointer)
+            self.assertEqual(
+                {(action.player_id, action.card.suit, action.card.value) for action in actions},
+                {(0, 0, 10), (0, 1, 10), (1, 0, 10)},
+            )
+            self.engine.apply_action(
+                pointer,
+                next(action for action in actions if action.player_id == 0 and action.card.suit == 1),
+            )
+            state = self.engine.snapshot(pointer)
+            self.assertEqual(state.players[0].plot_hidden.count, 3)
+
+            self.engine.apply_action(
+                pointer,
+                next(action for action in self.engine.legal_actions(pointer) if action.player_id == 1),
+            )
+            state = self.engine.snapshot(pointer)
+            self.assertEqual(state.exiled[1].count, 2)
+            self.assertEqual(state.requisition_rounds_remaining, 1)
+
+            second_round = self.engine.legal_actions(pointer)
+            self.assertEqual(
+                {(action.player_id, action.card.value) for action in second_round},
+                {(0, 8), (1, 7)},
+            )
+            for player_id in (0, 1):
+                self.engine.apply_action(
+                    pointer,
+                    next(
+                        action
+                        for action in self.engine.legal_actions(pointer)
+                        if action.player_id == player_id
+                    ),
+                )
+
+            state = self.engine.snapshot(pointer)
+            self.assertEqual(state.requisition_rounds_remaining, 0)
+            self.assertEqual(state.exiled[1].count, 3)
+            self.assertTrue(
+                any(
+                    state.players[1].plot_revealed.cards[index].value == 7
+                    for index in range(state.players[1].plot_revealed.count)
+                )
+            )
+        finally:
+            self.engine.free_engine(pointer)
+
+    def test_hero_is_fully_protected_from_a_saboteur_failure(self) -> None:
+        pointer = self.engine.new_engine(
+            81002,
+            variants=variants_native(normalize_variants({"heroOfSovietUnion": True})),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 3
+            state.last_winner = 0
+            state.current_player = 0
+            state.trick_count = 4
+            state.last_trick_count = 0
+            state.is_famine = False
+            for suit in range(4):
+                state.work_hours[suit] = 40
+                state.job_buckets[suit].count = 0
+            state.job_buckets[0].count = 1
+            state.job_buckets[0].cards[0] = KCCard(4, 0)
+            for player_id in range(4):
+                player = state.players[player_id]
+                player.hand.count = 0
+                player.plot_hidden.count = 1
+                player.plot_revealed.count = 0
+                player.plot_hidden.cards[0] = KCCard(0, 13 - player_id)
+                player.medals = 4 if player_id == 0 else 0
+
+            self.engine.apply_action(
+                pointer,
+                KCAction(6, 0, -1, KCCard(-1, 0), KCCard(-1, 0), KCCard(-1, 0), -1, -1),
+            )
+            self.assertEqual(
+                {action.player_id for action in self.engine.legal_actions(pointer)},
+                {1, 2, 3},
+            )
+            for player_id in (1, 2, 3):
+                self.engine.apply_action(
+                    pointer,
+                    next(
+                        action
+                        for action in self.engine.legal_actions(pointer)
+                        if action.player_id == player_id
+                    ),
+                )
+
+            state = self.engine.snapshot(pointer)
+            self.assertEqual(state.exiled[1].count, 3)
+            self.assertEqual(state.players[0].plot_hidden.count, 1)
+            self.assertFalse(
+                any(
+                    state.exiled_player_ids[1][index] == 0
+                    for index in range(state.exiled[1].count)
+                )
+            )
+        finally:
+            self.engine.free_engine(pointer)
 
     def test_snapshot_exposes_only_the_viewers_private_cards(self) -> None:
         controllers = controllers_native(["human"] * 4)

@@ -144,13 +144,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Передавайте одну скрытую карту влево и вправо по очереди со второго по пятый год.';
 
   @override
-  String get variantHighestCardsRequisitionTitle => 'Реквизиция старших карт';
-
-  @override
-  String get variantHighestCardsRequisitionDescription =>
-      'Теряйте старшие карты проваленных культур — по одной за каждую проваленную работу.';
-
-  @override
   String get variantLottoRewardsTitle => 'Лотерейные награды';
 
   @override

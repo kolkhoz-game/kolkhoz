@@ -509,6 +509,14 @@ class KolkhozCEngineBridge {
         action.card.suit,
         action.card.value,
       ),
+      kcActionSelectRequisitionCard => _applyCardAction(
+        engine,
+        action.kind,
+        action.playerID,
+        action.suit,
+        action.card.suit,
+        action.card.value,
+      ),
       _ => _applySimple(engine, action.kind, action.playerID),
     };
   }
@@ -555,6 +563,14 @@ class KolkhozCEngineBridge {
         action.suit,
       ),
       kcActionAssignReward => _applyCardActionManual(
+        engine,
+        action.kind,
+        action.playerID,
+        action.suit,
+        action.card.suit,
+        action.card.value,
+      ),
+      kcActionSelectRequisitionCard => _applyCardActionManual(
         engine,
         action.kind,
         action.playerID,

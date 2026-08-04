@@ -38,7 +38,7 @@ KolkhozGameVariants variantsFromJson(Map<String, Object?> json) {
     wreckerCard: json['wrecker'] as bool? ?? false,
     finalYearTrump: json['finalYearTrump'] as bool? ?? false,
     passCards: json['passCards'] as bool? ?? false,
-    highestCardsRequisition: json['highestCardsRequisition'] as bool? ?? false,
+    highestCardsRequisition: json['highestCardsRequisition'] as bool? ?? true,
     lottoRewards: json['lottoRewards'] as bool? ?? false,
     managedEconomy: json['managedEconomy'] as bool? ?? false,
   );

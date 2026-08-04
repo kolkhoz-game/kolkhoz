@@ -1,5 +1,23 @@
 #include "KolkhozCEngineInternal.h"
 
+static KCAction kc_training_requisition_action(const KCEngine *engine) {
+    KCAction actions[256];
+    int32_t count = kc_engine_legal_actions(engine, actions, 256);
+    for (int32_t i = 0; i < count; i++) {
+        if (actions[i].kind == KC_ACTION_SELECT_REQUISITION_CARD) return actions[i];
+    }
+    return (KCAction){
+        .kind = KC_ACTION_CONTINUE_AFTER_REQUISITION,
+        .player_id = 0,
+        .suit = -1,
+        .card = { .suit = -1, .value = 0 },
+        .hand_card = { .suit = -1, .value = 0 },
+        .plot_card = { .suit = -1, .value = 0 },
+        .plot_zone = -1,
+        .target_suit = -1
+    };
+}
+
 #include <math.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -766,7 +784,7 @@ static int32_t kc_run_policy_gradient_episode(
     while (engine.phase != KC_PHASE_GAME_OVER && kc_curriculum_should_continue(&engine, config.round_curriculum, starting_year) && guard_count < 2000) {
         guard_count++;
         if (engine.phase == KC_PHASE_REQUISITION) {
-            KCAction action = { .kind = KC_ACTION_CONTINUE_AFTER_REQUISITION, .player_id = 0, .suit = -1, .card = kc_no_card(), .hand_card = kc_no_card(), .plot_card = kc_no_card(), .plot_zone = -1, .target_suit = -1 };
+            KCAction action = kc_training_requisition_action(&engine);
             kc_engine_apply(&engine, action);
             continue;
         }
@@ -1055,7 +1073,7 @@ static int32_t kc_run_policy_ppo_episode(
     while (engine.phase != KC_PHASE_GAME_OVER && kc_curriculum_should_continue(&engine, config.round_curriculum, starting_year) && guard_count < 2000) {
         guard_count++;
         if (engine.phase == KC_PHASE_REQUISITION) {
-            KCAction action = { .kind = KC_ACTION_CONTINUE_AFTER_REQUISITION, .player_id = 0, .suit = -1, .card = kc_no_card(), .hand_card = kc_no_card(), .plot_card = kc_no_card(), .plot_zone = -1, .target_suit = -1 };
+            KCAction action = kc_training_requisition_action(&engine);
             kc_engine_apply(&engine, action);
             continue;
         }

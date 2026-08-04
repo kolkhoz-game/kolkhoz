@@ -41,6 +41,9 @@ static int32_t kc_engine_step_automatic_impl(KCEngine *engine);
 static int32_t kc_engine_apply_action(KCEngine *engine, KCAction action);
 static bool kc_step_requisition(KCEngine *engine);
 static void kc_append_exiled(KCEngine *engine, KCCard card, int32_t player_id);
+static bool kc_requisition_card_eligible(const KCEngine *engine, int32_t player_id, KCCard card);
+static int32_t kc_requisition_highest_value(const KCEngine *engine, int32_t player_id);
+static int32_t kc_commit_requisition_choice(KCEngine *engine, int32_t player_id, KCCard card);
 
 void kc_engine_begin_transition_batch(KCEngine *engine) {
     if (!engine) return;
@@ -1687,6 +1690,33 @@ static int32_t kc_engine_step_automatic_impl(KCEngine *engine) {
         return 1;
     }
     if (engine->phase == KC_PHASE_REQUISITION &&
+        engine->requisition_rounds_remaining > 0) {
+        for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+            if (engine->requisition_choice_confirmed[player_id] ||
+                !engine->requisition_target_players[player_id] ||
+                !kc_controller_is_automatic(engine->controllers.seats[player_id])) {
+                continue;
+            }
+            int32_t highest = kc_requisition_highest_value(engine, player_id);
+            KCCard selected = kc_no_card();
+            const KCPlayer *player = &engine->players[player_id];
+            for (int32_t zone = 0; zone < 2 && !kc_card_valid(selected); zone++) {
+                const KCCardList *cards = zone == 0
+                    ? &player->plot_hidden
+                    : &player->plot_revealed;
+                for (int32_t i = 0; i < cards->count; i++) {
+                    if (cards->cards[i].value == highest &&
+                        kc_requisition_card_eligible(engine, player_id, cards->cards[i])) {
+                        selected = cards->cards[i];
+                        break;
+                    }
+                }
+            }
+            return kc_commit_requisition_choice(engine, player_id, selected) == 0 ? 1 : -1;
+        }
+        return 0;
+    }
+    if (engine->phase == KC_PHASE_REQUISITION &&
         engine->requisition_plan_index < engine->requisition_plan_count) {
         return kc_step_requisition(engine) ? 1 : 0;
     }
@@ -1732,6 +1762,21 @@ int32_t kc_engine_step_automatic(KCEngine *engine) {
 
 bool kc_engine_heuristic_action(const KCEngine *engine, KCAction *selected) {
     if (!engine || !selected) {
+        return false;
+    }
+    if (engine->phase == KC_PHASE_REQUISITION &&
+        engine->requisition_rounds_remaining > 0) {
+        KCAction actions[256];
+        int32_t count = kc_engine_legal_actions(engine, actions, 256);
+        for (int32_t i = 0; i < count; i++) {
+            int32_t player_id = actions[i].player_id;
+            if (actions[i].kind == KC_ACTION_SELECT_REQUISITION_CARD &&
+                kc_valid_player_id(player_id) &&
+                kc_controller_is_automatic(engine->controllers.seats[player_id])) {
+                *selected = actions[i];
+                return true;
+            }
+        }
         return false;
     }
     if (engine->phase == KC_PHASE_PASS &&
@@ -1785,6 +1830,16 @@ int32_t kc_engine_waiting_player(const KCEngine *engine) {
     case KC_PHASE_ASSIGNMENT:
         return engine->last_winner;
     case KC_PHASE_REQUISITION:
+        if (engine->requisition_rounds_remaining > 0) {
+            for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+                if (!engine->requisition_choice_confirmed[player_id] &&
+                    engine->requisition_target_players[player_id] &&
+                    kc_controller_is_external(engine->controllers.seats[player_id])) {
+                    return player_id;
+                }
+            }
+            return engine->current_player;
+        }
         return engine->requisition_plan_index < engine->requisition_plan_count
             ? KC_NO_PLAYER
             : 0;
@@ -2119,53 +2174,6 @@ static int32_t kc_hero_player_id(const KCEngine *engine) {
 
 static void kc_append_exiled(KCEngine *engine, KCCard card, int32_t player_id);
 
-static int32_t kc_wrecker_job_suit(const KCEngine *engine) {
-    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-        if (kc_job_contains_wrecker(engine, suit)) {
-            return suit;
-        }
-    }
-    return KC_NO_SUIT;
-}
-
-static bool kc_plan_hero_wrecker_penalty(KCEngine *engine, int32_t hero_id) {
-    int32_t suit = kc_wrecker_job_suit(engine);
-    if (!kc_valid_player_id(hero_id) || !kc_valid_suit(suit)) {
-        return false;
-    }
-    KCPlayer *hero = &engine->players[hero_id];
-    KCCard highest = kc_no_card();
-    for (int32_t i = 0; i < hero->plot_revealed.count; i++) {
-        KCCard card = hero->plot_revealed.cards[i];
-        if (card.suit == suit &&
-            !kc_card_already_exiled_this_year(engine, card) &&
-            (!kc_card_valid(highest) || card.value > highest.value)) {
-            highest = card;
-        }
-    }
-    for (int32_t i = 0; i < hero->plot_hidden.count; i++) {
-        KCCard card = hero->plot_hidden.cards[i];
-        if (card.suit == suit &&
-            !kc_card_already_exiled_this_year(engine, card) &&
-            (!kc_card_valid(highest) || card.value > highest.value)) {
-            highest = card;
-        }
-    }
-    if (!kc_card_valid(highest)) {
-        return false;
-    }
-    kc_append_exiled(engine, highest, hero_id);
-    if (engine->requisition_event_count < KC_MAX_CARDS) {
-        engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
-            .player_id = hero_id,
-            .suit = suit,
-            .card = highest,
-            .message_kind = 5
-        };
-    }
-    return true;
-}
-
 static void kc_append_exiled(KCEngine *engine, KCCard card, int32_t player_id) {
     KCCardList *cards = &engine->exiled[engine->year];
     if (cards->count >= KC_MAX_CARDS) return;
@@ -2193,6 +2201,16 @@ static bool kc_handle_drunkard(KCEngine *engine, int32_t suit) {
                     .message_kind = 3
                 };
             }
+            kc_emit_transition(engine, (KCTransitionEvent){
+                .kind = KC_TRANSITION_CARD_MOVED,
+                .player_id = KC_NO_PLAYER,
+                .card = card,
+                .from_zone = KC_OBJECT_ZONE_JOB_BUCKET,
+                .to_zone = KC_OBJECT_ZONE_EXILED,
+                .from_owner = KC_NO_PLAYER,
+                .to_owner = KC_NO_PLAYER,
+                .target_suit = suit
+            });
             return true;
         }
     }
@@ -2228,29 +2246,202 @@ static void kc_reveal_hidden_cards(KCEngine *engine, int32_t player_id, int32_t 
     }
 }
 
-static void kc_sort_revealed_desc(KCCard *cards, int32_t count) {
-    for (int32_t i = 1; i < count; i++) {
-        KCCard value = cards[i];
-        int32_t j = i - 1;
-        while (j >= 0 && cards[j].value < value.value) {
-            cards[j + 1] = cards[j];
-            j--;
-        }
-        cards[j + 1] = value;
-    }
-}
-
-static bool kc_card_matches_any_requisition_suit(
+static int32_t kc_requisition_event_suit_for_card(
     KCCard card,
     const bool active_suits[KC_SUIT_COUNT],
     const bool vulnerable_suits[KC_SUIT_COUNT]
+);
+
+static bool kc_requisition_card_eligible(
+    const KCEngine *engine,
+    int32_t player_id,
+    KCCard card
 ) {
+    if (!kc_valid_player_id(player_id) ||
+        kc_card_already_exiled_this_year(engine, card)) {
+        return false;
+    }
     for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-        if (active_suits[suit] && vulnerable_suits[suit] && kc_card_matches_suit(card, suit)) {
+        if (engine->requisition_player_suits[player_id][suit] &&
+            kc_card_matches_suit(card, suit)) {
             return true;
         }
     }
     return false;
+}
+
+static int32_t kc_requisition_highest_value(const KCEngine *engine, int32_t player_id) {
+    if (!kc_valid_player_id(player_id) || !engine->requisition_target_players[player_id]) {
+        return -1;
+    }
+    int32_t highest = -1;
+    const KCPlayer *player = &engine->players[player_id];
+    for (int32_t i = 0; i < player->plot_revealed.count; i++) {
+        KCCard card = player->plot_revealed.cards[i];
+        if (kc_requisition_card_eligible(engine, player_id, card) && card.value > highest) {
+            highest = card.value;
+        }
+    }
+    for (int32_t i = 0; i < player->plot_hidden.count; i++) {
+        KCCard card = player->plot_hidden.cards[i];
+        if (kc_requisition_card_eligible(engine, player_id, card) && card.value > highest) {
+            highest = card.value;
+        }
+    }
+    return highest;
+}
+
+static bool kc_requisition_choices_complete(const KCEngine *engine) {
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        if (engine->requisition_target_players[player_id] &&
+            !engine->requisition_choice_confirmed[player_id]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static int32_t kc_first_requisition_suit(const KCEngine *engine) {
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        if (engine->requisition_active_suits[suit]) return suit;
+    }
+    return KC_NO_SUIT;
+}
+
+static void kc_prepare_requisition_round(KCEngine *engine) {
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        engine->requisition_choices[player_id] = kc_no_card();
+        engine->requisition_choice_confirmed[player_id] =
+            !engine->requisition_target_players[player_id] ||
+            kc_requisition_highest_value(engine, player_id) < 0;
+    }
+    engine->current_player = KC_NO_PLAYER;
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        if (!engine->requisition_choice_confirmed[player_id]) {
+            engine->current_player = player_id;
+            break;
+        }
+    }
+}
+
+static void kc_reveal_requisition_choice(KCEngine *engine, int32_t player_id) {
+    KCCard card = engine->requisition_choices[player_id];
+    if (!kc_card_valid(card)) return;
+    KCPlayer *player = &engine->players[player_id];
+    int32_t hidden_index = kc_list_find(&player->plot_hidden, card);
+    if (hidden_index >= 0) {
+        kc_list_remove_at(&player->plot_hidden, hidden_index);
+        kc_list_append(&player->plot_revealed, card);
+    }
+}
+
+static void kc_resolve_requisition_round(KCEngine *engine) {
+    int32_t highest = -1;
+    bool was_hidden[KC_PLAYER_COUNT] = {0};
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        was_hidden[player_id] = kc_list_find(
+            &engine->players[player_id].plot_hidden,
+            engine->requisition_choices[player_id]
+        ) >= 0;
+        kc_reveal_requisition_choice(engine, player_id);
+        KCCard card = engine->requisition_choices[player_id];
+        if (kc_card_valid(card) && card.value > highest) highest = card.value;
+    }
+
+    bool exiled_any = false;
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        KCCard card = engine->requisition_choices[player_id];
+        if (!kc_card_valid(card) ||
+            (!engine->requisition_individual_losses && card.value != highest)) {
+            continue;
+        }
+        int32_t event_suit = kc_requisition_event_suit_for_card(
+            card,
+            engine->requisition_active_suits,
+            engine->requisition_player_suits[player_id]
+        );
+        kc_append_exiled(engine, card, player_id);
+        kc_emit_transition(engine, (KCTransitionEvent){
+            .kind = KC_TRANSITION_CARD_MOVED,
+            .player_id = player_id,
+            .card = card,
+            .from_zone = was_hidden[player_id]
+                ? KC_OBJECT_ZONE_PLOT_HIDDEN
+                : KC_OBJECT_ZONE_PLOT_REVEALED,
+            .to_zone = KC_OBJECT_ZONE_EXILED,
+            .from_owner = player_id,
+            .to_owner = KC_NO_PLAYER,
+            .target_suit = event_suit
+        });
+        if (engine->requisition_event_count < KC_MAX_CARDS) {
+            engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
+                .player_id = player_id,
+                .suit = event_suit,
+                .card = card,
+                .message_kind = 1
+            };
+        }
+        exiled_any = true;
+    }
+    if (!exiled_any && engine->requisition_event_count < KC_MAX_CARDS) {
+        engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
+            .player_id = KC_NO_PLAYER,
+            .suit = kc_first_requisition_suit(engine),
+            .card = kc_no_card(),
+            .message_kind = 2
+        };
+    }
+
+    engine->requisition_rounds_remaining--;
+    if (engine->requisition_rounds_remaining > 0) {
+        kc_prepare_requisition_round(engine);
+    } else {
+        engine->current_player = 0;
+    }
+}
+
+static void kc_resolve_empty_requisition_rounds(KCEngine *engine) {
+    while (engine->requisition_rounds_remaining > 0 &&
+        kc_requisition_choices_complete(engine)) {
+        kc_resolve_requisition_round(engine);
+    }
+}
+
+static int32_t kc_commit_requisition_choice(
+    KCEngine *engine,
+    int32_t player_id,
+    KCCard card
+) {
+    if (engine->phase != KC_PHASE_REQUISITION ||
+        engine->requisition_rounds_remaining <= 0) {
+        return KC_ERR_WRONG_PHASE;
+    }
+    if (!kc_valid_player_id(player_id) ||
+        !engine->requisition_target_players[player_id] ||
+        engine->requisition_choice_confirmed[player_id]) {
+        return KC_ERR_WRONG_PLAYER;
+    }
+    int32_t highest = kc_requisition_highest_value(engine, player_id);
+    if (highest < 0 || card.value != highest ||
+        !kc_requisition_card_eligible(engine, player_id, card) ||
+        (kc_list_find(&engine->players[player_id].plot_revealed, card) < 0 &&
+         kc_list_find(&engine->players[player_id].plot_hidden, card) < 0)) {
+        return KC_ERR_INVALID_CARD;
+    }
+    engine->requisition_choices[player_id] = card;
+    engine->requisition_choice_confirmed[player_id] = true;
+    if (kc_requisition_choices_complete(engine)) {
+        kc_resolve_requisition_round(engine);
+        kc_resolve_empty_requisition_rounds(engine);
+    } else {
+        for (int32_t candidate = 0; candidate < KC_PLAYER_COUNT; candidate++) {
+            if (!engine->requisition_choice_confirmed[candidate]) {
+                engine->current_player = candidate;
+                break;
+            }
+        }
+    }
+    return 0;
 }
 
 static int32_t kc_requisition_event_suit_for_card(
@@ -2267,12 +2458,20 @@ static int32_t kc_requisition_event_suit_for_card(
     return KC_NO_SUIT;
 }
 
-static void kc_perform_highest_cards_requisition(KCEngine *engine, int32_t hero_id) {
-    bool active_suits[KC_SUIT_COUNT] = {0};
+static void kc_begin_core_requisition(KCEngine *engine) {
     bool informant[KC_SUIT_COUNT] = {0};
     bool party_official[KC_SUIT_COUNT] = {0};
-    bool matching_found[KC_SUIT_COUNT] = {0};
     int32_t active_count = 0;
+    int32_t hero_id = engine->variants.hero_of_soviet_union
+        ? kc_hero_player_id(engine)
+        : KC_NO_PLAYER;
+
+    memset(engine->requisition_active_suits, 0, sizeof(engine->requisition_active_suits));
+    memset(engine->requisition_player_suits, 0, sizeof(engine->requisition_player_suits));
+    memset(engine->requisition_target_players, 0, sizeof(engine->requisition_target_players));
+    memset(engine->requisition_choice_confirmed, 0, sizeof(engine->requisition_choice_confirmed));
+    engine->requisition_rounds_remaining = 0;
+    engine->requisition_individual_losses = false;
 
     for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
         if (engine->work_hours[suit] >= KC_WORK_THRESHOLD && !kc_job_contains_wrecker(engine, suit)) {
@@ -2281,7 +2480,7 @@ static void kc_perform_highest_cards_requisition(KCEngine *engine, int32_t hero_
         if (kc_handle_drunkard(engine, suit)) {
             continue;
         }
-        active_suits[suit] = true;
+        engine->requisition_active_suits[suit] = true;
         active_count++;
         if (engine->variants.nomenclature && engine->trump >= 0) {
             for (int32_t i = 0; i < engine->job_buckets[suit].count; i++) {
@@ -2294,87 +2493,66 @@ static void kc_perform_highest_cards_requisition(KCEngine *engine, int32_t hero_
         }
     }
 
-    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
-        if (player_id == hero_id || active_count <= 0) continue;
-        bool vulnerable_suits[KC_SUIT_COUNT] = {0};
-        bool any_vulnerable = false;
-        bool party_bonus = false;
-        for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-            if (!active_suits[suit]) continue;
-            vulnerable_suits[suit] = engine->variants.northern_style ||
-                engine->variants.mice_variant ||
-                informant[suit] ||
-                hero_id >= 0 ||
-                engine->players[player_id].has_won_trick_this_year;
-            any_vulnerable = any_vulnerable || vulnerable_suits[suit];
-            party_bonus = party_bonus || (vulnerable_suits[suit] && party_official[suit]);
-            if (vulnerable_suits[suit] && (engine->variants.mice_variant || informant[suit])) {
-                kc_reveal_hidden_cards(engine, player_id, suit, true);
+    bool universal_override = engine->variants.northern_style || engine->variants.mice_variant;
+    if (universal_override) {
+        engine->requisition_individual_losses = true;
+        for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+            engine->requisition_target_players[player_id] = active_count > 0;
+            for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+                engine->requisition_player_suits[player_id][suit] =
+                    engine->requisition_active_suits[suit];
             }
         }
-        if (!any_vulnerable) continue;
-
-        KCCard candidates[KC_MAX_CARDS];
-        int32_t candidate_count = 0;
-        KCPlayer *player = &engine->players[player_id];
-        for (int32_t i = 0; i < player->plot_revealed.count; i++) {
-            KCCard card = player->plot_revealed.cards[i];
-            if (kc_card_matches_any_requisition_suit(card, active_suits, vulnerable_suits) &&
-                !kc_card_already_exiled_this_year(engine, card)) {
-                candidates[candidate_count++] = card;
-                for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-                    if (active_suits[suit] && vulnerable_suits[suit] && kc_card_matches_suit(card, suit)) {
-                        matching_found[suit] = true;
-                    }
-                }
+    } else if (hero_id >= 0) {
+        engine->requisition_individual_losses = true;
+        for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+            if (player_id == hero_id) continue;
+            engine->requisition_target_players[player_id] = active_count > 0;
+            for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+                engine->requisition_player_suits[player_id][suit] =
+                    engine->requisition_active_suits[suit];
             }
         }
-        for (int32_t i = 0; i < player->plot_hidden.count; i++) {
-            KCCard card = player->plot_hidden.cards[i];
-            if (kc_card_matches_any_requisition_suit(card, active_suits, vulnerable_suits) &&
-                !kc_card_already_exiled_this_year(engine, card)) {
-                candidates[candidate_count++] = card;
-                for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-                    if (active_suits[suit] && vulnerable_suits[suit] && kc_card_matches_suit(card, suit)) {
-                        matching_found[suit] = true;
-                    }
-                }
-            }
+        if (engine->requisition_event_count < KC_MAX_CARDS) {
+            engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
+                .player_id = hero_id,
+                .suit = KC_NO_SUIT,
+                .card = kc_no_card(),
+                .message_kind = 4
+            };
         }
-        kc_sort_revealed_desc(candidates, candidate_count);
-        int32_t quota = active_count + (party_bonus ? 1 : 0);
-        for (int32_t i = 0; i < candidate_count && i < quota; i++) {
-            KCCard card = candidates[i];
-            int32_t hidden_index = kc_list_find(&player->plot_hidden, card);
-            if (hidden_index >= 0) {
-                kc_list_remove_at(&player->plot_hidden, hidden_index);
-                kc_list_append(&player->plot_revealed, card);
-            }
-            int32_t event_suit = kc_requisition_event_suit_for_card(
-                card, active_suits, vulnerable_suits
-            );
-            kc_append_exiled(engine, card, player_id);
-            if (engine->requisition_event_count < KC_MAX_CARDS) {
-                engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
-                    .player_id = player_id,
-                    .suit = event_suit,
-                    .card = card,
-                    .message_kind = 1
-                };
+    } else {
+        for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+            if (engine->players[player_id].medals <= 0) continue;
+            engine->requisition_target_players[player_id] = active_count > 0;
+            for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+                engine->requisition_player_suits[player_id][suit] =
+                    engine->requisition_active_suits[suit];
             }
         }
     }
 
+    bool party_bonus = false;
     for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-        if (active_suits[suit] && !matching_found[suit] &&
-            engine->requisition_event_count < KC_MAX_CARDS) {
-            engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
-                .player_id = KC_NO_PLAYER,
-                .suit = suit,
-                .card = kc_no_card(),
-                .message_kind = 2
-            };
+        if (!engine->requisition_active_suits[suit]) continue;
+        party_bonus = party_bonus || party_official[suit];
+        for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+            if (informant[suit] && !(hero_id >= 0 && player_id == hero_id) &&
+                !universal_override) {
+                engine->requisition_target_players[player_id] = true;
+                engine->requisition_player_suits[player_id][suit] = true;
+            }
+            if (engine->variants.mice_variant ||
+                (informant[suit] && !(hero_id >= 0 && player_id == hero_id))) {
+                kc_reveal_hidden_cards(engine, player_id, suit, true);
+            }
         }
+    }
+
+    engine->requisition_rounds_remaining = active_count + (party_bonus ? 1 : 0);
+    if (engine->requisition_rounds_remaining > 0) {
+        kc_prepare_requisition_round(engine);
+        kc_resolve_empty_requisition_rounds(engine);
     }
 }
 
@@ -2382,89 +2560,7 @@ static void kc_perform_requisition_batch(KCEngine *engine) {
     engine->phase = KC_PHASE_REQUISITION;
     engine->current_player = 0;
     engine->requisition_event_count = 0;
-    int32_t hero_id = engine->variants.hero_of_soviet_union ? kc_hero_player_id(engine) : KC_NO_PLAYER;
-    bool hero_penalized = hero_id >= 0 &&
-        kc_plan_hero_wrecker_penalty(engine, hero_id);
-    if (hero_id >= 0 && !hero_penalized &&
-        engine->requisition_event_count < KC_MAX_CARDS) {
-        engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
-            .player_id = hero_id,
-            .suit = 0,
-            .card = kc_no_card(),
-            .message_kind = 4
-        };
-    }
-    if (engine->variants.highest_cards_requisition) {
-        kc_perform_highest_cards_requisition(engine, hero_id);
-        return;
-    }
-    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-        if (engine->work_hours[suit] >= KC_WORK_THRESHOLD && !kc_job_contains_wrecker(engine, suit)) {
-            continue;
-        }
-        if (kc_handle_drunkard(engine, suit)) {
-            continue;
-        }
-        bool informant = false;
-        bool party_official = false;
-        if (engine->variants.nomenclature && engine->trump >= 0) {
-            for (int32_t i = 0; i < engine->job_buckets[suit].count; i++) {
-                KCCard card = engine->job_buckets[suit].cards[i];
-                if (card.suit == engine->trump && card.value == 12) {
-                    informant = true;
-                }
-                if (card.suit == engine->trump && card.value == 13) {
-                    party_official = true;
-                }
-            }
-        }
-        bool exiled_for_suit = false;
-        for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
-            if (player_id == hero_id) {
-                continue;
-            }
-            bool vulnerable = engine->variants.northern_style ||
-                engine->variants.mice_variant ||
-                informant ||
-                hero_id >= 0 ||
-                engine->players[player_id].has_won_trick_this_year;
-            if (!vulnerable) {
-                continue;
-            }
-            kc_reveal_hidden_cards(engine, player_id, suit, engine->variants.mice_variant || informant);
-            KCCard revealed[KC_MAX_CARDS];
-            int32_t revealed_count = 0;
-            for (int32_t i = 0; i < engine->players[player_id].plot_revealed.count; i++) {
-                KCCard card = engine->players[player_id].plot_revealed.cards[i];
-                if (kc_card_matches_suit(card, suit) &&
-                    !kc_card_already_exiled_this_year(engine, card)) {
-                    revealed[revealed_count++] = card;
-                }
-            }
-            kc_sort_revealed_desc(revealed, revealed_count);
-            int32_t limit = party_official ? 2 : 1;
-            for (int32_t i = 0; i < revealed_count && i < limit; i++) {
-                kc_append_exiled(engine, revealed[i], player_id);
-                if (engine->requisition_event_count < KC_MAX_CARDS) {
-                    engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
-                        .player_id = player_id,
-                        .suit = suit,
-                        .card = revealed[i],
-                        .message_kind = 1
-                    };
-                }
-                exiled_for_suit = true;
-            }
-        }
-        if (!exiled_for_suit && engine->requisition_event_count < KC_MAX_CARDS) {
-            engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
-                .player_id = KC_NO_PLAYER,
-                .suit = suit,
-                .card = kc_no_card(),
-                .message_kind = 2
-            };
-        }
-    }
+    kc_begin_core_requisition(engine);
 }
 
 static bool kc_requisition_reveal_all(const KCEngine *engine, int32_t suit) {
@@ -2522,16 +2618,9 @@ static bool kc_step_requisition(KCEngine *engine) {
 }
 
 static void kc_perform_requisition(KCEngine *engine) {
-    KCEngine resolved = *engine;
-    kc_perform_requisition_batch(&resolved);
-    engine->phase = KC_PHASE_REQUISITION;
-    engine->current_player = 0;
-    engine->requisition_event_count = 0;
-    engine->requisition_plan_count = resolved.requisition_event_count;
+    engine->requisition_plan_count = 0;
     engine->requisition_plan_index = 0;
-    for (int32_t i = 0; i < resolved.requisition_event_count; i++) {
-        engine->requisition_plan[i] = resolved.requisition_events[i];
-    }
+    kc_perform_requisition_batch(engine);
 }
 
 static void kc_advance_after_assignments(KCEngine *engine) {
@@ -3027,11 +3116,15 @@ static int32_t kc_engine_apply_action(KCEngine *engine, KCAction action) {
         kc_advance_after_assignments(engine);
         return 0;
 
+    case KC_ACTION_SELECT_REQUISITION_CARD:
+        return kc_commit_requisition_choice(engine, player_id, action.card);
+
     case KC_ACTION_CONTINUE_AFTER_REQUISITION:
         if (engine->phase != KC_PHASE_REQUISITION) {
             return 0;
         }
-        if (engine->requisition_plan_index < engine->requisition_plan_count) {
+        if (engine->requisition_plan_index < engine->requisition_plan_count ||
+            engine->requisition_rounds_remaining > 0) {
             return KC_ERR_WRONG_PHASE;
         }
         kc_remove_exiled_cards(engine);
@@ -3577,6 +3670,39 @@ int32_t kc_engine_legal_actions(const KCEngine *engine, KCAction *actions, int32
 
     case KC_PHASE_REQUISITION: {
         if (engine->requisition_plan_index < engine->requisition_plan_count) {
+            break;
+        }
+        if (engine->requisition_rounds_remaining > 0) {
+            for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+                if (!engine->requisition_target_players[player_id] ||
+                    engine->requisition_choice_confirmed[player_id]) {
+                    continue;
+                }
+                int32_t highest = kc_requisition_highest_value(engine, player_id);
+                const KCPlayer *player = &engine->players[player_id];
+                for (int32_t zone = 0; zone < 2; zone++) {
+                    const KCCardList *cards = zone == 0
+                        ? &player->plot_hidden
+                        : &player->plot_revealed;
+                    for (int32_t i = 0; i < cards->count; i++) {
+                        KCCard card = cards->cards[i];
+                        if (card.value != highest ||
+                            !kc_requisition_card_eligible(engine, player_id, card)) {
+                            continue;
+                        }
+                        KCAction action = {0};
+                        action.kind = KC_ACTION_SELECT_REQUISITION_CARD;
+                        action.player_id = player_id;
+                        action.card = card;
+                        action.suit = -1;
+                        action.hand_card = kc_no_card();
+                        action.plot_card = kc_no_card();
+                        action.plot_zone = zone;
+                        action.target_suit = -1;
+                        kc_add_action(actions, max_actions, &count, action);
+                    }
+                }
+            }
             break;
         }
         KCAction action = {0};

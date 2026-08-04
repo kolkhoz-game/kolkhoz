@@ -93,7 +93,7 @@ void main() {
     expect(engine.transitionEvents.first.toZone, kcObjectZoneCurrentTrick);
   });
 
-  test('Saboteur field takes the Hero highest matching plot card', () {
+  test('Saboteur field leaves the Hero fully protected', () {
     var foundScenario = false;
     for (var seed = 1; seed <= 250 && !foundScenario; seed += 1) {
       final bridge = KolkhozCEngineBridge();
@@ -144,54 +144,26 @@ void main() {
             ].firstOrNull,
           );
           if (heroID != null && wreckerSuit != null) {
-            final matchingCards = engine.readNative(
+            final heroChoices = engine.legalActions.where(
+              (action) =>
+                  action.kind == kcActionSelectRequisitionCard &&
+                  action.playerID == heroID,
+            );
+            final compromisedEvents = engine.readNative(
               (bridge, pointer) => [
                 for (
                   var index = 0;
-                  index < bridge.plotRevealedCount(pointer, heroID);
+                  index < bridge.requisitionEventCount(pointer);
                   index += 1
                 )
-                  bridge.plotRevealedCard(pointer, heroID, index),
-                for (
-                  var index = 0;
-                  index < bridge.plotHiddenCount(pointer, heroID);
-                  index += 1
-                )
-                  bridge.plotHiddenCard(pointer, heroID, index),
-              ].where((card) => card.suit == wreckerSuit).toList(),
+                  if (bridge.requisitionEventMessageKind(pointer, index) == 5)
+                    bridge.requisitionEventPlayer(pointer, index),
+              ],
             );
-            if (matchingCards.isNotEmpty) {
-              final expected = matchingCards.reduce(
-                (left, right) => left.value > right.value ? left : right,
-              );
-              while (engine.phase == kcPhaseRequisition &&
-                  engine.legalActions.isEmpty) {
-                expect(engine.stepAutomatic(), greaterThan(0));
-              }
-              final penalty = engine.readNative(
-                (bridge, pointer) => [
-                  for (
-                    var index = 0;
-                    index < bridge.requisitionEventCount(pointer);
-                    index += 1
-                  )
-                    if (bridge.requisitionEventMessageKind(pointer, index) == 5)
-                      (
-                        playerID: bridge.requisitionEventPlayer(pointer, index),
-                        suit: bridge.requisitionEventSuit(pointer, index),
-                        card: bridge.requisitionEventCard(pointer, index),
-                      ),
-                ].single,
-              );
-              expect(penalty.playerID, heroID);
-              expect(penalty.suit, wreckerSuit);
-              expect(
-                (penalty.card.suit, penalty.card.value),
-                (expected.suit, expected.value),
-              );
-              foundScenario = true;
-              break;
-            }
+            expect(heroChoices, isEmpty);
+            expect(compromisedEvents, isEmpty);
+            foundScenario = true;
+            break;
           }
         }
         if (engine.phase == kcPhaseRequisition && engine.legalActions.isEmpty) {
@@ -277,30 +249,42 @@ void main() {
       isFalse,
     );
     expect(
+      engine.legalActions.any(
+        (action) =>
+            action.kind == kcActionSelectRequisitionCard &&
+            action.playerID == 0 &&
+            action.card.suit == 3 &&
+            action.card.value == 13,
+      ),
+      isTrue,
+      reason: 'Year 2 should make the learner nominate the Beet King',
+    );
+    while (engine.phase == kcPhaseRequisition &&
+        engine.legalActions.any(
+          (action) => action.kind == kcActionSelectRequisitionCard,
+        )) {
+      expect(engine.applyManual(engine.legalActions.first), 0);
+    }
+    expect(
       engine.readNative(
         (bridge, pointer) => [
+          for (
+            var index = 0;
+            index < bridge.plotRevealedCount(pointer, 0);
+            index += 1
+          )
+            bridge.plotRevealedCard(pointer, 0, index),
           for (
             var index = 0;
             index < bridge.exiledCount(pointer, 2);
             index += 1
           )
-            bridge.exiledPlayer(pointer, 2, index),
-        ],
+            if (bridge.exiledPlayer(pointer, 2, index) == 0)
+              bridge.exiledCard(pointer, 2, index),
+        ].map((card) => (card.suit, card.value)),
       ),
-      contains(0),
-      reason: 'Year 2 should requisition a card from the learner',
-    );
-    final learnerExiles = engine.readNative(
-      (bridge, pointer) => [
-        for (var index = 0; index < bridge.exiledCount(pointer, 2); index += 1)
-          if (bridge.exiledPlayer(pointer, 2, index) == 0)
-            bridge.exiledCard(pointer, 2, index),
-      ],
-    );
-    expect(
-      learnerExiles.map((card) => (card.suit, card.value)),
       contains((3, 13)),
-      reason: 'Requisition should take the Beet King hidden in the swap',
+      reason: 'The nominated Beet King should remain revealed or go North',
     );
 
     expect(engine.applyManual(engine.legalActions.single), 0);
@@ -593,21 +577,14 @@ void main() {
     expect(checkedFirstMixedAssignment, isTrue);
     expect(checkedSecondMixedAssignment, isTrue);
     expect(
-      engine.readNative(
-        (bridge, pointer) => [
-          for (
-            var index = 0;
-            index < bridge.exiledCount(pointer, 2);
-            index += 1
-          )
-            if (bridge.exiledPlayer(pointer, 2, index) == 0)
-              (
-                bridge.exiledCard(pointer, 2, index).suit,
-                bridge.exiledCard(pointer, 2, index).value,
-              ),
-        ],
+      engine.legalActions.any(
+        (action) =>
+            action.kind == kcActionSelectRequisitionCard &&
+            action.playerID == 0 &&
+            action.card.suit == 3 &&
+            action.card.value == 13,
       ),
-      contains((3, 13)),
+      isTrue,
     );
   });
 
@@ -836,17 +813,12 @@ void main() {
               isFalse,
             );
             expect(
-              engine.readNative(
-                (bridge, pointer) => [
-                  for (
-                    var index = 0;
-                    index < bridge.exiledCount(pointer, 2);
-                    index += 1
-                  )
-                    bridge.exiledPlayer(pointer, 2, index),
-                ],
+              engine.legalActions.any(
+                (action) =>
+                    action.kind == kcActionSelectRequisitionCard &&
+                    action.playerID == 0,
               ),
-              contains(0),
+              isTrue,
             );
           } else if (year == 3 && !checkedYearThree) {
             checkedYearThree = true;

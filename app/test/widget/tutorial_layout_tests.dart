@@ -1179,6 +1179,16 @@ void registerTutorialAndLayoutTests() {
         plotCard: const EngineCardValue(suit: 2, value: 11),
         plotZone: 0,
       ),
+      const CEngineActionValue(
+        kind: kcActionSelectRequisitionCard,
+        playerID: 0,
+        suit: -1,
+        card: EngineCardValue(suit: 1, value: 13),
+        handCard: EngineCardValue(suit: -1, value: 0),
+        plotCard: EngineCardValue(suit: -1, value: 0),
+        plotZone: 0,
+        targetSuit: -1,
+      ),
     ];
 
     expect(handActionCardIDs(actions, 0), {
@@ -1190,10 +1200,12 @@ void registerTutorialAndLayoutTests() {
     expect(plotActionCardIDs(actions, plotZoneHidden), {
       'beet-10',
       'potato-11',
+      'sunflower-13',
     });
     expect(plotActionCardIDs(actions, plotZoneHidden, playerID: 0), {
       'beet-10',
       'potato-11',
+      'sunflower-13',
     });
     expect(plotActionCardIDs(actions, plotZoneHidden, playerID: 1), isEmpty);
     expect(plotActionCardIDs(actions, plotZoneRevealed), {'wheat-9'});

@@ -61,8 +61,8 @@ Saboteur-specific behavior:
 - Saboteur can make any crop suit a legal assignment target because it matches every suit;
 - a job containing Saboteur can claim its reward at 40 hours, but requisition still treats
   that job as failed;
-- if a Hero of Socialist Labor has a Plot or Cellar card matching the crop of the
-  Saboteur's field, their single highest matching card is exiled despite Hero immunity;
+- a Hero of Socialist Labor is completely protected from requisition, including a field
+  failed by Saboteur;
 - a plot Saboteur matches any failed job, but the same card is exiled only once per year.
 
 With Managed Economy, shuffle the four aces and deal one to each player's hidden plot at
@@ -117,6 +117,10 @@ The C `KCVariants` struct owns:
 - `lotto_rewards`
 - `managed_economy`
 
+`highest_cards_requisition` remains in saved-game and network structs for compatibility,
+but requisition now always uses the highest-card comparison rule and the app exposes no
+toggle for it.
+
 ## Key State Mutations
 
 ### New Game
@@ -165,13 +169,21 @@ For each failed job (`work_hours[suit] < 40`):
 - a trump jack assigned to the failed job is the Drunkard and is exiled instead of player cards;
 - a trump queen assigned to the failed job is the Informant and reveals all matching hidden cards;
 - a trump king assigned to the failed job is the Party Official and can exile two matching revealed cards;
-- vulnerable players reveal/exile matching plot cards according to the active variants.
+- the failed suits enter one shared eligible pool for requisition.
+
+Without a universal vulnerability override, every player with at least one medal secretly
+nominates their highest remaining Plot or Cellar card in the pool. Nominations reveal
+together. The global highest goes North, including every tied highest nomination. Losing
+Cellar nominations stay face up in the Plot. This comparison repeats once per failed job.
+
+With Hero of Socialist Labor enabled, a player who won every possible trick is protected
+and each opponent instead loses their own highest remaining eligible card per comparison.
+Northern Style and Mice similarly make every player lose their own highest eligible card.
 
 A job containing Saboteur is processed as failed even when its work hours reached 40 and
 its reward was already claimed. Saboteur plot cards match every failed job, but the engine
 does not exile the same Saboteur card more than once in the same year. A Hero remains
-immune to ordinary requisition, but loses their single highest Plot or Cellar card of the
-Saboteur field's crop when one exists.
+fully protected from that failure.
 
 Exiled cards are recorded immediately, then removed from plots when requisition continues.
 

@@ -404,16 +404,16 @@
         "ru": "Это реквизиция"
       },
       "body": {
-        "en": "Beets failed. Because you won tricks this year, requisition takes your highest plot or cellar card matching a failed crop: the Beet King you hid during the swap.",
-        "ru": "Работа со свёклой провалена. Поскольку вы брали взятки в этом году, реквизиция забирает вашу старшую карту проваленной культуры с участка или из подвала — короля свёклы, спрятанного при обмене."
+        "en": "Beets failed. Every medal holder now nominates their highest plot or cellar card matching any failed crop. Your nomination is the Beet King you hid during the swap.",
+        "ru": "Работа со свёклой провалена. Каждый обладатель медали выбирает свою старшую карту любой проваленной культуры с участка или из подвала. Вы выбираете короля свёклы, спрятанного при обмене."
       },
       "tip": {
-        "en": "If N jobs fail, each player who won a trick loses their N highest cards matching any failed crop. Winning rewards can also expose your best cards.",
-        "ru": "Если провалено N работ, каждый бравший взятки игрок теряет N старших карт любой проваленной культуры. Победы дают награды, но подвергают лучшие карты риску."
+        "en": "Reveal all nominations together. The global highest goes North, including every tie. Repeat once per failed field; losing cellar nominations stay face up in the plot.",
+        "ru": "Все выбранные карты открываются одновременно. Самая старшая отправляется на Север; при ничьей уходят все равные карты. Сравнение повторяется за каждое проваленное поле, а неушедшие карты из подвала остаются открытыми на участке."
       },
       "callout": {
-        "en": "Watch the Beet King leave your cellar for the North.",
-        "ru": "Смотрите, как король свёклы отправляется из подвала на Север."
+        "en": "Select the highlighted Beet King, then compare every nomination.",
+        "ru": "Выберите подсвеченного короля свёклы, затем сравните все выбранные карты."
       },
       "icon": "assets/art/field_plan/game/ui/navigation/north.png",
       "focus": "table",
@@ -559,16 +559,16 @@
         "ru": "Герой Социалистического Труда"
       },
       "body": {
-        "en": "You won every trick this year. A Hero is protected from ordinary requisition; instead, every other player is vulnerable, even those who never led a brigade. But a field poisoned by the Saboteur still costs the Hero their highest card of that crop, if they have one.",
-        "ru": "Вы выиграли все взятки этого года. Герой защищён от обычной реквизиции; вместо него уязвимы все остальные игроки, даже не руководившие бригадой. Но поле с Вредителем всё равно лишает Героя старшей карты этой культуры, если она у него есть."
+        "en": "You won every trick this year. A Hero is completely protected from requisition. Instead, every other player loses their own highest eligible card once per failed field, even if they never led a brigade.",
+        "ru": "Вы выиграли все взятки этого года. Герой полностью защищён от реквизиции. Вместо него каждый другой игрок теряет свою старшую подходящую карту за каждое проваленное поле, даже если он не руководил бригадой."
       },
       "tip": {
         "en": "The title is earned anew each year by winning every available trick.",
         "ru": "Звание присуждается заново каждый год за победу во всех доступных взятках."
       },
       "callout": {
-        "en": "Only the Saboteur's field can breach your protection.",
-        "ru": "Только поле с Вредителем может пробить вашу защиту."
+        "en": "Even a field poisoned by the Saboteur cannot breach your protection.",
+        "ru": "Даже поле с Вредителем не может пробить вашу защиту."
       },
       "icon": "assets/art/field_plan/game/ui/icons/medal.png",
       "focus": "rail",

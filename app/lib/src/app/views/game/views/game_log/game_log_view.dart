@@ -639,7 +639,8 @@ String _phaseForAction(String kind) => switch (kind) {
   actionPassCard => phasePass,
   actionPlayCard => phaseTrick,
   actionAssign || actionSubmitAssignments => phaseAssignment,
-  actionContinueAfterRequisition => phaseRequisition,
+  actionContinueAfterRequisition ||
+  actionSelectRequisitionCard => phaseRequisition,
   actionRequisitionEvent => phaseRequisition,
   _ => 'events',
 };
@@ -748,6 +749,9 @@ List<Widget> _actionWidgets(
     ],
     actionContinueAfterRequisition => [
       text('completed requisition.', 'завершил реквизицию.'),
+    ],
+    actionSelectRequisitionCard => [
+      text('locked a requisition nomination.', 'выбрал карту для реквизиции.'),
     ],
     actionRequisitionEvent => switch (action.requisitionKind) {
       1 => [

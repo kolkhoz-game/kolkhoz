@@ -87,7 +87,7 @@ class KolkhozGameVariants {
     this.wreckerCard = false,
     this.finalYearTrump = false,
     this.passCards = false,
-    this.highestCardsRequisition = false,
+    this.highestCardsRequisition = true,
     this.lottoRewards = false,
     this.managedEconomy = false,
   });
@@ -214,6 +214,7 @@ const kcActionCompleteTutorialRewardLesson = 13;
 const kcActionCompleteTutorialSaboteurFollowLesson = 14;
 const kcActionAssignReward = 15;
 const kcActionConfirmRewardSwaps = 16;
+const kcActionSelectRequisitionCard = 17;
 
 const kcPhasePlanning = 0;
 const kcPhaseSwap = 1;

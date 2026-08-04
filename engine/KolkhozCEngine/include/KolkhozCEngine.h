@@ -55,7 +55,8 @@ enum {
     KC_ACTION_COMPLETE_TUTORIAL_REWARD_LESSON = 13,
     KC_ACTION_COMPLETE_TUTORIAL_SABOTEUR_FOLLOW_LESSON = 14,
     KC_ACTION_ASSIGN_REWARD = 15,
-    KC_ACTION_CONFIRM_REWARD_SWAPS = 16
+    KC_ACTION_CONFIRM_REWARD_SWAPS = 16,
+    KC_ACTION_SELECT_REQUISITION_CARD = 17
 };
 
 enum {
@@ -399,6 +400,13 @@ typedef struct {
     KCRequisitionEvent requisition_plan[KC_MAX_CARDS];
     int32_t requisition_plan_count;
     int32_t requisition_plan_index;
+    bool requisition_active_suits[KC_SUIT_COUNT];
+    bool requisition_player_suits[KC_PLAYER_COUNT][KC_SUIT_COUNT];
+    bool requisition_target_players[KC_PLAYER_COUNT];
+    bool requisition_choice_confirmed[KC_PLAYER_COUNT];
+    KCCard requisition_choices[KC_PLAYER_COUNT];
+    int32_t requisition_rounds_remaining;
+    bool requisition_individual_losses;
     KCTransitionEvent transition_events[KC_MAX_TRANSITION_EVENTS];
     int32_t transition_event_count;
     int32_t transition_batch_depth;
