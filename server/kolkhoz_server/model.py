@@ -5,7 +5,7 @@ from typing import Any
 
 
 JsonObject = dict[str, Any]
-ENGINE_REPLAY_CONTRACT_VERSION = 1
+ENGINE_REPLAY_CONTRACT_VERSION = 2
 
 
 @dataclass(frozen=True)

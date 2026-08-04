@@ -5,11 +5,57 @@ import unittest
 from pathlib import Path
 
 from server.kolkhoz_server.ai import AutomaticAdvancer, ModelCache
+from server.kolkhoz_server.engine import KolkhozCEngineFactory
 from server.kolkhoz_server.runtime import GameRuntime
 from server.kolkhoz_server.store import SQLiteEventStore
 
 
 class RealCEngineRecoveryTests(unittest.TestCase):
+    def test_server_replays_legacy_collapsed_ai_events(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            database = Path(temporary) / "legacy-ai.sqlite3"
+            store = SQLiteEventStore(database)
+            settings = {
+                "variants": {},
+                "controllers": [
+                    "human",
+                    "heuristicAI",
+                    "heuristicAI",
+                    "heuristicAI",
+                ],
+            }
+            factory = KolkhozCEngineFactory()
+            legacy = factory.create_legacy(1, settings)
+            try:
+                action = legacy.heuristic_action()  # type: ignore[attr-defined]
+                legacy.apply_ai_action(action)
+                expected = legacy.view()
+                store.create_game(
+                    "legacy-ai",
+                    1,
+                    settings,
+                    engine_contract_version=1,
+                )
+                payload = dict(action)
+                payload["source"] = "automatic"
+                store.append(
+                    "legacy-ai",
+                    expected_revision=0,
+                    kind="action",
+                    payload=payload,
+                )
+            finally:
+                legacy.close()
+                store.close()
+
+            replacement = GameRuntime(SQLiteEventStore(database), shard_count=1)
+            try:
+                recovered = replacement.state("legacy-ai").state
+            finally:
+                replacement.close()
+
+            self.assertEqual(recovered, expected)
+
     def test_server_keeps_nonhuman_managed_planner_stepwise(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             runtime = GameRuntime(

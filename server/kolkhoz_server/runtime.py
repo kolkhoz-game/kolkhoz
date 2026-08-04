@@ -97,7 +97,13 @@ class _Shard:
             self.engines.pop(session_id, None)
             self.automatic_states.pop(session_id, None)
             self.update_buffers.pop(session_id, None)
-        engine = self.factory.create(record.seed, record.variants)
+        legacy_factory = getattr(self.factory, "create_legacy", None)
+        if record.engine_contract_version < ENGINE_REPLAY_CONTRACT_VERSION and callable(
+            legacy_factory
+        ):
+            engine = legacy_factory(record.seed, record.variants)
+        else:
+            engine = self.factory.create(record.seed, record.variants)
         for event in self.store.events(session_id):
             if event.kind == "action":
                 if event.payload.get("source") == "automatic":

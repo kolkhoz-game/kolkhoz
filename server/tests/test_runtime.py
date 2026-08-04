@@ -198,7 +198,7 @@ class RuntimeTests(unittest.TestCase):
 
         self.assertEqual(record.engine_build_sha, "build-123")
         self.assertEqual(record.engine_sha256, "engine-456")
-        self.assertEqual(record.engine_contract_version, 1)
+        self.assertEqual(record.engine_contract_version, 2)
 
     def test_sqlite_store_migrates_existing_games_table(self) -> None:
         connection = sqlite3.connect(self.database)

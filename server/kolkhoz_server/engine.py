@@ -25,6 +25,14 @@ class KolkhozCEngineFactory:
         self._engine = CEngine()
 
     def create(self, seed: int, variants: JsonObject) -> GameEngine:
+        return self._create(seed, variants, stepwise_automatic=True)
+
+    def create_legacy(self, seed: int, variants: JsonObject) -> GameEngine:
+        return self._create(seed, variants, stepwise_automatic=False)
+
+    def _create(
+        self, seed: int, variants: JsonObject, *, stepwise_automatic: bool
+    ) -> GameEngine:
         from .contracts import (
             controllers_native,
             normalize_controllers,
@@ -39,6 +47,7 @@ class KolkhozCEngineFactory:
             seed,
             variants=variants_native(normalize_variants(game_variants)),
             controllers=controllers_native(controllers),
+            stepwise_automatic=stepwise_automatic,
         )
 
     def provenance(self) -> JsonObject:
@@ -48,14 +57,21 @@ class KolkhozCEngineFactory:
 
 class KolkhozCEngine:
     def __init__(
-        self, engine: object, seed: int, *, variants: object, controllers: object
+        self,
+        engine: object,
+        seed: int,
+        *,
+        variants: object,
+        controllers: object,
+        stepwise_automatic: bool,
     ) -> None:
         self._engine = engine
+        self._stepwise_automatic = stepwise_automatic
         self._pointer = engine.new_engine(
             seed,
             variants=variants,
             controllers=controllers,
-            stepwise_controllers=True,
+            stepwise_controllers=stepwise_automatic,
         )
 
     def apply(self, action: JsonObject) -> None:
@@ -92,9 +108,11 @@ class KolkhozCEngine:
     def apply_ai_action(self, action: JsonObject) -> None:
         from .contracts import action_from_json
 
-        self._engine.apply_ai_action_stepwise(
-            self._pointer, action_from_json(action)
-        )
+        native = action_from_json(action)
+        if self._stepwise_automatic:
+            self._engine.apply_ai_action_stepwise(self._pointer, native)
+        else:
+            self._engine.apply_ai_action(self._pointer, native)
 
     def controller(self, player_id: int) -> str:
         from .contracts import CONTROLLER_CODES
