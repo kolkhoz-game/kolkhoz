@@ -2335,6 +2335,40 @@ static void kc_reveal_requisition_choice(KCEngine *engine, int32_t player_id) {
     }
 }
 
+static void kc_hold_requisition_nomination(
+    KCEngine *engine,
+    int32_t player_id,
+    KCCard card
+) {
+    for (int32_t i = 0; i < engine->requisition_held_nomination_count; i++) {
+        if (engine->requisition_held_nominations[i].player_id == player_id &&
+            kc_card_equal(engine->requisition_held_nominations[i].card, card)) {
+            return;
+        }
+    }
+    if (engine->requisition_held_nomination_count >= KC_MAX_CARDS) return;
+    engine->requisition_held_nominations[
+        engine->requisition_held_nomination_count++
+    ] = (KCTrickPlay){.player_id = player_id, .card = card};
+}
+
+static void kc_release_requisition_nomination(
+    KCEngine *engine,
+    int32_t player_id,
+    KCCard card
+) {
+    for (int32_t i = 0; i < engine->requisition_held_nomination_count; i++) {
+        KCTrickPlay held = engine->requisition_held_nominations[i];
+        if (held.player_id != player_id || !kc_card_equal(held.card, card)) continue;
+        for (int32_t j = i; j + 1 < engine->requisition_held_nomination_count; j++) {
+            engine->requisition_held_nominations[j] =
+                engine->requisition_held_nominations[j + 1];
+        }
+        engine->requisition_held_nomination_count--;
+        return;
+    }
+}
+
 static void kc_resolve_requisition_round(KCEngine *engine) {
     int32_t highest = -1;
     bool was_hidden[KC_PLAYER_COUNT] = {0};
@@ -2345,22 +2379,8 @@ static void kc_resolve_requisition_round(KCEngine *engine) {
         ) >= 0;
         kc_reveal_requisition_choice(engine, player_id);
         KCCard card = engine->requisition_choices[player_id];
-        if (kc_card_valid(card) && card.value > highest) highest = card.value;
-    }
-
-    bool exiled_any = false;
-    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
-        KCCard card = engine->requisition_choices[player_id];
-        if (!kc_card_valid(card) ||
-            (!engine->requisition_individual_losses && card.value != highest)) {
-            continue;
-        }
-        int32_t event_suit = kc_requisition_event_suit_for_card(
-            card,
-            engine->requisition_active_suits,
-            engine->requisition_player_suits[player_id]
-        );
-        kc_append_exiled(engine, card, player_id);
+        if (!kc_card_valid(card)) continue;
+        if (card.value > highest) highest = card.value;
         kc_emit_transition(engine, (KCTransitionEvent){
             .kind = KC_TRANSITION_CARD_MOVED,
             .player_id = player_id,
@@ -2368,6 +2388,48 @@ static void kc_resolve_requisition_round(KCEngine *engine) {
             .from_zone = was_hidden[player_id]
                 ? KC_OBJECT_ZONE_PLOT_HIDDEN
                 : KC_OBJECT_ZONE_PLOT_REVEALED,
+            .to_zone = KC_OBJECT_ZONE_CURRENT_TRICK,
+            .from_owner = player_id,
+            .to_owner = player_id,
+            .target_suit = kc_requisition_event_suit_for_card(
+                card,
+                engine->requisition_active_suits,
+                engine->requisition_player_suits[player_id]
+            )
+        });
+    }
+
+    bool exiled_any = false;
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        KCCard card = engine->requisition_choices[player_id];
+        if (!kc_card_valid(card)) continue;
+        bool requisitioned = engine->requisition_individual_losses || card.value == highest;
+        int32_t event_suit = kc_requisition_event_suit_for_card(
+            card,
+            engine->requisition_active_suits,
+            engine->requisition_player_suits[player_id]
+        );
+        if (!requisitioned) {
+            kc_hold_requisition_nomination(engine, player_id, card);
+            kc_emit_transition(engine, (KCTransitionEvent){
+                .kind = KC_TRANSITION_CARD_MOVED,
+                .player_id = player_id,
+                .card = card,
+                .from_zone = KC_OBJECT_ZONE_CURRENT_TRICK,
+                .to_zone = KC_OBJECT_ZONE_PLOT_REVEALED,
+                .from_owner = player_id,
+                .to_owner = player_id,
+                .target_suit = event_suit
+            });
+            continue;
+        }
+        kc_release_requisition_nomination(engine, player_id, card);
+        kc_append_exiled(engine, card, player_id);
+        kc_emit_transition(engine, (KCTransitionEvent){
+            .kind = KC_TRANSITION_CARD_MOVED,
+            .player_id = player_id,
+            .card = card,
+            .from_zone = KC_OBJECT_ZONE_CURRENT_TRICK,
             .to_zone = KC_OBJECT_ZONE_EXILED,
             .from_owner = player_id,
             .to_owner = KC_NO_PLAYER,
@@ -2560,6 +2622,7 @@ static void kc_perform_requisition_batch(KCEngine *engine) {
     engine->phase = KC_PHASE_REQUISITION;
     engine->current_player = 0;
     engine->requisition_event_count = 0;
+    engine->requisition_held_nomination_count = 0;
     kc_begin_core_requisition(engine);
 }
 
@@ -2707,6 +2770,7 @@ static void kc_finish_game(KCEngine *engine) {
 }
 
 static void kc_transition_to_next_year(KCEngine *engine) {
+    engine->requisition_held_nomination_count = 0;
     for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
         if (engine->variants.deck_type == 36 || engine->variants.northern_style) {
             continue;

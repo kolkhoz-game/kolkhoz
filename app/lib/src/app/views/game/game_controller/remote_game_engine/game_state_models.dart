@@ -261,6 +261,7 @@ abstract class OnlineEngineSnapshot with _$OnlineEngineSnapshot {
     @Default([]) List<OnlineSuitPlayersSnapshot> exiledPlayers,
     required List<OnlineAssignmentSnapshot> pendingAssignments,
     required List<OnlineRequisitionSnapshot> requisitionEvents,
+    @Default([]) List<OnlineTrickPlaySnapshot> requisitionHeldNominations,
     @JsonKey(fromJson: _transitionEventsFromJson)
     @Default([])
     List<EngineTransitionEvent> transitionEvents,

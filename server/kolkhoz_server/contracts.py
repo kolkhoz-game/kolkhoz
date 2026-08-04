@@ -302,6 +302,10 @@ def snapshot_json(
         ],
         "pendingAssignments": pending_assignments_json(state),
         "requisitionEvents": requisition_events_json(state),
+        "requisitionHeldNominations": trick_json(
+            state.requisition_held_nominations,
+            state.requisition_held_nomination_count,
+        ),
         "transitionEvents": transition_events_json(state),
         "scores": [
             score_json(engine, pointer, i, viewer_id, game_over)

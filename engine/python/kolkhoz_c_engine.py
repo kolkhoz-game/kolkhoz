@@ -200,6 +200,8 @@ class KCEngineSnapshot(ctypes.Structure):
         ("requisition_choices", KCCard * PLAYER_COUNT),
         ("requisition_rounds_remaining", ctypes.c_int32),
         ("requisition_individual_losses", ctypes.c_bool),
+        ("requisition_held_nominations", KCTrickPlay * MAX_CARDS),
+        ("requisition_held_nomination_count", ctypes.c_int32),
         ("transition_events", KCTransitionEvent * MAX_TRANSITION_EVENTS),
         ("transition_event_count", ctypes.c_int32),
         ("transition_batch_depth", ctypes.c_int32),

@@ -233,6 +233,22 @@ class ProjectionContractTests(unittest.TestCase):
                     for index in range(state.players[1].plot_revealed.count)
                 )
             )
+            self.assertEqual(state.requisition_held_nomination_count, 1)
+            held = state.requisition_held_nominations[0]
+            self.assertEqual((held.player_id, held.card.suit, held.card.value), (1, 1, 7))
+            self.assertEqual(
+                snapshot_json(self.engine, pointer, 0)["requisitionHeldNominations"],
+                [{"playerID": 1, "card": {"suit": 1, "value": 7}}],
+            )
+
+            self.engine.apply_action(
+                pointer,
+                KCAction(7, 0, -1, KCCard(-1, 0), KCCard(-1, 0), KCCard(-1, 0), -1, -1),
+            )
+            self.assertEqual(
+                self.engine.snapshot(pointer).requisition_held_nomination_count,
+                0,
+            )
         finally:
             self.engine.free_engine(pointer)
 
@@ -342,6 +358,7 @@ class ProjectionContractTests(unittest.TestCase):
                 "exiledPlayers",
                 "pendingAssignments",
                 "requisitionEvents",
+                "requisitionHeldNominations",
                 "transitionEvents",
                 "scores",
                 "winnerID",

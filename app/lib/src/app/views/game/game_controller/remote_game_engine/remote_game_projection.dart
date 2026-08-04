@@ -110,7 +110,17 @@ class OnlineTableProjection {
       hiddenHandCount: seatID == playerID ? 0 : hand.length,
       plot: PlotState(
         revealed: cards(
-          player?.revealedPlot ?? const <OnlineEngineCard>[],
+          [
+            for (final card
+                in player?.revealedPlot ?? const <OnlineEngineCard>[])
+              if (!snapshot.requisitionHeldNominations.any(
+                (held) =>
+                    held.playerID == seatID &&
+                    held.card.suit == card.suit &&
+                    held.card.value == card.value,
+              ))
+                card,
+          ],
           highlightedIDs: seatID == playerID
               ? plotActionCardIDs(
                   legalActions
@@ -203,7 +213,9 @@ class OnlineTableProjection {
   }
 
   Trick trick({required bool current}) {
-    final plays = current ? snapshot.currentTrick : snapshot.lastTrick;
+    final plays = current
+        ? [...snapshot.requisitionHeldNominations, ...snapshot.currentTrick]
+        : snapshot.lastTrick;
     return Trick(
       plays: [
         for (final play in plays)

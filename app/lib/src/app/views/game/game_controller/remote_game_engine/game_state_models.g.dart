@@ -161,6 +161,13 @@ _OnlineEngineSnapshot _$OnlineEngineSnapshotFromJson(
   requisitionEvents: (json['requisitionEvents'] as List<dynamic>)
       .map((e) => OnlineRequisitionSnapshot.fromJson(e as Map<String, dynamic>))
       .toList(),
+  requisitionHeldNominations:
+      (json['requisitionHeldNominations'] as List<dynamic>?)
+          ?.map(
+            (e) => OnlineTrickPlaySnapshot.fromJson(e as Map<String, dynamic>),
+          )
+          .toList() ??
+      const [],
   transitionEvents: json['transitionEvents'] == null
       ? const []
       : _transitionEventsFromJson(json['transitionEvents']),
