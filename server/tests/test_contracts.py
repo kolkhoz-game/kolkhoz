@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 import unittest
 from http import HTTPStatus
+from pathlib import Path
 from unittest import mock
 
 from engine.python.kolkhoz_c_engine import (
@@ -30,6 +31,7 @@ from server.kolkhoz_server.contracts import (
     variants_native,
 )
 from server.kolkhoz_server.errors import ServerError
+from server.kolkhoz_server.policy import PolicyArtifact
 
 
 class ContractNormalizationTests(unittest.TestCase):
@@ -538,6 +540,39 @@ class ProjectionContractTests(unittest.TestCase):
         finally:
             self.engine.free_engine(pointer)
 
+    def test_stepwise_final_year_trump_advances_from_planning(self) -> None:
+        pointer = self.engine.new_engine(
+            42049,
+            variants=variants_native(normalize_variants({})),
+            controllers=controllers_native(["human"] * 4),
+            stepwise_controllers=True,
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 0
+            state.year = 5
+            state.is_famine = True
+            state.current_player = 0
+            state.trump_selector = 0
+            state.managed_rewards_confirmed = False
+            state.pending_final_year_trump_card = KCCard(2, 7)
+            state.final_year_trump_card = KCCard(-1, 0)
+            for suit in range(4):
+                state.managed_reward_offers[suit] = KCCard(-1, 0)
+                state.revealed_jobs[suit] = KCCard(-1, 0)
+                state.has_revealed_job[suit] = False
+
+            actions = self.engine.legal_actions(pointer)
+            self.assertEqual(len(actions), 1)
+            self.assertEqual(actions[0].kind, 11)
+
+            self.engine.apply_ai_action_stepwise(pointer, actions[0])
+
+            self.assertNotEqual(self.engine.phase(pointer), 0)
+            self.assertTrue(self.engine.legal_actions(pointer))
+        finally:
+            self.engine.free_engine(pointer)
+
     def test_managed_economy_returns_unclaimed_rewards_to_worker_deck(self) -> None:
         variants = variants_native(
             normalize_variants({"managedEconomy": True, "lottoRewards": False})
@@ -645,6 +680,51 @@ class ProjectionContractTests(unittest.TestCase):
             state.controllers.seats[0] = 0
             self.engine.apply_action(pointer, confirm)
             self.assertTrue(self.engine.snapshot(pointer).managed_rewards_confirmed)
+        finally:
+            self.engine.free_engine(pointer)
+
+    def test_managed_economy_policy_uses_heuristic_reward_choice(self) -> None:
+        pointer = self.engine.new_engine(
+            42048,
+            variants=variants_native(
+                normalize_variants({"managedEconomy": True, "lottoRewards": False})
+            ),
+            controllers=controllers_native(["mediumAI", "human", "human", "human"]),
+            stepwise_controllers=True,
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 0
+            state.year = 1
+            state.current_player = 0
+            state.trump_selector = 0
+            state.managed_rewards_confirmed = False
+            state.players[0].hand.count = 5
+            cards = (
+                KCCard(4, 0),
+                KCCard(1, 8),
+                KCCard(2, 9),
+                KCCard(2, 6),
+                KCCard(3, 1),
+            )
+            for index, card in enumerate(cards):
+                state.players[0].hand.cards[index] = card
+            for suit, value in enumerate((5, 4, 5, 5)):
+                state.managed_reward_offers[suit] = KCCard(suit, value)
+                state.revealed_jobs[suit] = KCCard(suit, value)
+                state.has_revealed_job[suit] = True
+
+            model = PolicyArtifact.load(
+                Path(__file__).resolve().parents[2] / "policies/medium_policy.json"
+            ).c_buffer()
+            action = self.engine.policy_action(pointer, model)
+
+            self.assertIsNotNone(action)
+            assert action is not None
+            self.assertEqual(
+                (action.kind, action.suit, action.card.suit, action.card.value),
+                (15, 2, 2, 9),
+            )
         finally:
             self.engine.free_engine(pointer)
 

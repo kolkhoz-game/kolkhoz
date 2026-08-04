@@ -2369,6 +2369,13 @@ int32_t kc_engine_apply_ai_action(KCEngine *engine, KCAction action) {
     return error;
 }
 
+static void kc_advance_stepwise_automatic_transition(KCEngine *engine) {
+    if (engine->phase == KC_PHASE_PLANNING && engine->is_famine &&
+        kc_engine_legal_actions(engine, NULL, 0) == 0) {
+        kc_advance_from_planning(engine);
+    }
+}
+
 int32_t kc_engine_apply_ai_action_stepwise(KCEngine *engine, KCAction action) {
     kc_engine_begin_transition_batch(engine);
     if (action.kind == KC_ACTION_ASSIGN) {
@@ -2392,6 +2399,9 @@ int32_t kc_engine_apply_ai_action_stepwise(KCEngine *engine, KCAction action) {
     if (action.kind == KC_ACTION_SWAP) {
         KCAction confirm = { .kind = KC_ACTION_CONFIRM_SWAP, .player_id = action.player_id, .suit = -1, .card = kc_no_card(), .hand_card = kc_no_card(), .plot_card = kc_no_card(), .plot_zone = -1, .target_suit = -1 };
         error = kc_engine_apply_manual(engine, confirm);
+    }
+    if (error == 0) {
+        kc_advance_stepwise_automatic_transition(engine);
     }
     kc_engine_end_transition_batch(engine);
     return error;
@@ -2425,7 +2435,12 @@ bool kc_engine_policy_action_with_workspace(const KCEngine *engine, KCPolicyMode
     if (engine->phase == KC_PHASE_PLANNING && legal_count > 0 &&
         (legal_actions[0].kind == KC_ACTION_ASSIGN_REWARD ||
          legal_actions[0].kind == KC_ACTION_CONFIRM_REWARD_SWAPS)) {
-        return kc_engine_heuristic_action(engine, selected);
+        return kc_choose_benchmark_action(
+            engine,
+            legal_actions,
+            legal_count,
+            selected
+        );
     }
     if (engine->phase == KC_PHASE_PLANNING && engine->is_famine) {
         return false;

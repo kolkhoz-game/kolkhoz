@@ -6,11 +6,57 @@ from pathlib import Path
 
 from server.kolkhoz_server.ai import AutomaticAdvancer, ModelCache
 from server.kolkhoz_server.engine import KolkhozCEngineFactory
+from server.kolkhoz_server.policy import PolicyArtifact
 from server.kolkhoz_server.runtime import GameRuntime
 from server.kolkhoz_server.store import SQLiteEventStore
 
 
 class RealCEngineRecoveryTests(unittest.TestCase):
+    def test_affected_population_seeds_finish_stepwise(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        models = ModelCache(
+            {
+                "mediumAI": repo_root / "policies/medium_policy.json",
+                "neuralAI": repo_root / "policies/hard_policy.json",
+            },
+            lambda path: PolicyArtifact.load(path).c_buffer(),
+        )
+        cases = (
+            (
+                2810686489648982463,
+                ["neuralAI", "heuristicAI", "heuristicAI", "mediumAI"],
+            ),
+            (
+                1088494256005499699,
+                ["mediumAI", "heuristicAI", "heuristicAI", "mediumAI"],
+            ),
+        )
+        for seed, controllers in cases:
+            with self.subTest(seed=seed), tempfile.TemporaryDirectory() as temporary:
+                runtime = GameRuntime(
+                    SQLiteEventStore(Path(temporary) / "population-seed.sqlite3"),
+                    shard_count=1,
+                    automatic_advancer=AutomaticAdvancer(models),
+                )
+                try:
+                    runtime.create_game(
+                        seed=seed,
+                        variants={"variants": {}, "controllers": controllers},
+                        session_id=f"population-{seed}",
+                    )
+                    for _ in range(250):
+                        update = runtime.state(f"population-{seed}")
+                        if update.state["phase"] == 5:
+                            break
+                        runtime.advance_automatic(f"population-{seed}", now=0)
+                    else:
+                        self.fail("population seed did not finish within 1,000 actions")
+                finally:
+                    runtime.close()
+
+                self.assertEqual(update.state["phase"], 5)
+                self.assertLess(update.revision, 1000)
+
     def test_server_replays_legacy_collapsed_ai_events(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             database = Path(temporary) / "legacy-ai.sqlite3"
