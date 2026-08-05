@@ -474,9 +474,9 @@ actions=
         expect(
           gameOverFingerprint(model, appliedActions),
           '''
-actions=55 winner=3
-scores=0:visible=4:final=13|1:visible=8:final=20|2:visible=0:final=16|3:visible=15:final=41
-exiled=1:beet-1|2:beet-13,beet-4,sunflower-1,sunflower-10|3:wheat-13,wheat-7|4:potato-5,potato-7,sunflower-12,sunflower-13,wheat-6,wheat-9|5:potato-10,sunflower-11,sunflower-2,wheat-3,wheat-5
+actions=62 winner=3
+scores=0:visible=1:final=1|1:visible=1:final=1|2:visible=0:final=5|3:visible=15:final=41
+exiled=1:beet-1|2:beet-13,beet-4,sunflower-1,sunflower-10|3:wheat-13,wheat-7|4:potato-4,potato-5,potato-7,sunflower-12,sunflower-13,wheat-3,wheat-4,wheat-6,wheat-9|5:potato-10,potato-12,sunflower-11,sunflower-2,sunflower-6,wheat-5,wheat-8
 '''
               .trim(),
         );
