@@ -559,8 +559,8 @@
         "ru": "Герой Социалистического Труда"
       },
       "body": {
-        "en": "You won every trick this year. A Hero is completely protected from requisition. Instead, every other player loses their own highest eligible card once per failed field, even if they never led a brigade.",
-        "ru": "Вы выиграли все взятки этого года. Герой полностью защищён от реквизиции. Вместо него каждый другой игрок теряет свою старшую подходящую карту за каждое проваленное поле, даже если он не руководил бригадой."
+        "en": "You won every Medal this year. Each other player sends their highest eligible card North once for every Medal you hold. There are no competitive comparisons, and the Hero is completely protected.",
+        "ru": "Вы выиграли все медали этого года. Каждый другой игрок отправляет на Север свою старшую подходящую карту за каждую медаль Героя. Соревновательные сравнения не проводятся, а Герой полностью защищён."
       },
       "tip": {
         "en": "The title is earned anew each year by winning every available trick.",

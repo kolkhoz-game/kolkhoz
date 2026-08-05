@@ -131,13 +131,15 @@ next deal instead of being sent North.
 Failed jobs may reveal and exile matching plot cards. Drunkard, Informant, Party
 Official, mice, northern style, and hero immunity behavior all live in the C engine.
 
-The active failed crop suits form one eligible pool. Medal holders privately nominate
-their highest remaining eligible card, all nominations reveal together, and the global
-highest goes North, including all global ties. Losing Cellar nominations remain face up.
-The comparison repeats once per active failed crop. Hero replaces the comparison with one
-individual loss for every opponent; Northern Style and Mice do the same for every player.
-Party Official adds one comparison. Drunkard removes its crop from both the pool and the
-comparison count.
+The active failed crop suits form one eligible pool. Each medal holder loses their highest
+eligible card once per Medal they hold. The medal holders then privately nominate their
+highest remaining eligible cards once per active failed crop; the global highest goes
+North, including ties, and lower Cellar nominations remain face up. Informant expands its
+field's comparison to all players and that comparison resolves first. Party Official adds
+one comparison; when sharing the Informant field, that expanded comparison resolves next.
+A Hero sweep replaces the entire sequence: each non-Hero loses one highest eligible card
+per Hero Medal and no comparisons occur. Northern Style and Mice retain their universal
+individual-loss behavior. Drunkard removes its crop from the pool and comparison count.
 
 ### 8. Game Over
 

@@ -474,9 +474,9 @@ actions=
         expect(
           gameOverFingerprint(model, appliedActions),
           '''
-actions=62 winner=3
-scores=0:visible=4:final=17|1:visible=13:final=13|2:visible=0:final=37|3:visible=28:final=52
-exiled=1:beet-1|2:beet-13,sunflower-10|3:wheat-13|4:potato-7,wheat-10,wheat-9|5:beet-10,sunflower-12,sunflower-9,wheat-6
+actions=55 winner=3
+scores=0:visible=4:final=13|1:visible=8:final=20|2:visible=0:final=16|3:visible=15:final=41
+exiled=1:beet-1|2:beet-13,beet-4,sunflower-1,sunflower-10|3:wheat-13,wheat-7|4:potato-5,potato-7,sunflower-12,sunflower-13,wheat-6,wheat-9|5:potato-10,sunflower-11,sunflower-2,wheat-3,wheat-5
 '''
               .trim(),
         );
@@ -586,11 +586,11 @@ visible=0:0:2|1:0:1|2:0:0|3:0:0
         expect(
           variantFingerprint(result.model, result.appliedActions),
           '''
-actions=56 winner=1
-scores=0:visible=4:final=27|1:visible=42:final=65|2:visible=18:final=30|3:visible=13:final=37
-exiled=1:wheat-10,wheat-13|2:beet-7|3:beet-11,sunflower-13|4:wheat-12|5:wheat-11,wheat-5,wheat-9
-claimed=sunflower,potato,beet
-visible=0:4:0|1:42:3|2:18:0|3:13:0
+actions=62 winner=1
+scores=0:visible=5:final=13|1:visible=16:final=29|2:visible=26:final=26|3:visible=12:final=24
+exiled=1:wheat-10,wheat-13|2:beet-7|3:beet-11,beet-4,beet-6,sunflower-13,sunflower-6|4:beet-12,beet-13|5:beet-8,potato-6,potato-7,potato-8,wheat-12,wheat-6,wheat-8,wheat-9
+claimed=sunflower
+visible=0:5:1|1:16:0|2:26:1|3:12:1
 '''
               .trim(),
         );

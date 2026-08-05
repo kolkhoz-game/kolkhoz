@@ -150,7 +150,7 @@ class ProjectionContractTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.engine = CEngine(build_shared_library())
 
-    def test_requisition_compares_medalists_once_per_failed_field(self) -> None:
+    def test_requisition_takes_each_medalists_highest_then_compares(self) -> None:
         pointer = self.engine.new_engine(
             81001,
             variants=variants_native(
@@ -181,7 +181,7 @@ class ProjectionContractTests(unittest.TestCase):
             player_zero.plot_hidden.cards[2] = KCCard(1, 8)
             player_one = state.players[1]
             player_one.plot_hidden.count = 2
-            player_one.plot_hidden.cards[0] = KCCard(0, 10)
+            player_one.plot_hidden.cards[0] = KCCard(0, 9)
             player_one.plot_hidden.cards[1] = KCCard(1, 7)
 
             self.engine.apply_action(
@@ -192,7 +192,7 @@ class ProjectionContractTests(unittest.TestCase):
             actions = self.engine.legal_actions(pointer)
             self.assertEqual(
                 {(action.player_id, action.card.suit, action.card.value) for action in actions},
-                {(0, 0, 10), (0, 1, 10), (1, 0, 10)},
+                {(0, 0, 10), (0, 1, 10), (1, 0, 9)},
             )
             self.engine.apply_action(
                 pointer,
@@ -207,11 +207,36 @@ class ProjectionContractTests(unittest.TestCase):
             )
             state = self.engine.snapshot(pointer)
             self.assertEqual(state.exiled[1].count, 2)
-            self.assertEqual(state.requisition_rounds_remaining, 1)
+            self.assertEqual(state.requisition_rounds_remaining, 2)
 
             second_round = self.engine.legal_actions(pointer)
             self.assertEqual(
-                {(action.player_id, action.card.value) for action in second_round},
+                {(action.player_id, action.card.suit, action.card.value) for action in second_round},
+                {(0, 0, 10), (1, 1, 7)},
+            )
+            for player_id in (0, 1):
+                self.engine.apply_action(
+                    pointer,
+                    next(
+                        action
+                        for action in self.engine.legal_actions(pointer)
+                        if action.player_id == player_id
+                    ),
+                )
+
+            state = self.engine.snapshot(pointer)
+            self.assertEqual(state.requisition_rounds_remaining, 1)
+            self.assertEqual(state.exiled[1].count, 3)
+            self.assertTrue(
+                any(
+                    state.players[1].plot_revealed.cards[index].value == 7
+                    for index in range(state.players[1].plot_revealed.count)
+                )
+            )
+
+            third_round = self.engine.legal_actions(pointer)
+            self.assertEqual(
+                {(action.player_id, action.card.value) for action in third_round},
                 {(0, 8), (1, 7)},
             )
             for player_id in (0, 1):
@@ -226,13 +251,7 @@ class ProjectionContractTests(unittest.TestCase):
 
             state = self.engine.snapshot(pointer)
             self.assertEqual(state.requisition_rounds_remaining, 0)
-            self.assertEqual(state.exiled[1].count, 3)
-            self.assertTrue(
-                any(
-                    state.players[1].plot_revealed.cards[index].value == 7
-                    for index in range(state.players[1].plot_revealed.count)
-                )
-            )
+            self.assertEqual(state.exiled[1].count, 4)
             self.assertEqual(state.requisition_held_nomination_count, 1)
             held = state.requisition_held_nominations[0]
             self.assertEqual((held.player_id, held.card.suit, held.card.value), (1, 1, 7))
@@ -252,6 +271,146 @@ class ProjectionContractTests(unittest.TestCase):
         finally:
             self.engine.free_engine(pointer)
 
+    def test_requisition_individual_losses_follow_each_players_medal_count(self) -> None:
+        pointer = self.engine.new_engine(
+            81003,
+            variants=variants_native(
+                normalize_variants({"heroOfSovietUnion": False})
+            ),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 3
+            state.last_winner = 0
+            state.current_player = 0
+            state.trick_count = 4
+            state.last_trick_count = 0
+            for suit in range(4):
+                state.work_hours[suit] = 0 if suit == 0 else 40
+                state.job_buckets[suit].count = 0
+            for player_id in range(4):
+                player = state.players[player_id]
+                player.hand.count = 0
+                player.plot_hidden.count = 0
+                player.plot_revealed.count = 0
+                player.medals = 0
+
+            state.players[0].medals = 2
+            state.players[0].plot_hidden.count = 3
+            state.players[0].plot_hidden.cards[0] = KCCard(0, 13)
+            state.players[0].plot_hidden.cards[1] = KCCard(0, 11)
+            state.players[0].plot_hidden.cards[2] = KCCard(0, 8)
+            state.players[1].medals = 1
+            state.players[1].plot_hidden.count = 2
+            state.players[1].plot_hidden.cards[0] = KCCard(0, 12)
+            state.players[1].plot_hidden.cards[1] = KCCard(0, 7)
+
+            self.engine.apply_action(
+                pointer,
+                KCAction(6, 0, -1, KCCard(-1, 0), KCCard(-1, 0), KCCard(-1, 0), -1, -1),
+            )
+            self.assertEqual(
+                {action.player_id for action in self.engine.legal_actions(pointer)},
+                {0, 1},
+            )
+            for player_id in (0, 1):
+                self.engine.apply_action(
+                    pointer,
+                    next(
+                        action
+                        for action in self.engine.legal_actions(pointer)
+                        if action.player_id == player_id
+                    ),
+                )
+
+            self.assertEqual(
+                {action.player_id for action in self.engine.legal_actions(pointer)},
+                {0},
+            )
+            self.engine.apply_action(pointer, self.engine.legal_actions(pointer)[0])
+
+            state = self.engine.snapshot(pointer)
+            self.assertEqual(state.exiled[1].count, 3)
+            self.assertEqual(state.requisition_rounds_remaining, 1)
+            self.assertEqual(
+                {(action.player_id, action.card.value) for action in self.engine.legal_actions(pointer)},
+                {(0, 8), (1, 7)},
+            )
+        finally:
+            self.engine.free_engine(pointer)
+
+    def test_informant_expands_only_its_ordered_competitive_rounds(self) -> None:
+        pointer = self.engine.new_engine(
+            81004,
+            variants=variants_native(
+                normalize_variants(
+                    {"heroOfSovietUnion": False, "nomenclature": True}
+                )
+            ),
+            controllers=controllers_native(["human"] * 4),
+        )
+        try:
+            state = self.engine.snapshot(pointer)
+            state.phase = 3
+            state.last_winner = 0
+            state.current_player = 0
+            state.trick_count = 4
+            state.last_trick_count = 0
+            state.trump = 3
+            for suit in range(4):
+                state.work_hours[suit] = 0 if suit < 2 else 40
+                state.job_buckets[suit].count = 0
+            state.job_buckets[0].count = 2
+            state.job_buckets[0].cards[0] = KCCard(3, 12)
+            state.job_buckets[0].cards[1] = KCCard(3, 13)
+            cards = (
+                ((0, 13), (0, 9), (0, 5), (0, 1)),
+                ((1, 12), (1, 8)),
+                ((1, 11), (1, 7)),
+                ((1, 10), (1, 6)),
+            )
+            for player_id in range(4):
+                player = state.players[player_id]
+                player.hand.count = 0
+                player.plot_revealed.count = 0
+                player.plot_hidden.count = len(cards[player_id])
+                player.medals = 1 if player_id == 0 else 0
+                for index, (suit, value) in enumerate(cards[player_id]):
+                    player.plot_hidden.cards[index] = KCCard(suit, value)
+
+            self.engine.apply_action(
+                pointer,
+                KCAction(6, 0, -1, KCCard(-1, 0), KCCard(-1, 0), KCCard(-1, 0), -1, -1),
+            )
+            self.assertEqual(
+                {action.player_id for action in self.engine.legal_actions(pointer)},
+                {0},
+            )
+            self.engine.apply_action(pointer, self.engine.legal_actions(pointer)[0])
+
+            for _ in range(2):
+                self.assertEqual(
+                    {action.player_id for action in self.engine.legal_actions(pointer)},
+                    {0, 1, 2, 3},
+                )
+                for player_id in range(4):
+                    self.engine.apply_action(
+                        pointer,
+                        next(
+                            action
+                            for action in self.engine.legal_actions(pointer)
+                            if action.player_id == player_id
+                        ),
+                    )
+
+            self.assertEqual(
+                {action.player_id for action in self.engine.legal_actions(pointer)},
+                {0},
+            )
+        finally:
+            self.engine.free_engine(pointer)
+
     def test_hero_is_fully_protected_from_a_saboteur_failure(self) -> None:
         pointer = self.engine.new_engine(
             81002,
@@ -267,39 +426,50 @@ class ProjectionContractTests(unittest.TestCase):
             state.last_trick_count = 0
             state.is_famine = False
             for suit in range(4):
-                state.work_hours[suit] = 40
+                state.work_hours[suit] = 0
                 state.job_buckets[suit].count = 0
             state.job_buckets[0].count = 1
             state.job_buckets[0].cards[0] = KCCard(4, 0)
             for player_id in range(4):
                 player = state.players[player_id]
                 player.hand.count = 0
-                player.plot_hidden.count = 1
+                player.plot_hidden.count = 1 if player_id == 0 else 5
                 player.plot_revealed.count = 0
-                player.plot_hidden.cards[0] = KCCard(0, 13 - player_id)
+                for index in range(player.plot_hidden.count):
+                    player.plot_hidden.cards[index] = KCCard(
+                        3 if player_id == 0 else player_id - 1,
+                        13 - index,
+                    )
                 player.medals = 4 if player_id == 0 else 0
 
             self.engine.apply_action(
                 pointer,
                 KCAction(6, 0, -1, KCCard(-1, 0), KCCard(-1, 0), KCCard(-1, 0), -1, -1),
             )
-            self.assertEqual(
-                {action.player_id for action in self.engine.legal_actions(pointer)},
-                {1, 2, 3},
-            )
-            for player_id in (1, 2, 3):
-                self.engine.apply_action(
-                    pointer,
-                    next(
-                        action
-                        for action in self.engine.legal_actions(pointer)
-                        if action.player_id == player_id
-                    ),
+            self.assertEqual(self.engine.snapshot(pointer).requisition_rounds_remaining, 4)
+            for _ in range(4):
+                self.assertEqual(
+                    {action.player_id for action in self.engine.legal_actions(pointer)},
+                    {1, 2, 3},
                 )
+                for player_id in (1, 2, 3):
+                    self.engine.apply_action(
+                        pointer,
+                        next(
+                            action
+                            for action in self.engine.legal_actions(pointer)
+                            if action.player_id == player_id
+                        ),
+                    )
 
             state = self.engine.snapshot(pointer)
-            self.assertEqual(state.exiled[1].count, 3)
+            self.assertEqual(state.requisition_rounds_remaining, 0)
+            self.assertEqual(state.exiled[1].count, 12)
             self.assertEqual(state.players[0].plot_hidden.count, 1)
+            self.assertEqual(
+                [state.players[player_id].plot_hidden.count for player_id in (1, 2, 3)],
+                [1, 1, 1],
+            )
             self.assertFalse(
                 any(
                     state.exiled_player_ids[1][index] == 0

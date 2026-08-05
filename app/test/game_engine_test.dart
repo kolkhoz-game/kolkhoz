@@ -162,6 +162,167 @@ void main() {
     );
   });
 
+  test(
+    'requisition takes individual highest cards before competitive losses',
+    () {
+      List<EngineTransitionEvent>? initialLoss;
+      List<EngineTransitionEvent>? competitiveLoss;
+      Set<int>? medalHolders;
+      var requisitions = 0;
+      var multiMedalRequisitions = 0;
+      var initialRounds = 0;
+
+      for (var seed = 1; seed <= 200 && competitiveLoss == null; seed += 1) {
+        final bridge = KolkhozCEngineBridge();
+        final engine = NativeGameEngine(
+          bridge: bridge,
+          seed: seed,
+          variants: KolkhozGameVariants.kolkhoz.copyWith(
+            maxYears: 1,
+            nomenclature: false,
+            allowSwap: false,
+            heroOfSovietUnion: false,
+            wreckerCard: false,
+            finalYearTrump: false,
+            managedEconomy: true,
+          ),
+          controllers: const [
+            KolkhozPlayerController.human,
+            KolkhozPlayerController.human,
+            KolkhozPlayerController.human,
+            KolkhozPlayerController.human,
+          ],
+        );
+        try {
+          for (
+            var step = 0;
+            step < 2500 &&
+                engine.phase != kcPhaseRequisition &&
+                engine.phase != kcPhaseGameOver;
+            step += 1
+          ) {
+            final actions = engine.legalActions;
+            final action = actions.firstWhere(
+              (action) =>
+                  action.kind == kcActionConfirmRewardSwaps ||
+                  action.kind == kcActionConfirmSwap,
+              orElse: () => engine.heuristicAction() ?? actions.first,
+            );
+            expect(engine.applyManual(action), 0);
+          }
+          if (engine.phase != kcPhaseRequisition) continue;
+          requisitions += 1;
+          final currentMedalHolders = engine.readNative(
+            (native, pointer) => {
+              for (var playerID = 0; playerID < 4; playerID += 1)
+                if (native.playerMedals(pointer, playerID) > 0) playerID,
+            },
+          );
+          if (currentMedalHolders.length < 2) continue;
+          multiMedalRequisitions += 1;
+
+          List<EngineTransitionEvent>? candidateInitialLoss;
+          for (
+            var actionCount = 0;
+            actionCount < 40 && engine.phase == kcPhaseRequisition;
+            actionCount += 1
+          ) {
+            final choices = engine.legalActions
+                .where((action) => action.kind == kcActionSelectRequisitionCard)
+                .toList();
+            if (choices.isEmpty) {
+              if (engine.stepAutomatic() <= 0) break;
+            } else {
+              expect(engine.applyManual(choices.first), 0);
+            }
+            final events = List<EngineTransitionEvent>.of(
+              engine.transitionEvents,
+            );
+            final nominations = events
+                .where((event) => event.toZone == kcObjectZoneCurrentTrick)
+                .toList();
+            if (nominations.length < 2) continue;
+            final outcomes = events
+                .where(
+                  (event) =>
+                      event.fromZone == kcObjectZoneCurrentTrick &&
+                      (event.toZone == kcObjectZonePlotRevealed ||
+                          event.toZone == kcObjectZoneExiled),
+                )
+                .toList();
+            if (outcomes.length != nominations.length) continue;
+
+            if (candidateInitialLoss == null) {
+              if (outcomes.every(
+                (event) => event.toZone == kcObjectZoneExiled,
+              )) {
+                candidateInitialLoss = events;
+                initialRounds += 1;
+              }
+              continue;
+            }
+            initialLoss = candidateInitialLoss;
+            competitiveLoss = events;
+            medalHolders = currentMedalHolders;
+            break;
+          }
+        } finally {
+          engine.dispose();
+        }
+      }
+
+      expect(
+        initialLoss,
+        isNotNull,
+        reason:
+            'requisitions=$requisitions multiMedal=$multiMedalRequisitions initialRounds=$initialRounds',
+      );
+      expect(competitiveLoss, isNotNull);
+      final initialNominations = initialLoss!
+          .where((event) => event.toZone == kcObjectZoneCurrentTrick)
+          .toList();
+      final initialOutcomes = initialLoss
+          .where((event) => event.fromZone == kcObjectZoneCurrentTrick)
+          .toList();
+      expect(
+        initialNominations.map((event) => event.playerID),
+        everyElement(isIn(medalHolders!)),
+      );
+      expect(
+        initialOutcomes,
+        everyElement(
+          isA<EngineTransitionEvent>().having(
+            (event) => event.toZone,
+            'destination',
+            kcObjectZoneExiled,
+          ),
+        ),
+      );
+
+      final competitiveNominations = competitiveLoss!
+          .where((event) => event.toZone == kcObjectZoneCurrentTrick)
+          .toList();
+      final competitiveOutcomes = competitiveLoss
+          .where((event) => event.fromZone == kcObjectZoneCurrentTrick)
+          .toList();
+      final highest = competitiveNominations
+          .map((event) => event.card.value)
+          .reduce((left, right) => left > right ? left : right);
+      expect(
+        competitiveOutcomes
+            .where((event) => event.toZone == kcObjectZoneExiled)
+            .map((event) => event.card.value),
+        everyElement(highest),
+      );
+      expect(
+        competitiveOutcomes
+            .where((event) => event.card.value < highest)
+            .map((event) => event.toZone),
+        everyElement(kcObjectZonePlotRevealed),
+      );
+    },
+  );
+
   test('Saboteur field leaves the Hero fully protected', () {
     var foundScenario = false;
     for (var seed = 1; seed <= 250 && !foundScenario; seed += 1) {
@@ -213,11 +374,13 @@ void main() {
             ].firstOrNull,
           );
           if (heroID != null && wreckerSuit != null) {
-            final heroChoices = engine.legalActions.where(
-              (action) =>
-                  action.kind == kcActionSelectRequisitionCard &&
-                  action.playerID == heroID,
-            );
+            final heroChoices = engine.legalActions
+                .where(
+                  (action) =>
+                      action.kind == kcActionSelectRequisitionCard &&
+                      action.playerID == heroID,
+                )
+                .toList();
             final compromisedEvents = engine.readNative(
               (bridge, pointer) => [
                 for (
@@ -231,8 +394,52 @@ void main() {
             );
             expect(heroChoices, isEmpty);
             expect(compromisedEvents, isEmpty);
-            foundScenario = true;
-            break;
+            List<EngineTransitionEvent>? initialLoss;
+            for (var choiceCount = 0; choiceCount < 4; choiceCount += 1) {
+              final choices = engine.legalActions
+                  .where(
+                    (action) => action.kind == kcActionSelectRequisitionCard,
+                  )
+                  .toList();
+              if (choices.isEmpty) break;
+              expect(engine.applyManual(choices.first), 0);
+              final nominations = engine.transitionEvents.where(
+                (event) => event.toZone == kcObjectZoneCurrentTrick,
+              );
+              if (nominations.isNotEmpty) {
+                initialLoss = List<EngineTransitionEvent>.of(
+                  engine.transitionEvents,
+                );
+                break;
+              }
+            }
+            if (initialLoss != null) {
+              final nominations = initialLoss.where(
+                (event) => event.toZone == kcObjectZoneCurrentTrick,
+              );
+              final outcomes = initialLoss.where(
+                (event) => event.fromZone == kcObjectZoneCurrentTrick,
+              );
+              expect(
+                nominations.map((event) => event.playerID),
+                everyElement(isNot(heroID)),
+              );
+              expect(
+                nominations.map(
+                  (event) => engine.readNative(
+                    (native, pointer) =>
+                        native.playerMedals(pointer, event.playerID),
+                  ),
+                ),
+                everyElement(0),
+              );
+              expect(
+                outcomes.map((event) => event.toZone),
+                everyElement(kcObjectZoneExiled),
+              );
+              foundScenario = true;
+              break;
+            }
           }
         }
         if (engine.phase == kcPhaseRequisition && engine.legalActions.isEmpty) {

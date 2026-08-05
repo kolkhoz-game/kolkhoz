@@ -1342,6 +1342,84 @@ void registerLobbyAndProfileTests() {
     expect(changedControllers![1], KolkhozPlayerController.heuristicAI);
   });
 
+  testWidgets('narrow landscape lobby keeps variants and seats compact', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 667,
+          height: 375,
+          child: StandaloneLobby(
+            tokens: lightDesignTokens,
+            language: KolkhozLanguage.en,
+            appearance: KolkhozAppearance.light,
+            onStart: () {},
+            selectedPreset: KolkhozGamePreset.kolkhoz,
+            customVariants: KolkhozGameVariants.kolkhoz,
+            playerControllers: KolkhozPlayerController.defaultControllers,
+            displayName: 'Mira',
+            showingRules: false,
+            showingOnline: false,
+            onHostOnline: (_, _, _, _, _) async => 'session',
+            onJoinOnline: (_, _, _) async {},
+            onEnterOnlineGame: () {},
+            onPresetChanged: (_) {},
+            onCustomVariantsChanged: (_) {},
+            onPlayerControllersChanged: (_) {},
+            onRulesPressed: () {},
+            onOfflinePressed: () {},
+            onOnlinePressed: () {},
+            onTutorialPressed: () {},
+            onLanguageToggle: () {},
+            onAppearanceToggle: () {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(findAppText('ADD PLAYERS'));
+    await tester.pumpAndSettle();
+
+    final summaryChips = find.byWidgetPredicate(
+      (widget) =>
+          widget is Tooltip &&
+          widget.triggerMode == TooltipTriggerMode.manual &&
+          widget.richMessage != null,
+    );
+    expect(summaryChips, findsAtLeast(8));
+    final summaryCenters = [
+      for (final element in summaryChips.evaluate())
+        tester.getCenter(
+          find.byElementPredicate((candidate) => candidate == element),
+        ),
+    ];
+    final summaryTop = summaryCenters
+        .map((center) => center.dy)
+        .reduce(
+          (current, candidate) => current < candidate ? current : candidate,
+        );
+    final summaryBottom = summaryCenters
+        .map((center) => center.dy)
+        .reduce(
+          (current, candidate) => current > candidate ? current : candidate,
+        );
+    expect(summaryBottom - summaryTop, lessThan(1));
+
+    final p1 = find.bySemanticsLabel('P1 Mira');
+    final p2 = find.bySemanticsLabel('P2 OPEN');
+    final p3 = find.bySemanticsLabel('P3 OPEN');
+    final p4 = find.bySemanticsLabel('P4 OPEN');
+    expect(p1, findsOneWidget);
+    expect(p2, findsOneWidget);
+    expect(p3, findsOneWidget);
+    expect(p4, findsOneWidget);
+    expect(tester.getCenter(p1).dy, closeTo(tester.getCenter(p2).dy, 1));
+    expect(tester.getCenter(p3).dy, closeTo(tester.getCenter(p4).dy, 1));
+    expect(tester.getCenter(p1).dx, closeTo(tester.getCenter(p3).dx, 1));
+    expect(tester.getCenter(p2).dx, closeTo(tester.getCenter(p4).dx, 1));
+  });
+
   testWidgets('offline lobby can save and use a favorite setup', (
     tester,
   ) async {

@@ -114,7 +114,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get variantHeroDescription =>
-      'Win every possible trick in a year: you are fully protected and every other player loses their own highest eligible card.';
+      'Win every possible Medal in a year: you are protected, and every other player loses one eligible card per Medal you hold.';
 
   @override
   String get variantAccumulationTitle => 'In the Common Pot';

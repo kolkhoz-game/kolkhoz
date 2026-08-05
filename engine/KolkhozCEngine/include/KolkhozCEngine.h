@@ -407,6 +407,9 @@ typedef struct {
     KCCard requisition_choices[KC_PLAYER_COUNT];
     int32_t requisition_rounds_remaining;
     bool requisition_individual_losses;
+    int32_t requisition_individual_losses_remaining[KC_PLAYER_COUNT];
+    int32_t requisition_competitive_rounds_remaining;
+    int32_t requisition_expanded_rounds_remaining;
     KCTrickPlay requisition_held_nominations[KC_MAX_CARDS];
     int32_t requisition_held_nomination_count;
     KCTransitionEvent transition_events[KC_MAX_TRANSITION_EVENTS];

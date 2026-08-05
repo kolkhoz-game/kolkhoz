@@ -97,10 +97,12 @@ processed as failed during requisition.
 Default Kolkhoz also enables Final Year Trump, Hero of Socialist Labor, and Managed
 Economy. Passing and Lotto Rewards remain available in Custom games. Lotto job piles
 contain ranks 1-4 plus one seeded random rank from 5-K
-per crop. Requisition compares each medal holder's highest card across all active failed
-crops once per failed field. The highest nomination goes North, including all global ties;
-losing hidden nominations remain revealed. Party Official adds one comparison and Drunkard
-removes its crop before the comparison count is calculated.
+per crop. In normal requisition, each medal holder loses one highest eligible card per
+Medal they hold, then medal holders compare their highest remaining eligible cards once
+per failed field. The global highest goes North, including ties, and losing hidden
+nominations remain revealed. A Hero sweep instead makes every other player lose one card
+per Hero Medal and removes all competitive comparisons. Informant expands only its
+field's comparison; Party Official adds one comparison; Drunkard removes its crop.
 
 ## Key Files To Read First
 

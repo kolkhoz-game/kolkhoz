@@ -80,8 +80,8 @@ Windows release builds can be published on demand from the GitHub Actions
 Special cards apply only when `nomenclature` is enabled and the card is in the trump suit:
 
 - **Jack, Drunkard** - Contributes 0 work hours. If its assigned job fails, the Drunkard is exiled instead of player plot cards for that job.
-- **Queen, Informant** - If its assigned job fails, matching hidden plot cards are all revealed.
-- **King, Party Official** - If its assigned job fails, two matching revealed plot cards are exiled instead of one.
+- **Queen, Informant** - If its assigned job fails, matching hidden plot cards are revealed and every player joins that field's competitive comparison.
+- **King, Party Official** - If its assigned job fails, requisition gains one extra competitive comparison.
 
 Famine has no trump, so trump special-card effects do not apply in year 5.
 
@@ -99,8 +99,9 @@ Default Kolkhoz includes the Saboteur card. In engine state it is the dedicated
   ordinary cards within the winning suit.
 - A job bucket containing Saboteur can still claim its reward after reaching 40 hours, but
   it is treated as failed during requisition.
-- A Hero of Socialist Labor normally avoids requisition, but a Saboteur field sends the
-  Hero's single highest Plot or Cellar card of that crop North, if they have one.
+- A Hero of Socialist Labor remains protected from requisition, including when a failed
+  field contains Saboteur. Every other player instead loses one highest eligible card for
+  each Medal held by the Hero; a Hero year has no competitive comparisons.
 - If Saboteur is in a player's plot, it can match any failed job for requisition, but the
   same Saboteur card is exiled at most once in that year's requisition report.
 

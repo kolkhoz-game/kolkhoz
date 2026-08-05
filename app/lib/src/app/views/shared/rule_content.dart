@@ -209,23 +209,30 @@ const kolkhozBaseRulebook = [
     RulebookBlockKind.bullet,
     'Count the number of failed fields (fields with fewer than the required '
     'work hours assigned, or containing the joker). The suits of all failed '
-    'fields form one eligible pool. For each failed field, every player who '
-    'was a brigadier during the year secretly identifies their highest '
-    'remaining card in their cellar or plot from that pool. A player with '
-    'equally ranked highest cards chooses one. Reveal all identified cards '
-    'together; identified cellar cards remain face up in the plot. Send the '
-    'highest identified card to the North (отправить на Север). If multiple '
-    'identified cards tie for highest, send all tied cards North. Repeat '
-    'with the remaining cards once for each failed field.',
+    'fields form one eligible pool. Every player holding at least one Medal '
+    'sends their highest eligible card North once per Medal they hold. Then, '
+    'once for each failed field, those players identify their highest '
+    'remaining eligible card in their cellar or plot. Reveal all identified '
+    'cards together and send only the globally highest card North '
+    '(отправить на Север), including every card tied for highest. Lower '
+    'cellar cards remain face up in the plot. A player chooses between their '
+    'own equally ranked highest cards.',
+  ),
+  RulebookBlock(
+    RulebookBlockKind.bullet,
+    'Informant: In a non-Hero year, every player joins the competitive '
+    'comparison for the Informant’s failed field, using the full failed-suit '
+    'pool. Resolve that comparison first. A Party Official adds one extra '
+    'comparison; if both occupy the same field, the same expanded group '
+    'resolves it immediately afterward.',
   ),
   RulebookBlock(
     RulebookBlockKind.bullet,
     'Hero of Socialist Labor (стахановец): When playing with this variant, '
-    'a player who won every possible trick in the year is protected. For '
-    'each failed field, every other player sends their own highest remaining '
-    'eligible card North. Players choose between their own equally ranked '
-    'cards. The Hero is completely protected, including from a field '
-    'containing the joker.',
+    'when one player wins every possible Medal in the year, every other '
+    'player sends their highest eligible card North once per Medal held by '
+    'the Hero. No competitive comparisons occur. The Hero is completely '
+    'protected, including from a field containing the joker.',
   ),
   RulebookBlock(
     RulebookBlockKind.subsectionTitle,

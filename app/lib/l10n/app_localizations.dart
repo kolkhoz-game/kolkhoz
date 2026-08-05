@@ -287,7 +287,7 @@ abstract class AppLocalizations {
   /// No description provided for @variantHeroDescription.
   ///
   /// In en, this message translates to:
-  /// **'Win every possible trick in a year: you are fully protected and every other player loses their own highest eligible card.'**
+  /// **'Win every possible Medal in a year: you are protected, and every other player loses one eligible card per Medal you hold.'**
   String get variantHeroDescription;
 
   /// No description provided for @variantAccumulationTitle.

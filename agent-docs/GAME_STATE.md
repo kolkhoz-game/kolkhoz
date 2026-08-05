@@ -173,14 +173,17 @@ For each failed job (`work_hours[suit] < 40`):
 - a trump king assigned to the failed job is the Party Official and can exile two matching revealed cards;
 - the failed suits enter one shared eligible pool for requisition.
 
-Without a universal vulnerability override, every player with at least one medal secretly
-nominates their highest remaining Plot or Cellar card in the pool. Nominations reveal
-together. The global highest goes North, including every tied highest nomination. Losing
-Cellar nominations stay face up in the Plot. This comparison repeats once per failed job.
+Without a universal vulnerability override or Hero, every medal holder loses their
+highest eligible Plot or Cellar card once per Medal they hold. Medal holders then nominate
+their highest remaining eligible cards once per failed job. Nominations reveal together;
+the global highest goes North, including ties, while lower Cellar nominations stay face up.
+Informant adds all players only to its job's comparison, which resolves first using the
+full failed-suit pool. If Party Official shares that job, its extra expanded comparison
+resolves next.
 
-With Hero of Socialist Labor enabled, a player who won every possible trick is protected
-and each opponent instead loses their own highest remaining eligible card per comparison.
-Northern Style and Mice similarly make every player lose their own highest eligible card.
+With Hero of Socialist Labor enabled, every non-Hero player loses their highest eligible
+card once per Medal held by the Hero. No competitive comparisons occur and the Hero is
+protected. Northern Style and Mice retain their universal individual-loss behavior.
 
 A job containing Saboteur is processed as failed even when its work hours reached 40 and
 its reward was already claimed. Saboteur plot cards match every failed job, but the engine

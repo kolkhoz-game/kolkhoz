@@ -2369,7 +2369,25 @@ static void kc_release_requisition_nomination(
     }
 }
 
+static void kc_configure_requisition_round_targets(KCEngine *engine) {
+    memset(engine->requisition_target_players, 0, sizeof(engine->requisition_target_players));
+    memset(engine->requisition_player_suits, 0, sizeof(engine->requisition_player_suits));
+    for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+        bool targeted = engine->requisition_individual_losses
+            ? engine->requisition_individual_losses_remaining[player_id] > 0
+            : engine->requisition_expanded_rounds_remaining > 0 ||
+                engine->players[player_id].medals > 0;
+        engine->requisition_target_players[player_id] = targeted;
+        if (!targeted) continue;
+        for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+            engine->requisition_player_suits[player_id][suit] =
+                engine->requisition_active_suits[suit];
+        }
+    }
+}
+
 static void kc_resolve_requisition_round(KCEngine *engine) {
+    bool individual_loss_round = engine->requisition_individual_losses;
     int32_t highest = -1;
     bool was_hidden[KC_PLAYER_COUNT] = {0};
     for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
@@ -2445,7 +2463,8 @@ static void kc_resolve_requisition_round(KCEngine *engine) {
         }
         exiled_any = true;
     }
-    if (!exiled_any && engine->requisition_event_count < KC_MAX_CARDS) {
+    if (!exiled_any && !individual_loss_round &&
+        engine->requisition_event_count < KC_MAX_CARDS) {
         engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
             .player_id = KC_NO_PLAYER,
             .suit = kc_first_requisition_suit(engine),
@@ -2455,7 +2474,26 @@ static void kc_resolve_requisition_round(KCEngine *engine) {
     }
 
     engine->requisition_rounds_remaining--;
+    if (individual_loss_round) {
+        bool individual_losses_remain = false;
+        for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+            if (engine->requisition_individual_losses_remaining[player_id] > 0) {
+                engine->requisition_individual_losses_remaining[player_id]--;
+            }
+            individual_losses_remain = individual_losses_remain ||
+                engine->requisition_individual_losses_remaining[player_id] > 0;
+        }
+        engine->requisition_individual_losses = individual_losses_remain;
+    } else {
+        if (engine->requisition_competitive_rounds_remaining > 0) {
+            engine->requisition_competitive_rounds_remaining--;
+        }
+        if (engine->requisition_expanded_rounds_remaining > 0) {
+            engine->requisition_expanded_rounds_remaining--;
+        }
+    }
     if (engine->requisition_rounds_remaining > 0) {
+        kc_configure_requisition_round_targets(engine);
         kc_prepare_requisition_round(engine);
     } else {
         engine->current_player = 0;
@@ -2532,8 +2570,15 @@ static void kc_begin_core_requisition(KCEngine *engine) {
     memset(engine->requisition_player_suits, 0, sizeof(engine->requisition_player_suits));
     memset(engine->requisition_target_players, 0, sizeof(engine->requisition_target_players));
     memset(engine->requisition_choice_confirmed, 0, sizeof(engine->requisition_choice_confirmed));
+    memset(
+        engine->requisition_individual_losses_remaining,
+        0,
+        sizeof(engine->requisition_individual_losses_remaining)
+    );
     engine->requisition_rounds_remaining = 0;
     engine->requisition_individual_losses = false;
+    engine->requisition_competitive_rounds_remaining = 0;
+    engine->requisition_expanded_rounds_remaining = 0;
 
     for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
         if (engine->work_hours[suit] >= KC_WORK_THRESHOLD && !kc_job_contains_wrecker(engine, suit)) {
@@ -2555,25 +2600,37 @@ static void kc_begin_core_requisition(KCEngine *engine) {
         }
     }
 
-    bool universal_override = engine->variants.northern_style || engine->variants.mice_variant;
-    if (universal_override) {
-        engine->requisition_individual_losses = true;
+    bool party_bonus = false;
+    bool informant_active = false;
+    bool informant_party_same_field = false;
+    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
+        if (!engine->requisition_active_suits[suit]) continue;
+        party_bonus = party_bonus || party_official[suit];
+        informant_active = informant_active || informant[suit];
+        informant_party_same_field = informant_party_same_field ||
+            (informant[suit] && party_official[suit]);
         for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
-            engine->requisition_target_players[player_id] = active_count > 0;
-            for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-                engine->requisition_player_suits[player_id][suit] =
-                    engine->requisition_active_suits[suit];
+            if (engine->variants.mice_variant ||
+                (informant[suit] && !(hero_id >= 0 && player_id == hero_id))) {
+                kc_reveal_hidden_cards(engine, player_id, suit, true);
             }
         }
-    } else if (hero_id >= 0) {
-        engine->requisition_individual_losses = true;
+    }
+
+    bool universal_override = engine->variants.northern_style || engine->variants.mice_variant;
+    int32_t individual_round_count = 0;
+    if (active_count > 0 && universal_override) {
+        individual_round_count = active_count + (party_bonus ? 1 : 0);
+        for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
+            engine->requisition_individual_losses_remaining[player_id] =
+                individual_round_count;
+        }
+    } else if (active_count > 0 && hero_id >= 0) {
+        individual_round_count = engine->players[hero_id].medals;
         for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
             if (player_id == hero_id) continue;
-            engine->requisition_target_players[player_id] = active_count > 0;
-            for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-                engine->requisition_player_suits[player_id][suit] =
-                    engine->requisition_active_suits[suit];
-            }
+            engine->requisition_individual_losses_remaining[player_id] =
+                individual_round_count;
         }
         if (engine->requisition_event_count < KC_MAX_CARDS) {
             engine->requisition_events[engine->requisition_event_count++] = (KCRequisitionEvent){
@@ -2583,36 +2640,25 @@ static void kc_begin_core_requisition(KCEngine *engine) {
                 .message_kind = 4
             };
         }
-    } else {
+    } else if (active_count > 0) {
         for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
-            if (engine->players[player_id].medals <= 0) continue;
-            engine->requisition_target_players[player_id] = active_count > 0;
-            for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-                engine->requisition_player_suits[player_id][suit] =
-                    engine->requisition_active_suits[suit];
-            }
+            int32_t losses = engine->players[player_id].medals;
+            engine->requisition_individual_losses_remaining[player_id] = losses;
+            if (losses > individual_round_count) individual_round_count = losses;
+        }
+        engine->requisition_competitive_rounds_remaining =
+            active_count + (party_bonus ? 1 : 0);
+        if (informant_active) {
+            engine->requisition_expanded_rounds_remaining =
+                1 + (informant_party_same_field ? 1 : 0);
         }
     }
 
-    bool party_bonus = false;
-    for (int32_t suit = 0; suit < KC_SUIT_COUNT; suit++) {
-        if (!engine->requisition_active_suits[suit]) continue;
-        party_bonus = party_bonus || party_official[suit];
-        for (int32_t player_id = 0; player_id < KC_PLAYER_COUNT; player_id++) {
-            if (informant[suit] && !(hero_id >= 0 && player_id == hero_id) &&
-                !universal_override) {
-                engine->requisition_target_players[player_id] = true;
-                engine->requisition_player_suits[player_id][suit] = true;
-            }
-            if (engine->variants.mice_variant ||
-                (informant[suit] && !(hero_id >= 0 && player_id == hero_id))) {
-                kc_reveal_hidden_cards(engine, player_id, suit, true);
-            }
-        }
-    }
-
-    engine->requisition_rounds_remaining = active_count + (party_bonus ? 1 : 0);
+    engine->requisition_individual_losses = individual_round_count > 0;
+    engine->requisition_rounds_remaining =
+        individual_round_count + engine->requisition_competitive_rounds_remaining;
     if (engine->requisition_rounds_remaining > 0) {
+        kc_configure_requisition_round_targets(engine);
         kc_prepare_requisition_round(engine);
         kc_resolve_empty_requisition_rounds(engine);
     }

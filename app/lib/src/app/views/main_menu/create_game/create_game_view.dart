@@ -472,62 +472,95 @@ class _VariantPanelState extends State<CreateGameView> {
           ),
         MainMenuGoldDivider(tokens: widget.tokens),
         Expanded(
-          child: KolkhozScrollbar(
-            tokens: widget.tokens,
-            childBuilder: (context, scrollController) => SingleChildScrollView(
-              controller: scrollController,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 10, bottom: 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 10,
-                  children: [
-                    _SeatLobbyEditor(
-                      tokens: widget.tokens,
-                      language: widget.language,
-                      choices: effectiveSeatChoices,
-                      displayName: widget.displayName,
-                      portraitAsset: widget.portraitAsset,
-                      profileStats: widget.profileStats,
-                      selectedPlayerID: selectedSeatPlayerID,
-                      onSeatPressed: widget.demoMode
-                          ? null
-                          : toggleSeatSelector,
-                      compact: widget.compactRail,
-                    ),
-                    if (hasOnlineSeats)
-                      _MatchFormatSelector(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 8,
+            children: [
+              Expanded(
+                child: selectedSeatPlayerID != null
+                    ? _buildSelectedSeatEditor(selectedSeatPlayerID!)
+                    : _SeatLobbyEditor(
                         tokens: widget.tokens,
-                        value: bestOf,
-                        enabled: true,
-                        onChanged: (value) => setState(() => bestOf = value),
+                        language: widget.language,
+                        choices: effectiveSeatChoices,
+                        displayName: widget.displayName,
+                        portraitAsset: widget.portraitAsset,
+                        profileStats: widget.profileStats,
+                        selectedPlayerID: selectedSeatPlayerID,
+                        onSeatPressed: widget.demoMode
+                            ? null
+                            : toggleSeatSelector,
+                        compact: widget.compactRail,
                       ),
-                  ],
-                ),
               ),
-            ),
+              if (hasOnlineSeats)
+                _MatchFormatSelector(
+                  tokens: widget.tokens,
+                  value: bestOf,
+                  enabled: true,
+                  onChanged: (value) => setState(() => bestOf = value),
+                ),
+            ],
           ),
         ),
-        if (selectedSeatPlayerID case final playerID?)
-          _SeatSelectorWheel(
+        _lobbyCommandRow(),
+      ],
+    );
+  }
+
+  Widget _buildSelectedSeatEditor(int playerID) {
+    final choices = effectiveSeatChoices;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 6,
+      children: [
+        SizedBox(
+          height: 58,
+          child: Row(
+            spacing: 6,
+            children: [
+              for (var seatID = 0; seatID < kolkhozPlayerCount; seatID += 1)
+                Expanded(
+                  child: _SeatLobbyColumn(
+                    tokens: widget.tokens,
+                    language: widget.language,
+                    playerID: seatID,
+                    choice: choices[seatID],
+                    displayName: widget.displayName,
+                    portraitAsset: widget.portraitAsset,
+                    profileStats: widget.profileStats,
+                    selected: playerID == seatID,
+                    onPressed: seatID == 0
+                        ? null
+                        : () => toggleSeatSelector(seatID),
+                    compact: true,
+                    minimal: true,
+                    availableHeight: 58,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _SeatSelectorWheel(
             key: seatSelectorWheelKey,
             tokens: widget.tokens,
             language: widget.language,
             playerID: playerID,
-            choice: effectiveSeatChoices[playerID],
+            choice: choices[playerID],
             options: _LobbySeatChoice.optionsForPlayer(playerID)
                 .where(
                   (option) => _LobbySeatChoice.isOptionEnabledForPlayer(
                     playerID,
-                    effectiveSeatChoices,
+                    choices,
                     option,
                   ),
                 )
                 .toList(),
-            compact: widget.compactRail,
+            compact: true,
             onChanged: (choice) => setSeatChoice(playerID, choice),
           ),
-        _lobbyCommandRow(),
+        ),
       ],
     );
   }
@@ -1018,26 +1051,43 @@ class _PresetSummaryStrip extends StatelessWidget {
               : fieldPlanHowToPlayPictogram.fieldPlanPath,
         ),
     ];
-    return Align(
-      alignment: Alignment.center,
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        runAlignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: compact ? 5 : 7,
-        runSpacing: compact ? 5 : 7,
-        children: [
-          for (final icon in icons)
-            _VariantHeaderIconChip(
-              label: icon.label,
-              description: icon.description,
-              iconAsset: icon.iconAsset,
-              showLabel: icon.showLabel,
-              tokens: tokens,
-              compact: compact,
-            ),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = compact ? 4.0 : 6.0;
+        final labeledWidth = compact ? 128.0 : 154.0;
+        final iconWidth = compact ? 42.0 : 48.0;
+        final naturalWidth =
+            icons.fold<double>(
+              0,
+              (width, icon) =>
+                  width + (icon.showLabel ? labeledWidth : iconWidth),
+            ) +
+            spacing * math.max(0, icons.length - 1);
+        final collapseLabels = naturalWidth > constraints.maxWidth;
+        final fittedWidth = collapseLabels
+            ? ((constraints.maxWidth -
+                          spacing * math.max(0, icons.length - 1)) /
+                      icons.length)
+                  .clamp(20.0, iconWidth)
+                  .toDouble()
+            : null;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: spacing,
+          children: [
+            for (final icon in icons)
+              _VariantHeaderIconChip(
+                label: icon.label,
+                description: icon.description,
+                iconAsset: icon.iconAsset,
+                showLabel: icon.showLabel && !collapseLabels,
+                tokens: tokens,
+                compact: compact,
+                width: fittedWidth,
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1064,6 +1114,7 @@ class _VariantHeaderIconChip extends StatelessWidget {
     required this.showLabel,
     required this.tokens,
     required this.compact,
+    this.width,
   });
 
   final String label;
@@ -1072,16 +1123,24 @@ class _VariantHeaderIconChip extends StatelessWidget {
   final bool showLabel;
   final DesignTokens tokens;
   final bool compact;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
-    final width = showLabel
-        ? (compact ? 128.0 : 154.0)
-        : (compact ? 42.0 : 48.0);
-    final height = compact ? 38.0 : 44.0;
-    final iconSize = showLabel
-        ? (compact ? 25.0 : 29.0)
-        : (compact ? 28.0 : 33.0);
+    final chipWidth =
+        width ??
+        (showLabel ? (compact ? 128.0 : 154.0) : (compact ? 42.0 : 48.0));
+    final height = width == null
+        ? (compact ? 38.0 : 44.0)
+        : chipWidth.clamp(28.0, compact ? 38.0 : 44.0).toDouble();
+    final iconSize =
+        (showLabel
+                ? (compact ? 25.0 : 29.0)
+                : math.max(
+                    14.0,
+                    math.min(chipWidth - 8, compact ? 28.0 : 33.0),
+                  ))
+            .toDouble();
     final tooltipKey = GlobalKey<TooltipState>();
     void showTooltip() => tooltipKey.currentState?.ensureTooltipVisible();
     final tooltipText = TextSpan(
@@ -1135,7 +1194,7 @@ class _VariantHeaderIconChip extends StatelessWidget {
               ],
             ),
             child: SizedBox(
-              width: width,
+              width: chipWidth,
               height: height,
               child: Stack(
                 alignment: Alignment.center,
@@ -1433,34 +1492,52 @@ class _SeatLobbyEditor extends StatelessWidget {
     final normalized = _LobbySeatChoice.normalized(choices);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columnCount = constraints.maxWidth >= 660 && !compact
-            ? 4
-            : constraints.maxWidth >= 430
-            ? 2
-            : 1;
+        final columnCount = constraints.maxWidth >= 660 && !compact ? 4 : 2;
         const spacing = 8.0;
         final columnWidth =
             (constraints.maxWidth - spacing * (columnCount - 1)) / columnCount;
-        return Wrap(
+        final rowCount = (kolkhozPlayerCount / columnCount).ceil();
+        final rowHeight = constraints.maxHeight.isFinite
+            ? ((constraints.maxHeight - spacing * (rowCount - 1)) / rowCount)
+                  .clamp(58.0, compact ? 82.0 : 96.0)
+                  .toDouble()
+            : (compact ? 78.0 : 92.0);
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           spacing: spacing,
-          runSpacing: spacing,
           children: [
-            for (var playerID = 0; playerID < kolkhozPlayerCount; playerID += 1)
+            for (var row = 0; row < rowCount; row += 1)
               SizedBox(
-                width: columnWidth,
-                child: _SeatLobbyColumn(
-                  tokens: tokens,
-                  language: language,
-                  playerID: playerID,
-                  choice: normalized[playerID],
-                  displayName: displayName,
-                  portraitAsset: portraitAsset,
-                  profileStats: profileStats,
-                  selected: selectedPlayerID == playerID,
-                  onPressed: onSeatPressed == null || playerID == 0
-                      ? null
-                      : () => onSeatPressed!(playerID),
-                  compact: compact,
+                height: rowHeight,
+                child: Row(
+                  spacing: spacing,
+                  children: [
+                    for (var column = 0; column < columnCount; column += 1)
+                      if (row * columnCount + column < kolkhozPlayerCount)
+                        SizedBox(
+                          width: columnWidth,
+                          child: _SeatLobbyColumn(
+                            tokens: tokens,
+                            language: language,
+                            playerID: row * columnCount + column,
+                            choice: normalized[row * columnCount + column],
+                            displayName: displayName,
+                            portraitAsset: portraitAsset,
+                            profileStats: profileStats,
+                            selected:
+                                selectedPlayerID == row * columnCount + column,
+                            onPressed:
+                                onSeatPressed == null ||
+                                    row * columnCount + column == 0
+                                ? null
+                                : () => onSeatPressed!(
+                                    row * columnCount + column,
+                                  ),
+                            compact: compact,
+                            availableHeight: rowHeight,
+                          ),
+                        ),
+                  ],
                 ),
               ),
           ],
@@ -1482,6 +1559,8 @@ class _SeatLobbyColumn extends StatelessWidget {
     required this.selected,
     required this.onPressed,
     required this.compact,
+    required this.availableHeight,
+    this.minimal = false,
   });
 
   final DesignTokens tokens;
@@ -1494,6 +1573,8 @@ class _SeatLobbyColumn extends StatelessWidget {
   final bool selected;
   final VoidCallback? onPressed;
   final bool compact;
+  final double availableHeight;
+  final bool minimal;
 
   @override
   Widget build(BuildContext context) {
@@ -1517,13 +1598,15 @@ class _SeatLobbyColumn extends StatelessWidget {
           ? portraitAsset
           : _seatPortraitAsset(playerID, choice),
       seatLabel: playerLabel,
-      subtitle: subtitle,
-      subtitleIconAsset: localProfile ? null : choice.iconAsset,
-      portraitSize: compact ? 42 : 48,
-      minHeight: compact ? 78 : 92,
+      subtitle: minimal ? null : subtitle,
+      subtitleIconAsset: minimal || localProfile ? null : choice.iconAsset,
+      portraitSize: minimal
+          ? 32
+          : math.min(compact ? 42 : 48, availableHeight - 20),
+      minHeight: availableHeight,
       active: playerID == 0 || selected,
       muted: choice == _LobbySeatChoice.empty,
-      trailing: onPressed == null
+      trailing: minimal || onPressed == null
           ? null
           : Icon(
               selected ? Icons.expand_less : Icons.expand_more,
