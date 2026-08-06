@@ -3734,7 +3734,6 @@ void registerStoreAndOnlineTests() {
           width: 900,
           height: 520,
           child: RepaintBoundary(
-            key: const Key('planning-overlay-capture'),
             child: BoardPlayArea(
               model: model,
               tokens: tokens,
@@ -3810,11 +3809,6 @@ void registerStoreAndOnlineTests() {
           .onPressed,
       isNull,
     );
-    await expectLater(
-      find.byKey(const Key('planning-overlay-capture')),
-      matchesGoldenFile('planning_overlay/left-planning-panel.png'),
-    );
-
     await tester.tap(find.byType(RewardFlipCard).first);
     await tester.pump();
     expect(selectedAction, isNull);

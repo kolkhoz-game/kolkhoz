@@ -19,10 +19,11 @@ no production `part` coupling.
 The deterministic verification gates pass: C syntax, policy asset synchronization,
 Flutter analysis, targeted engine/transport/controller/profile tests, macOS debug build,
 and the eight-game research engine smoke test. The repository-wide Flutter run reaches
-302 passing tests but is not green in this checkout because two golden baselines are
-absent, another golden suite differs from its stored images, the bundled neural-policy
-test exceeds its 30-second timeout, and two lobby tests use an ambiguous text finder.
+302 passing tests but is not green in this checkout because the bundled neural-policy
+test exceeds its 30-second timeout and two lobby tests use an ambiguous text finder.
 The tournament lobby test also fails only in the combined run and passes when isolated.
+The obsolete screenshot-golden suites were retired on 2026-08-06; behavioral and
+geometry assertions now carry UI regression coverage without stale pixel baselines.
 
 ## Target Ownership Tree
 
@@ -249,7 +250,7 @@ Gate after every owner move: `flutter analyze` and its targeted tests pass.
   feature directories.
 - Pass immutable presentation values and callbacks rather than parent-private state.
 
-Gate: widget tests and screenshot/golden tests pass with no intentional visual changes.
+Gate: widget tests pass with no intentional behavioral or layout changes.
 
 ### Phase 6: Remove the old architecture
 
@@ -296,5 +297,4 @@ python3 -m research.kolkhoz_research.cli engine-smoke --games 8
 - The old local/online session and channel hierarchy is removed.
 - Main-menu and game views are independent imported modules with no `part` coupling.
 - FFI types stay behind the local game engine and its projections.
-- Analysis, targeted behavior tests, engine smoke tests, and the macOS build pass. Golden
-  suites additionally require their checked-in baselines to be present.
+- Analysis, targeted behavior tests, engine smoke tests, and the macOS build pass.

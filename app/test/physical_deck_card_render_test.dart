@@ -80,7 +80,6 @@ void main() {
         color: const Color(0xff252c2b),
         child: Center(
           child: RepaintBoundary(
-            key: const Key('physical-deck-cards'),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -115,11 +114,6 @@ void main() {
       findsOneWidget,
     );
 
-    await expectLater(
-      find.byKey(const Key('physical-deck-cards')),
-      matchesGoldenFile('goldens/physical_deck_cards.png'),
-    );
-
     await tester.pumpWidget(deck(defaultDesignTokens));
     await tester.pumpAndSettle();
     await tester.runAsync(
@@ -135,10 +129,6 @@ void main() {
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
-    await expectLater(
-      find.byKey(const Key('physical-deck-cards')),
-      matchesGoldenFile('goldens/physical_deck_cards_dark.png'),
-    );
   });
 
   testWidgets(

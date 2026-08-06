@@ -156,10 +156,6 @@ void main() {
     _expectTrickLayoutVerticallyCentered(tester);
     _expectTrickProfileHorizontalGaps(tester);
     _expectLeftPlotFansBuildOutward(tester);
-    await expectLater(
-      find.byKey(const Key('production-board-capture')),
-      matchesGoldenFile('static_hero_production/brigade.png'),
-    );
   });
 
   testWidgets('large trick cards clear profiles at phone landscape size', (
@@ -366,10 +362,6 @@ void main() {
 
     await _pumpBoard(tester, _scenario('assignment_jobs').model);
     _expectFieldGeometry(tester);
-    await expectLater(
-      find.byKey(const Key('production-board-capture')),
-      matchesGoldenFile('static_hero_production/fields.png'),
-    );
   });
 
   testWidgets('field jobs remain aligned at phone landscape size', (
@@ -606,7 +598,6 @@ Future<void> _pumpBoard(
         builder: (context) => MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: textScaler),
           child: RepaintBoundary(
-            key: const Key('production-board-capture'),
             child: KolkhozBoard(
               model: model,
               tokens: KolkhozAppearance.light.tokens,

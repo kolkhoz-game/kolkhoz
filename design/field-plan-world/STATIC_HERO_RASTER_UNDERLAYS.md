@@ -58,7 +58,7 @@ Shared constraints for every prompt:
 ## Production contract
 
 The underlays remain indivisible 1920 x 800 assets. Flutter owns every live card,
-label, selection state, legal target, and action above them. Production screenshots
-and widget tests live under `app/test/static_hero_production/`; the standalone lab is
+label, selection state, legal target, and action above them. Behavioral and geometry
+coverage lives in `app/test/static_hero_game_panel_test.dart`; the standalone lab is
 only a quick raster-composition sandbox. No Figma promotion or depth-card segmentation
 is required for this static-panel path.
