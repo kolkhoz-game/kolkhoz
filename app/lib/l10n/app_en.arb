@@ -464,5 +464,62 @@
   "phaseAssignment": "Assignment",
   "phaseRequisition": "Requisition",
   "phaseGameOver": "Game Over",
+  "profileOperations": "OPERATIONS",
+  "profileRecentGames": "RECENT GAMES",
+  "profileRetry": "RETRY",
+  "profileRecentResultsUnavailable": "RECENT RESULTS UNAVAILABLE",
+  "profileNoCompletedOnlineGames": "NO COMPLETED ONLINE GAMES YET",
+  "profileFirstPlace": "1ST",
+  "profileSecondPlace": "2ND",
+  "profileThirdPlace": "3RD",
+  "profileOtherPlace": "{rank}TH",
+  "@profileOtherPlace": {
+    "placeholders": {
+      "rank": {"type": "int"}
+    }
+  },
+  "profileWin": "WIN",
+  "profilePoints": "{score} PTS",
+  "@profilePoints": {
+    "placeholders": {
+      "score": {"type": "int"}
+    }
+  },
+  "profileDailyChallenge": "DAILY COLLECTIVE CHALLENGE",
+  "profileDailyChallengeDescription": "One shared seed. Unlimited attempts. Your best score counts.",
+  "profilePersonalBest": "PERSONAL BEST {score} PTS",
+  "@profilePersonalBest": {
+    "placeholders": {
+      "score": {"type": "int"}
+    }
+  },
+  "profileLeader": "LEADER {name} {score}",
+  "@profileLeader": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "score": {"type": "int"}
+    }
+  },
+  "profilePlay": "PLAY",
+  "profilePlayAgain": "PLAY AGAIN",
+  "profileMatchReplay": "MATCH REPLAY",
+  "profileReplaySummary": "SEED {seed} • {mode} • {count} ACTIONS",
+  "@profileReplaySummary": {
+    "placeholders": {
+      "seed": {"type": "int"},
+      "mode": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "profileAction": "ACTION {kind}",
+  "@profileAction": {
+    "placeholders": {
+      "kind": {"type": "String"}
+    }
+  },
+  "profilePrevious": "PREVIOUS",
+  "profileNext": "NEXT",
+  "profileNoRecordedActions": "NO RECORDED ACTIONS",
+  "profileClose": "CLOSE",
   "languageSwitchTitle": "Switch to Russian"
 }

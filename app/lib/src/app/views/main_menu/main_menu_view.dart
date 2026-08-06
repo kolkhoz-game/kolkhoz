@@ -577,6 +577,7 @@ class StandaloneLobby extends StatelessWidget {
                               right: 0,
                               top: 0,
                               child: _FieldPlanProfilePlaque(
+                                language: language,
                                 displayName: displayName,
                                 portraitAsset: portraitAsset,
                                 cloudSignedIn: cloudSignedIn,
@@ -1290,6 +1291,7 @@ class _FieldPlanCloudStatus extends StatelessWidget {
 
 class _FieldPlanProfilePlaque extends StatelessWidget {
   const _FieldPlanProfilePlaque({
+    required this.language,
     required this.displayName,
     required this.portraitAsset,
     required this.cloudSignedIn,
@@ -1298,6 +1300,7 @@ class _FieldPlanProfilePlaque extends StatelessWidget {
     required this.onPressed,
   });
 
+  final KolkhozLanguage language;
   final String displayName;
   final String portraitAsset;
   final bool cloudSignedIn;
@@ -1368,7 +1371,8 @@ class _FieldPlanProfilePlaque extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'COMRADE ${displayName.toUpperCase()}',
+                      '${language.strings.kolkhozappComrade.toUpperCase()} '
+                      '${displayName.toUpperCase()}',
                       maxLines: 1,
                       style: fieldPlanDisplayTextStyle.copyWith(
                         color: const Color(0xffead7a6),
@@ -1873,7 +1877,7 @@ enum KolkhozSettingsTab {
       KolkhozSettingsTab.leaderboard => language.strings.kolkhozappLeaderboard,
       KolkhozSettingsTab.progress => language.strings.kolkhozappProgress,
       KolkhozSettingsTab.comrades => language.strings.kolkhozappComrades,
-      KolkhozSettingsTab.admin => 'OPERATIONS',
+      KolkhozSettingsTab.admin => language.strings.profileOperations,
       KolkhozSettingsTab.assist => OptionsMenuTab.assist.title(language),
       KolkhozSettingsTab.display => OptionsMenuTab.display.title(language),
       KolkhozSettingsTab.rules => OptionsMenuTab.rules.title(language),
@@ -1994,6 +1998,15 @@ class SettingsPanel extends StatefulWidget {
 
 class _SettingsPanelState extends State<SettingsPanel> {
   late KolkhozSettingsTab selectedTab = _effectiveTab(widget.initialTab);
+  late final Map<KolkhozSettingsTab, GlobalKey> _tabKeys = {
+    for (final tab in KolkhozSettingsTab.values) tab: GlobalKey(),
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _revealSelectedTab();
+  }
 
   KolkhozSettingsTab _effectiveTab(KolkhozSettingsTab tab) {
     return widget.profileFeaturesEnabled ? tab : KolkhozSettingsTab.display;
@@ -2005,7 +2018,26 @@ class _SettingsPanelState extends State<SettingsPanel> {
     if (oldWidget.initialTab != widget.initialTab ||
         oldWidget.profileFeaturesEnabled != widget.profileFeaturesEnabled) {
       selectedTab = _effectiveTab(widget.initialTab);
+      _revealSelectedTab();
     }
+  }
+
+  void _revealSelectedTab() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final tabContext = _tabKeys[selectedTab]?.currentContext;
+      if (!mounted || tabContext == null) return;
+      Scrollable.ensureVisible(
+        tabContext,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  void _selectTab(KolkhozSettingsTab tab) {
+    setState(() => selectedTab = tab);
+    _revealSelectedTab();
   }
 
   Widget _tabBody() {
@@ -2145,15 +2177,18 @@ class _SettingsPanelState extends State<SettingsPanel> {
                 spacing: spacing,
                 children: [
                   for (final tab in KolkhozSettingsTab.values)
-                    SizedBox(
-                      width: tabWidth,
-                      child: _SettingsTabButton(
-                        tokens: widget.tokens,
-                        label: tab.title(widget.language),
-                        iconAsset: tab.iconAsset,
-                        selected: selectedTab == tab,
-                        height: tabHeight,
-                        onPressed: () => setState(() => selectedTab = tab),
+                    KeyedSubtree(
+                      key: _tabKeys[tab],
+                      child: SizedBox(
+                        width: tabWidth,
+                        child: _SettingsTabButton(
+                          tokens: widget.tokens,
+                          label: tab.title(widget.language),
+                          iconAsset: tab.iconAsset,
+                          selected: selectedTab == tab,
+                          height: tabHeight,
+                          onPressed: () => _selectTab(tab),
+                        ),
                       ),
                     ),
                 ],

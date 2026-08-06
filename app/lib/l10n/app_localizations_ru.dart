@@ -1035,5 +1035,95 @@ class AppLocalizationsRu extends AppLocalizations {
   String get phaseGameOver => 'Итог';
 
   @override
+  String get profileOperations => 'ОПЕРАЦИИ';
+
+  @override
+  String get profileRecentGames => 'ПОСЛЕДНИЕ ИГРЫ';
+
+  @override
+  String get profileRetry => 'ПОВТОРИТЬ';
+
+  @override
+  String get profileRecentResultsUnavailable =>
+      'НЕДАВНИЕ РЕЗУЛЬТАТЫ НЕДОСТУПНЫ';
+
+  @override
+  String get profileNoCompletedOnlineGames => 'ПОКА НЕТ ЗАВЕРШЁННЫХ ОНЛАЙН-ИГР';
+
+  @override
+  String get profileFirstPlace => '1-Е';
+
+  @override
+  String get profileSecondPlace => '2-Е';
+
+  @override
+  String get profileThirdPlace => '3-Е';
+
+  @override
+  String profileOtherPlace({required int rank}) {
+    return '$rank-Е';
+  }
+
+  @override
+  String get profileWin => 'ПОБЕДА';
+
+  @override
+  String profilePoints({required int score}) {
+    return '$score ОЧК.';
+  }
+
+  @override
+  String get profileDailyChallenge => 'ЕЖЕДНЕВНОЕ КОЛЛЕКТИВНОЕ ИСПЫТАНИЕ';
+
+  @override
+  String get profileDailyChallengeDescription =>
+      'Одна общая раздача. Число попыток не ограничено. Засчитывается лучший результат.';
+
+  @override
+  String profilePersonalBest({required int score}) {
+    return 'ЛИЧНЫЙ РЕКОРД $score ОЧК.';
+  }
+
+  @override
+  String profileLeader({required String name, required int score}) {
+    return 'ЛИДЕР $name $score';
+  }
+
+  @override
+  String get profilePlay => 'ИГРАТЬ';
+
+  @override
+  String get profilePlayAgain => 'ЕЩЁ РАЗ';
+
+  @override
+  String get profileMatchReplay => 'ПОВТОР МАТЧА';
+
+  @override
+  String profileReplaySummary({
+    required int seed,
+    required String mode,
+    required int count,
+  }) {
+    return 'РАЗДАЧА $seed • $mode • $count ДЕЙСТВИЙ';
+  }
+
+  @override
+  String profileAction({required String kind}) {
+    return 'ДЕЙСТВИЕ $kind';
+  }
+
+  @override
+  String get profilePrevious => 'НАЗАД';
+
+  @override
+  String get profileNext => 'ДАЛЕЕ';
+
+  @override
+  String get profileNoRecordedActions => 'НЕТ ЗАПИСАННЫХ ДЕЙСТВИЙ';
+
+  @override
+  String get profileClose => 'ЗАКРЫТЬ';
+
+  @override
   String get languageSwitchTitle => 'Switch to English';
 }

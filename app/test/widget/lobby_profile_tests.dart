@@ -66,6 +66,75 @@ void registerLobbyAndProfileTests() {
       KolkhozSettingsTab.leaderboard.title(KolkhozLanguage.ru),
       'ТАБЛИЦА ЛИДЕРОВ',
     );
+    expect(KolkhozSettingsTab.admin.title(KolkhozLanguage.ru), 'ОПЕРАЦИИ');
+  });
+
+  testWidgets('Russian profile history is localized and loads after build', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1152, 768);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    KolkhozIdentityRuntime.instance.setTestState(
+      identity: const KolkhozPlayerIdentity(
+        id: 'current-user',
+        displayName: 'Игрок',
+        guest: false,
+        portable: true,
+      ),
+    );
+    final profileController = testProfileController(FakeOnlineHttpClient());
+    addTearDown(() {
+      profileController.dispose();
+      KolkhozIdentityRuntime.instance.setTestState(identity: null);
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 1152,
+          height: 768,
+          child: StandaloneLobby(
+            tokens: lightDesignTokens,
+            language: KolkhozLanguage.ru,
+            appearance: KolkhozAppearance.light,
+            onStart: () {},
+            selectedPreset: KolkhozGamePreset.kolkhoz,
+            customVariants: KolkhozGameVariants.kolkhoz,
+            playerControllers: KolkhozPlayerController.defaultControllers,
+            showingRules: false,
+            showingOnline: false,
+            showingProfile: true,
+            initialSettingsTab: KolkhozSettingsTab.profile,
+            cloudSignedIn: true,
+            displayName: 'Игрок',
+            profileController: profileController,
+            onHostOnline: (_, _, _, _, _) async => 'session',
+            onJoinOnline: (_, _, _) async {},
+            onEnterOnlineGame: () {},
+            onPresetChanged: (_) {},
+            onCustomVariantsChanged: (_) {},
+            onPlayerControllersChanged: (_) {},
+            onRulesPressed: () {},
+            onOfflinePressed: () {},
+            onOnlinePressed: () {},
+            onTutorialPressed: () {},
+            onLanguageToggle: () {},
+            onAppearanceToggle: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('ПОСЛЕДНИЕ ИГРЫ'), findsOneWidget);
+    expect(find.text('ПОБЕДА'), findsOneWidget);
+    expect(find.textContaining('123 ОЧК.'), findsOneWidget);
+    expect(find.text('ТОВАРИЩ ИГРОК'), findsOneWidget);
+    expect(find.text('RECENT GAMES'), findsNothing);
+    expect(find.text('WIN'), findsNothing);
   });
 
   testWidgets('active local match appears above the main menu', (tester) async {
@@ -509,6 +578,28 @@ void registerLobbyAndProfileTests() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+
+    final tabStrip = find.byWidgetPredicate(
+      (widget) =>
+          widget is SingleChildScrollView &&
+          widget.scrollDirection == Axis.horizontal,
+    );
+    expect(tabStrip, findsOneWidget);
+    final scrollable = find.descendant(
+      of: tabStrip,
+      matching: find.byType(Scrollable),
+    );
+    expect(
+      tester.state<ScrollableState>(scrollable).position.pixels,
+      greaterThan(0),
+    );
+
+    final displayTab = find.bySemanticsLabel('DISPLAY');
+    expect(displayTab, findsOneWidget);
+    final displayTabRect = tester.getRect(displayTab);
+    expect(displayTabRect.left, greaterThanOrEqualTo(0));
+    expect(displayTabRect.right, lessThanOrEqualTo(844));
 
     expect(findAppText('CARD BACKS'), findsNothing);
     expect(selectedCardBack, isNull);

@@ -1955,6 +1955,154 @@ abstract class AppLocalizations {
   /// **'Game Over'**
   String get phaseGameOver;
 
+  /// No description provided for @profileOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'OPERATIONS'**
+  String get profileOperations;
+
+  /// No description provided for @profileRecentGames.
+  ///
+  /// In en, this message translates to:
+  /// **'RECENT GAMES'**
+  String get profileRecentGames;
+
+  /// No description provided for @profileRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'RETRY'**
+  String get profileRetry;
+
+  /// No description provided for @profileRecentResultsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'RECENT RESULTS UNAVAILABLE'**
+  String get profileRecentResultsUnavailable;
+
+  /// No description provided for @profileNoCompletedOnlineGames.
+  ///
+  /// In en, this message translates to:
+  /// **'NO COMPLETED ONLINE GAMES YET'**
+  String get profileNoCompletedOnlineGames;
+
+  /// No description provided for @profileFirstPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'1ST'**
+  String get profileFirstPlace;
+
+  /// No description provided for @profileSecondPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'2ND'**
+  String get profileSecondPlace;
+
+  /// No description provided for @profileThirdPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'3RD'**
+  String get profileThirdPlace;
+
+  /// No description provided for @profileOtherPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'{rank}TH'**
+  String profileOtherPlace({required int rank});
+
+  /// No description provided for @profileWin.
+  ///
+  /// In en, this message translates to:
+  /// **'WIN'**
+  String get profileWin;
+
+  /// No description provided for @profilePoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{score} PTS'**
+  String profilePoints({required int score});
+
+  /// No description provided for @profileDailyChallenge.
+  ///
+  /// In en, this message translates to:
+  /// **'DAILY COLLECTIVE CHALLENGE'**
+  String get profileDailyChallenge;
+
+  /// No description provided for @profileDailyChallengeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'One shared seed. Unlimited attempts. Your best score counts.'**
+  String get profileDailyChallengeDescription;
+
+  /// No description provided for @profilePersonalBest.
+  ///
+  /// In en, this message translates to:
+  /// **'PERSONAL BEST {score} PTS'**
+  String profilePersonalBest({required int score});
+
+  /// No description provided for @profileLeader.
+  ///
+  /// In en, this message translates to:
+  /// **'LEADER {name} {score}'**
+  String profileLeader({required String name, required int score});
+
+  /// No description provided for @profilePlay.
+  ///
+  /// In en, this message translates to:
+  /// **'PLAY'**
+  String get profilePlay;
+
+  /// No description provided for @profilePlayAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'PLAY AGAIN'**
+  String get profilePlayAgain;
+
+  /// No description provided for @profileMatchReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'MATCH REPLAY'**
+  String get profileMatchReplay;
+
+  /// No description provided for @profileReplaySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'SEED {seed} • {mode} • {count} ACTIONS'**
+  String profileReplaySummary({
+    required int seed,
+    required String mode,
+    required int count,
+  });
+
+  /// No description provided for @profileAction.
+  ///
+  /// In en, this message translates to:
+  /// **'ACTION {kind}'**
+  String profileAction({required String kind});
+
+  /// No description provided for @profilePrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'PREVIOUS'**
+  String get profilePrevious;
+
+  /// No description provided for @profileNext.
+  ///
+  /// In en, this message translates to:
+  /// **'NEXT'**
+  String get profileNext;
+
+  /// No description provided for @profileNoRecordedActions.
+  ///
+  /// In en, this message translates to:
+  /// **'NO RECORDED ACTIONS'**
+  String get profileNoRecordedActions;
+
+  /// No description provided for @profileClose.
+  ///
+  /// In en, this message translates to:
+  /// **'CLOSE'**
+  String get profileClose;
+
   /// No description provided for @languageSwitchTitle.
   ///
   /// In en, this message translates to:

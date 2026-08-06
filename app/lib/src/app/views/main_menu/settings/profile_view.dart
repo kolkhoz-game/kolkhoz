@@ -55,12 +55,7 @@ class _ProfilePanelState extends State<ProfileView> {
     displayNameController = TextEditingController(text: widget.displayName);
     displayNameController.addListener(notifyDisplayNameChanged);
     widget.profileController?.addListener(_handleProfileChanged);
-    if (widget.cloudSignedIn) {
-      unawaited(loadRecentGames());
-      if (KolkhozIdentityRuntime.instance.player?.portable == true) {
-        unawaited(loadDailyChallenge());
-      }
-    }
+    if (widget.cloudSignedIn) _scheduleCloudLoads();
   }
 
   Future<void> loadDailyChallenge() async {
@@ -81,6 +76,16 @@ class _ProfilePanelState extends State<ProfileView> {
     await widget.profileController?.loadRecentGames();
   }
 
+  void _scheduleCloudLoads() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.cloudSignedIn) return;
+      unawaited(loadRecentGames());
+      if (KolkhozIdentityRuntime.instance.player?.portable == true) {
+        unawaited(loadDailyChallenge());
+      }
+    });
+  }
+
   @override
   void didUpdateWidget(covariant ProfileView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -89,7 +94,7 @@ class _ProfilePanelState extends State<ProfileView> {
       widget.profileController?.addListener(_handleProfileChanged);
     }
     if (!oldWidget.cloudSignedIn && widget.cloudSignedIn) {
-      unawaited(loadRecentGames());
+      _scheduleCloudLoads();
     }
     if (widget.displayName != lastSubmittedName &&
         widget.displayName != displayNameController.text) {
@@ -257,6 +262,7 @@ class _ProfilePanelState extends State<ProfileView> {
                       ),
                       _RecentGamesPanel(
                         tokens: widget.tokens,
+                        language: widget.language,
                         games: recentGames,
                         loading: recentGamesLoading,
                         error: recentGamesError,
@@ -267,6 +273,7 @@ class _ProfilePanelState extends State<ProfileView> {
                           true)
                         _DailyChallengePanel(
                           tokens: widget.tokens,
+                          language: widget.language,
                           challenge: dailyChallenge,
                           loading: dailyLoading,
                           onPlay: widget.onStartDailyChallenge,
@@ -291,6 +298,7 @@ class _ProfilePanelState extends State<ProfileView> {
 class _RecentGamesPanel extends StatelessWidget {
   const _RecentGamesPanel({
     required this.tokens,
+    required this.language,
     required this.games,
     required this.loading,
     required this.error,
@@ -299,6 +307,7 @@ class _RecentGamesPanel extends StatelessWidget {
   });
 
   final DesignTokens tokens;
+  final KolkhozLanguage language;
   final List<OnlineRecentGame> games;
   final bool loading;
   final Object? error;
@@ -306,16 +315,21 @@ class _RecentGamesPanel extends StatelessWidget {
   final ProfileController? profileController;
 
   String placement(int rank) => switch (rank) {
-    1 => '1ST',
-    2 => '2ND',
-    3 => '3RD',
-    _ => '${rank}TH',
+    1 => language.strings.profileFirstPlace,
+    2 => language.strings.profileSecondPlace,
+    3 => language.strings.profileThirdPlace,
+    _ => language.strings.profileOtherPlace(rank: rank),
   };
 
   String date(double seconds) {
     final value = DateTime.fromMillisecondsSinceEpoch(
       (seconds * 1000).round(),
     ).toLocal();
+    if (language == KolkhozLanguage.ru) {
+      final day = value.day.toString().padLeft(2, '0');
+      final month = value.month.toString().padLeft(2, '0');
+      return '$day.$month.${value.year}';
+    }
     return '${value.month}/${value.day}/${value.year}';
   }
 
@@ -329,7 +343,7 @@ class _RecentGamesPanel extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'RECENT GAMES',
+                language.strings.profileRecentGames,
                 style: kolkhozFontStyle.copyWith(
                   color: tokens.colors.gold,
                   fontSize: 13,
@@ -338,19 +352,22 @@ class _RecentGamesPanel extends StatelessWidget {
               ),
             ),
             if (error != null)
-              TactileTextButton(onPressed: onRetry, child: const Text('RETRY')),
+              TactileTextButton(
+                onPressed: onRetry,
+                child: Text(language.strings.profileRetry),
+              ),
           ],
         ),
         if (loading)
           const LinearProgressIndicator(minHeight: 2)
         else if (error != null)
           Text(
-            'RECENT RESULTS UNAVAILABLE',
+            language.strings.profileRecentResultsUnavailable,
             style: kolkhozFontStyle.copyWith(color: tokens.colors.creamDim),
           )
         else if (games.isEmpty)
           Text(
-            'NO COMPLETED ONLINE GAMES YET',
+            language.strings.profileNoCompletedOnlineGames,
             style: kolkhozFontStyle.copyWith(color: tokens.colors.creamDim),
           )
         else
@@ -363,6 +380,7 @@ class _RecentGamesPanel extends StatelessWidget {
                       context: context,
                       builder: (context) => _ReplayDialog(
                         tokens: tokens,
+                        language: language,
                         replay: profileController!.fetchReplay(game.sessionID),
                       ),
                     ),
@@ -384,9 +402,11 @@ class _RecentGamesPanel extends StatelessWidget {
                 child: Row(
                   children: [
                     SizedBox(
-                      width: 48,
+                      width: language == KolkhozLanguage.ru ? 72 : 48,
                       child: Text(
-                        game.won ? 'WIN' : placement(game.rank),
+                        game.won
+                            ? language.strings.profileWin
+                            : placement(game.rank),
                         style: kolkhozFontStyle.copyWith(
                           color: game.won
                               ? tokens.colors.goldBright
@@ -394,11 +414,13 @@ class _RecentGamesPanel extends StatelessWidget {
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
                         ),
+                        maxLines: 1,
                       ),
                     ),
                     Expanded(
                       child: Text(
-                        '${game.score} PTS  •  ${game.ranked ? 'RANKED' : 'CASUAL'}',
+                        '${language.strings.profilePoints(score: game.score)}  •  '
+                        '${(game.ranked ? language.strings.kolkhozappRanked : language.strings.kolkhozappCasual).toUpperCase()}',
                         style: kolkhozFontStyle.copyWith(
                           color: tokens.colors.cream,
                           fontSize: 13,
@@ -425,11 +447,13 @@ class _RecentGamesPanel extends StatelessWidget {
 class _DailyChallengePanel extends StatelessWidget {
   const _DailyChallengePanel({
     required this.tokens,
+    required this.language,
     required this.challenge,
     required this.loading,
     required this.onPlay,
   });
   final DesignTokens tokens;
+  final KolkhozLanguage language;
   final OnlineDailyChallenge? challenge;
   final bool loading;
   final Future<void> Function()? onPlay;
@@ -450,7 +474,7 @@ class _DailyChallengePanel extends StatelessWidget {
         spacing: 6,
         children: [
           Text(
-            'DAILY COLLECTIVE CHALLENGE',
+            language.strings.profileDailyChallenge,
             style: kolkhozFontStyle.copyWith(
               color: tokens.colors.goldBright,
               fontWeight: FontWeight.w900,
@@ -461,13 +485,18 @@ class _DailyChallengePanel extends StatelessWidget {
           else ...[
             Text(
               value?.bestScore == null
-                  ? 'One shared seed. Unlimited attempts. Your best score counts.'
-                  : 'PERSONAL BEST  ${value!.bestScore} PTS',
+                  ? language.strings.profileDailyChallengeDescription
+                  : language.strings.profilePersonalBest(
+                      score: value!.bestScore!,
+                    ),
               style: kolkhozFontStyle.copyWith(color: tokens.colors.cream),
             ),
             if (value != null && value.leaders.isNotEmpty)
               Text(
-                'LEADER  ${value.leaders.first.displayName}  ${value.leaders.first.score}',
+                language.strings.profileLeader(
+                  name: value.leaders.first.displayName,
+                  score: value.leaders.first.score,
+                ),
                 style: kolkhozFontStyle.copyWith(color: tokens.colors.creamDim),
               ),
             Align(
@@ -475,7 +504,11 @@ class _DailyChallengePanel extends StatelessWidget {
               child: TactileTextButton(
                 key: const Key('daily-challenge-play-button'),
                 onPressed: onPlay == null ? null : () => onPlay!(),
-                child: Text(value?.bestScore == null ? 'PLAY' : 'PLAY AGAIN'),
+                child: Text(
+                  value?.bestScore == null
+                      ? language.strings.profilePlay
+                      : language.strings.profilePlayAgain,
+                ),
               ),
             ),
           ],
@@ -486,8 +519,13 @@ class _DailyChallengePanel extends StatelessWidget {
 }
 
 class _ReplayDialog extends StatefulWidget {
-  const _ReplayDialog({required this.tokens, required this.replay});
+  const _ReplayDialog({
+    required this.tokens,
+    required this.language,
+    required this.replay,
+  });
   final DesignTokens tokens;
+  final KolkhozLanguage language;
   final Future<OnlineGameReplay> replay;
   @override
   State<_ReplayDialog> createState() => _ReplayDialogState();
@@ -500,7 +538,7 @@ class _ReplayDialogState extends State<_ReplayDialog> {
     final action = event.action;
     return [
       'R${event.revision}',
-      'ACTION ${action.kind}',
+      widget.language.strings.profileAction(kind: action.kind.toString()),
       'P${action.playerID + 1}',
       if (action.card.isValid) '${action.card.suit}-${action.card.value}',
     ].join('  ');
@@ -532,7 +570,7 @@ class _ReplayDialogState extends State<_ReplayDialog> {
               spacing: 10,
               children: [
                 Text(
-                  'MATCH REPLAY',
+                  widget.language.strings.profileMatchReplay,
                   style: kolkhozFontStyle.copyWith(
                     color: widget.tokens.colors.goldBright,
                     fontSize: 22,
@@ -540,7 +578,15 @@ class _ReplayDialogState extends State<_ReplayDialog> {
                   ),
                 ),
                 Text(
-                  'SEED ${replay.seed}  •  ${replay.ranked ? 'RANKED' : 'CASUAL'}  •  ${events.length} ACTIONS',
+                  widget.language.strings.profileReplaySummary(
+                    seed: replay.seed,
+                    mode:
+                        (replay.ranked
+                                ? widget.language.strings.kolkhozappRanked
+                                : widget.language.strings.kolkhozappCasual)
+                            .toUpperCase(),
+                    count: events.length,
+                  ),
                 ),
                 Wrap(
                   spacing: 12,
@@ -571,13 +617,13 @@ class _ReplayDialogState extends State<_ReplayDialog> {
                         onPressed: revision == 0
                             ? null
                             : () => setState(() => revision--),
-                        child: const Text('PREVIOUS'),
+                        child: Text(widget.language.strings.profilePrevious),
                       ),
                       TactileTextButton(
                         onPressed: revision >= events.length - 1
                             ? null
                             : () => setState(() => revision++),
-                        child: const Text('NEXT'),
+                        child: Text(widget.language.strings.profileNext),
                       ),
                       const Spacer(),
                       Text('${revision + 1}/${events.length}'),
@@ -599,14 +645,18 @@ class _ReplayDialogState extends State<_ReplayDialog> {
                     ),
                   ),
                 ] else
-                  const Expanded(
-                    child: Center(child: Text('NO RECORDED ACTIONS')),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        widget.language.strings.profileNoRecordedActions,
+                      ),
+                    ),
                   ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TactileTextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('CLOSE'),
+                    child: Text(widget.language.strings.profileClose),
                   ),
                 ),
               ],

@@ -1034,5 +1034,94 @@ class AppLocalizationsEn extends AppLocalizations {
   String get phaseGameOver => 'Game Over';
 
   @override
+  String get profileOperations => 'OPERATIONS';
+
+  @override
+  String get profileRecentGames => 'RECENT GAMES';
+
+  @override
+  String get profileRetry => 'RETRY';
+
+  @override
+  String get profileRecentResultsUnavailable => 'RECENT RESULTS UNAVAILABLE';
+
+  @override
+  String get profileNoCompletedOnlineGames => 'NO COMPLETED ONLINE GAMES YET';
+
+  @override
+  String get profileFirstPlace => '1ST';
+
+  @override
+  String get profileSecondPlace => '2ND';
+
+  @override
+  String get profileThirdPlace => '3RD';
+
+  @override
+  String profileOtherPlace({required int rank}) {
+    return '${rank}TH';
+  }
+
+  @override
+  String get profileWin => 'WIN';
+
+  @override
+  String profilePoints({required int score}) {
+    return '$score PTS';
+  }
+
+  @override
+  String get profileDailyChallenge => 'DAILY COLLECTIVE CHALLENGE';
+
+  @override
+  String get profileDailyChallengeDescription =>
+      'One shared seed. Unlimited attempts. Your best score counts.';
+
+  @override
+  String profilePersonalBest({required int score}) {
+    return 'PERSONAL BEST $score PTS';
+  }
+
+  @override
+  String profileLeader({required String name, required int score}) {
+    return 'LEADER $name $score';
+  }
+
+  @override
+  String get profilePlay => 'PLAY';
+
+  @override
+  String get profilePlayAgain => 'PLAY AGAIN';
+
+  @override
+  String get profileMatchReplay => 'MATCH REPLAY';
+
+  @override
+  String profileReplaySummary({
+    required int seed,
+    required String mode,
+    required int count,
+  }) {
+    return 'SEED $seed • $mode • $count ACTIONS';
+  }
+
+  @override
+  String profileAction({required String kind}) {
+    return 'ACTION $kind';
+  }
+
+  @override
+  String get profilePrevious => 'PREVIOUS';
+
+  @override
+  String get profileNext => 'NEXT';
+
+  @override
+  String get profileNoRecordedActions => 'NO RECORDED ACTIONS';
+
+  @override
+  String get profileClose => 'CLOSE';
+
+  @override
   String get languageSwitchTitle => 'Switch to Russian';
 }
