@@ -696,30 +696,28 @@ class OnlineWaitingRoomPanel extends StatelessWidget {
               if (showHeaderCancel && onCancelOnlineGame != null)
                 Tooltip(
                   message: language.strings.kolkhozappCancel,
-                  child: Semantics(
-                    button: true,
-                    label: language.strings.kolkhozappCancel,
-                    child: TactileControlSurface(
-                      key: const Key('online-waiting-cancel'),
-                      onPressed: onCancelOnlineGame,
-                      pressTravel: 2.5,
-                      hoverLift: -1,
-                      hoverScale: 1.06,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: tokens.colors.black.withValues(alpha: 0.24),
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(
-                            color: tokens.colors.gold.withValues(alpha: 0.48),
-                          ),
+                  excludeFromSemantics: true,
+                  child: TactileButton(
+                    key: const Key('online-waiting-cancel'),
+                    semanticLabel: language.strings.kolkhozappCancel,
+                    onPressed: onCancelOnlineGame,
+                    pressTravel: 2.5,
+                    hoverLift: -1,
+                    hoverScale: 1.06,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: tokens.colors.black.withValues(alpha: 0.24),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: tokens.colors.gold.withValues(alpha: 0.48),
                         ),
-                        child: Icon(
-                          Icons.arrow_back,
-                          color: tokens.colors.cream,
-                          size: 20,
-                        ),
+                      ),
+                      child: Icon(
+                        Icons.arrow_back,
+                        color: tokens.colors.cream,
+                        size: 20,
                       ),
                     ),
                   ),
@@ -885,52 +883,48 @@ class WaitingRoomEnterButton extends StatelessWidget {
         ),
       );
     }
-    return Semantics(
+    return TactileButton(
       key: const Key('waiting-room-countdown'),
-      button: true,
       enabled: false,
-      label: waitingLabel,
-      child: ExcludeSemantics(
-        child: Opacity(
-          opacity: 0.86,
-          child: SizedBox(
-            width: double.infinity,
-            height: height,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const Positioned.fill(
-                  child: ChromeButtonBackground(
-                    asset: chromeButtonPrimaryAsset,
-                  ),
-                ),
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      spacing: 8,
-                      children: [
-                        const MainMenuAssetIcon(
-                          'assets/art/field_plan/shared/pictograms/status-connecting.png',
-                          size: 22,
-                        ),
-                        Flexible(
-                          child: _AnimatedEllipsisLabel(
-                            label: waitingLabel,
-                            builder: (label) => ChromeScaledLabel(
-                              label,
-                              color: tokens.colors.onAccent,
-                              size: DisplayTextSize.headline,
-                            ),
+      semanticLabel: waitingLabel,
+      onPressed: null,
+      child: Opacity(
+        opacity: 0.86,
+        child: SizedBox(
+          width: double.infinity,
+          height: height,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const Positioned.fill(
+                child: ChromeButtonBackground(asset: chromeButtonPrimaryAsset),
+              ),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 8,
+                    children: [
+                      const MainMenuAssetIcon(
+                        'assets/art/field_plan/shared/pictograms/status-connecting.png',
+                        size: 22,
+                      ),
+                      Flexible(
+                        child: _AnimatedEllipsisLabel(
+                          label: waitingLabel,
+                          builder: (label) => ChromeScaledLabel(
+                            label,
+                            color: tokens.colors.onAccent,
+                            size: DisplayTextSize.headline,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1826,78 +1820,69 @@ class _OpenSessionRow extends StatelessWidget {
     return Column(
       spacing: 0,
       children: [
-        Semantics(
-          button: true,
-          expanded: expanded,
-          label:
+        MechanicalSelectionSurface(
+          selected: expanded,
+          semanticExpanded: expanded,
+          semanticLabel:
               '$title, '
               '${session.ranked ? language.strings.kolkhozappRanked : language.strings.kolkhozappCasual}'
               '${hasComrade ? ', ${language.strings.kolkhozappComrade}' : ''}',
-          child: ExcludeSemantics(
-            child: MechanicalSelectionSurface(
-              selected: expanded,
-              onPressed: onToggle,
-              child: VariantRowBackground(
-                tokens: tokens,
-                active: expanded,
-                child: Row(
-                  spacing: 10,
-                  children: [
-                    _OpenSessionBadgeIcon(
-                      tokens: tokens,
-                      label: session.ranked
-                          ? language.strings.kolkhozappRanked
-                          : language.strings.kolkhozappCasual,
-                      asset: session.ranked
-                          ? fieldPlanMedalIconPath
-                          : fieldPlanHowToPlayPictogram.fieldPlanPath,
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 4,
-                        children: [
-                          VariantPixelLine(
-                            height: displayTextSlotHeight(
-                              DisplayTextSize.caption,
-                            ),
-                            child: DisplayText(
-                              title,
-                              color: titleColor,
-                              size: DisplayTextSize.caption,
-                              variant: DisplayTextWeight.bold,
-                              maxLines: 1,
-                              overflow: TextOverflow.clip,
-                            ),
-                          ),
-                          VariantPixelLine(
-                            height: displayTextSlotHeight(
-                              DisplayTextSize.caption2,
-                            ),
-                            child: DisplayText(
-                              language.strings.kolkhozappOpenOpenseats(
-                                openSeats: openSeats,
-                              ),
-                              color: bodyColor,
-                              size: DisplayTextSize.caption2,
-                              variant: DisplayTextWeight.regular,
-                              maxLines: 1,
-                              overflow: TextOverflow.clip,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (hasComrade)
-                      _OpenSessionBadgeIcon(
-                        tokens: tokens,
-                        label: language.strings.kolkhozappComrade,
-                        asset:
-                            'assets/art/field_plan/shared/pictograms/comrade.png',
-                      ),
-                  ],
+          onPressed: onToggle,
+          child: VariantRowBackground(
+            tokens: tokens,
+            active: expanded,
+            child: Row(
+              spacing: 10,
+              children: [
+                _OpenSessionBadgeIcon(
+                  tokens: tokens,
+                  label: session.ranked
+                      ? language.strings.kolkhozappRanked
+                      : language.strings.kolkhozappCasual,
+                  asset: session.ranked
+                      ? fieldPlanMedalIconPath
+                      : fieldPlanHowToPlayPictogram.fieldPlanPath,
                 ),
-              ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 4,
+                    children: [
+                      VariantPixelLine(
+                        height: displayTextSlotHeight(DisplayTextSize.caption),
+                        child: DisplayText(
+                          title,
+                          color: titleColor,
+                          size: DisplayTextSize.caption,
+                          variant: DisplayTextWeight.bold,
+                          maxLines: 1,
+                          overflow: TextOverflow.clip,
+                        ),
+                      ),
+                      VariantPixelLine(
+                        height: displayTextSlotHeight(DisplayTextSize.caption2),
+                        child: DisplayText(
+                          language.strings.kolkhozappOpenOpenseats(
+                            openSeats: openSeats,
+                          ),
+                          color: bodyColor,
+                          size: DisplayTextSize.caption2,
+                          variant: DisplayTextWeight.regular,
+                          maxLines: 1,
+                          overflow: TextOverflow.clip,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (hasComrade)
+                  _OpenSessionBadgeIcon(
+                    tokens: tokens,
+                    label: language.strings.kolkhozappComrade,
+                    asset:
+                        'assets/art/field_plan/shared/pictograms/comrade.png',
+                  ),
+              ],
             ),
           ),
         ),

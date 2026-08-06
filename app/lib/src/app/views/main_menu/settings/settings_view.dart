@@ -114,34 +114,30 @@ class _ProfilePortraitChoice extends StatelessWidget {
   Widget build(BuildContext context) {
     return MechanicalSelectionSurface(
       selected: selected,
+      semanticSelected: selected,
+      semanticLabel: unlocked ? asset : '$asset (locked)',
       enabled: unlocked && onPressed != null,
       onPressed: onPressed,
-      child: Semantics(
-        button: true,
-        selected: selected,
-        enabled: unlocked,
-        label: unlocked ? asset : '$asset (locked)',
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Opacity(
-              opacity: unlocked ? 1 : 0.42,
-              child: PlayerProfilePortraitImage(
-                tokens: tokens,
-                asset: asset,
-                size: 58,
-                selected: selected,
-              ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Opacity(
+            opacity: unlocked ? 1 : 0.42,
+            child: PlayerProfilePortraitImage(
+              tokens: tokens,
+              asset: asset,
+              size: 58,
+              selected: selected,
             ),
-            if (!unlocked)
-              Image.asset(
-                'assets/ui/Icons/icon-lock.png',
-                width: 22,
-                height: 22,
-                filterQuality: FilterQuality.none,
-              ),
-          ],
-        ),
+          ),
+          if (!unlocked)
+            Image.asset(
+              'assets/ui/Icons/icon-lock.png',
+              width: 22,
+              height: 22,
+              filterQuality: FilterQuality.none,
+            ),
+        ],
       ),
     );
   }

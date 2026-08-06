@@ -596,11 +596,13 @@ class _ComradeIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: label,
+      excludeFromSemantics: true,
       child: SizedBox(
         width: 36,
         height: 32,
         child: ChromeAssetButton.command(
           label: '',
+          semanticLabel: label,
           prominent: false,
           tokens: tokens,
           iconAsset: iconAsset,

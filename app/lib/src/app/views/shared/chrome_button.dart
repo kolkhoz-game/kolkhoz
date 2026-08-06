@@ -190,8 +190,181 @@ class _TactileControlSurfaceState extends State<TactileControlSurface> {
   }
 }
 
-/// Preserves Material text-button styling while routing activation and motion
-/// through [TactileControlSurface].
+/// Lets a Material text button own activation, focus, keyboard handling, and
+/// semantics while applying the app's tactile motion to its visual surface.
+class TactileButton extends StatefulWidget {
+  const TactileButton({
+    required this.onPressed,
+    required this.child,
+    this.enabled = true,
+    this.selected = false,
+    this.style,
+    this.pressTravel = tactileControlPressTravel,
+    this.hoverLift = tactileControlHoverLift,
+    this.pressScale = tactileControlPressScale,
+    this.hoverScale = tactileControlHoverScale,
+    this.haptics = true,
+    this.focusNode,
+    this.autofocus = false,
+    this.semanticLabel,
+    this.semanticSelected,
+    this.semanticToggled,
+    this.semanticExpanded,
+    this.useDefaultMaterialStyle = false,
+    super.key,
+  });
+
+  final VoidCallback? onPressed;
+  final Widget child;
+  final bool enabled;
+  final bool selected;
+  final ButtonStyle? style;
+  final double pressTravel;
+  final double hoverLift;
+  final double pressScale;
+  final double hoverScale;
+  final bool haptics;
+  final FocusNode? focusNode;
+  final bool autofocus;
+  final String? semanticLabel;
+  final bool? semanticSelected;
+  final bool? semanticToggled;
+  final bool? semanticExpanded;
+  final bool useDefaultMaterialStyle;
+
+  @override
+  State<TactileButton> createState() => _TactileButtonState();
+}
+
+class _TactileButtonState extends State<TactileButton> {
+  late final WidgetStatesController statesController;
+  bool wasPressed = false;
+
+  bool get enabled => widget.enabled && widget.onPressed != null;
+
+  @override
+  void initState() {
+    super.initState();
+    statesController = WidgetStatesController();
+    statesController.addListener(_handleStatesChanged);
+    _synchronizeExternalStates();
+  }
+
+  @override
+  void didUpdateWidget(covariant TactileButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _synchronizeExternalStates();
+  }
+
+  void _synchronizeExternalStates() {
+    statesController.update(WidgetState.disabled, !enabled);
+    statesController.update(WidgetState.selected, widget.selected);
+  }
+
+  void _handleStatesChanged() {
+    final pressed = statesController.value.contains(WidgetState.pressed);
+    if (pressed && !wasPressed && widget.haptics) {
+      unawaited(HapticFeedback.selectionClick());
+    }
+    wasPressed = pressed;
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    statesController.removeListener(_handleStatesChanged);
+    statesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final states = statesController.value;
+    final pressed = enabled && states.contains(WidgetState.pressed);
+    final hovered = enabled && states.contains(WidgetState.hovered);
+    final focused = enabled && states.contains(WidgetState.focused);
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final scale = pressed
+        ? widget.pressScale
+        : hovered
+        ? widget.hoverScale
+        : focused
+        ? tactileControlFocusScale
+        : 1.0;
+    final offset = pressed
+        ? widget.pressTravel
+        : hovered
+        ? widget.hoverLift
+        : 0.0;
+    final duration = reduceMotion
+        ? Duration.zero
+        : pressed
+        ? tactileControlPressDuration
+        : hovered
+        ? tactileControlHoverDuration
+        : tactileControlReleaseDuration;
+    final curve = pressed ? Curves.easeOutCubic : Curves.easeOutBack;
+    final transform = Matrix4.translationValues(0, offset, 0)
+      ..multiply(Matrix4.diagonal3Values(scale, scale, 1));
+    final baseStyle = ButtonStyle(
+      padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+      minimumSize: const WidgetStatePropertyAll(Size.zero),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+      shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+      surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+      shape: const WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      ),
+    );
+    final semanticChild =
+        widget.semanticLabel != null ||
+            widget.semanticSelected != null ||
+            widget.semanticToggled != null ||
+            widget.semanticExpanded != null
+        ? Semantics(
+            label: widget.semanticLabel,
+            selected: widget.semanticSelected,
+            toggled: widget.semanticToggled,
+            expanded: widget.semanticExpanded,
+            excludeSemantics: widget.semanticLabel != null,
+            child: widget.child,
+          )
+        : widget.child;
+    // ButtonStyleButton installs its own text and icon themes around its child.
+    // Custom-painted controls already own those visuals, so restore the
+    // surrounding themes inside the Material button. TactileTextButton opts
+    // into the ordinary TextButton styling instead.
+    final visualChild = widget.useDefaultMaterialStyle
+        ? semanticChild
+        : DefaultTextStyle(
+            style: DefaultTextStyle.of(context).style,
+            child: IconTheme(data: IconTheme.of(context), child: semanticChild),
+          );
+    return AnimatedContainer(
+      key: const Key('tactile-control-transform'),
+      duration: duration,
+      curve: curve,
+      transformAlignment: Alignment.center,
+      transform: transform,
+      child: TextButton(
+        statesController: statesController,
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        onPressed: enabled ? widget.onPressed : null,
+        style: widget.useDefaultMaterialStyle
+            ? widget.style
+            : baseStyle.merge(widget.style),
+        child: visualChild,
+      ),
+    );
+  }
+}
+
 class TactileTextButton extends StatelessWidget {
   const TactileTextButton({
     required this.onPressed,
@@ -204,33 +377,16 @@ class TactileTextButton extends StatelessWidget {
   final Widget child;
   final ButtonStyle? style;
 
-  static void _visualButtonCallback() {}
-
   @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      onTap: onPressed,
-      child: ExcludeSemantics(
-        child: TactileControlSurface(
-          enabled: enabled,
-          onPressed: onPressed,
-          pressTravel: 2,
-          hoverLift: -0.5,
-          hoverScale: 1.03,
-          child: IgnorePointer(
-            child: TextButton(
-              onPressed: enabled ? _visualButtonCallback : null,
-              style: style,
-              child: child,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => TactileButton(
+    onPressed: onPressed,
+    style: style,
+    pressTravel: 2,
+    hoverLift: -0.5,
+    hoverScale: 1.03,
+    useDefaultMaterialStyle: true,
+    child: child,
+  );
 }
 
 /// Adds a short directional handoff between substantial pieces of UI.
@@ -308,6 +464,10 @@ class MechanicalSelectionSurface extends StatelessWidget {
     required this.onPressed,
     required this.child,
     this.enabled = true,
+    this.semanticLabel,
+    this.semanticSelected,
+    this.semanticToggled,
+    this.semanticExpanded,
     super.key,
   });
 
@@ -315,14 +475,23 @@ class MechanicalSelectionSurface extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
   final bool enabled;
+  final String? semanticLabel;
+  final bool? semanticSelected;
+  final bool? semanticToggled;
+  final bool? semanticExpanded;
 
   @override
   Widget build(BuildContext context) {
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    return TactileControlSurface(
+    return TactileButton(
       enabled: enabled,
       onPressed: onPressed,
+      selected: selected,
+      semanticLabel: semanticLabel,
+      semanticSelected: semanticSelected,
+      semanticToggled: semanticToggled,
+      semanticExpanded: semanticExpanded,
       pressTravel: 4,
       hoverLift: -1.5,
       child: AnimatedScale(
@@ -738,6 +907,8 @@ class ChromeAssetButton extends StatelessWidget {
     this.spacing = 8,
     this.expandLabel = true,
     this.commandProminent = false,
+    this.selected = false,
+    this.semanticLabel,
     super.key,
   }) : assert(backgroundAsset != null || backgroundColor != null);
 
@@ -760,6 +931,8 @@ class ChromeAssetButton extends StatelessWidget {
     this.disabledOpacity = 0.45,
     this.spacing = 8,
     this.expandLabel = true,
+    this.selected = false,
+    this.semanticLabel,
     super.key,
   }) : backgroundAsset = prominent
            ? chromeButtonPrimaryAsset
@@ -795,6 +968,8 @@ class ChromeAssetButton extends StatelessWidget {
   final double spacing;
   final bool expandLabel;
   final bool commandProminent;
+  final bool selected;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -892,18 +1067,13 @@ class ChromeAssetButton extends StatelessWidget {
         ? button
         : Opacity(opacity: disabledOpacity, child: button);
     final canActivate = enabled && onPressed != null;
-    return Semantics(
-      button: true,
+    return TactileButton(
       enabled: canActivate,
-      label: uppercase ? label.toUpperCase() : label,
-      onTap: canActivate ? onPressed : null,
-      child: ExcludeSemantics(
-        child: TactileControlSurface(
-          enabled: canActivate,
-          onPressed: onPressed,
-          child: child,
-        ),
-      ),
+      onPressed: onPressed,
+      selected: selected,
+      semanticLabel: semanticLabel ?? (uppercase ? label.toUpperCase() : label),
+      semanticSelected: selected ? true : null,
+      child: child,
     );
   }
 }

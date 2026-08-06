@@ -685,40 +685,36 @@ class _VariantIconChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      child: ExcludeSemantics(
-        child: Tooltip(
-          message: label,
-          child: MechanicalSelectionSurface(
-            selected: selected,
-            onPressed: onPressed,
-            child: SizedBox(
-              width: 52,
-              height: 48,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned.fill(
-                    child: ChromeButtonBackground(
-                      asset: switch ((selected, enabled)) {
-                        (true, true) => chromeButtonPrimaryCurrentAsset,
-                        (true, false) => chromeButtonPrimaryAsset,
-                        (false, true) => chromeButtonSecondaryCurrentAsset,
-                        (false, false) => chromeButtonSecondaryAsset,
-                      },
-                    ),
-                  ),
-                  VariantIcon(
-                    iconAsset,
-                    size: selected ? 34 : 31,
-                    opacity: selected ? 1 : 0.82,
-                  ),
-                ],
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: MechanicalSelectionSurface(
+        selected: selected,
+        semanticSelected: selected,
+        semanticLabel: label,
+        onPressed: onPressed,
+        child: SizedBox(
+          width: 52,
+          height: 48,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned.fill(
+                child: ChromeButtonBackground(
+                  asset: switch ((selected, enabled)) {
+                    (true, true) => chromeButtonPrimaryCurrentAsset,
+                    (true, false) => chromeButtonPrimaryAsset,
+                    (false, true) => chromeButtonSecondaryCurrentAsset,
+                    (false, false) => chromeButtonSecondaryAsset,
+                  },
+                ),
               ),
-            ),
+              VariantIcon(
+                iconAsset,
+                size: selected ? 34 : 31,
+                opacity: selected ? 1 : 0.82,
+              ),
+            ],
           ),
         ),
       ),
@@ -751,66 +747,61 @@ class _VariantToggleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = row.localizedTitle(language, variants);
     final toggleSize = compact ? 30.0 : 34 + 12 * scale;
-    return Semantics(
-      button: true,
-      toggled: value,
-      label: label,
-      child: ExcludeSemantics(
-        child: MechanicalSelectionSurface(
-          selected: value,
-          onPressed: () => onChanged(!value),
-          child: VariantRowBackground(
-            tokens: tokens,
-            active: value,
-            padding: EdgeInsets.symmetric(
-              horizontal: compact ? 12 : 16 + 12 * scale,
-              vertical: compact ? 9 : 13 + 12 * scale,
+    return MechanicalSelectionSurface(
+      selected: value,
+      semanticToggled: value,
+      semanticLabel: label,
+      onPressed: () => onChanged(!value),
+      child: VariantRowBackground(
+        tokens: tokens,
+        active: value,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 12 : 16 + 12 * scale,
+          vertical: compact ? 9 : 13 + 12 * scale,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          spacing: compact ? 10 : 12 + 8 * scale,
+          children: [
+            VariantIcon(
+              row.iconAssetFor(variants),
+              size: compact ? 40 : _variantIconSize(scale),
+              opacity: value ? 1 : 0.82,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              spacing: compact ? 10 : 12 + 8 * scale,
-              children: [
-                VariantIcon(
-                  row.iconAssetFor(variants),
-                  size: compact ? 40 : _variantIconSize(scale),
-                  opacity: value ? 1 : 0.82,
-                ),
-                Expanded(
-                  child: _VariantText(
-                    tokens: tokens,
-                    language: language,
-                    variants: variants,
-                    row: row,
-                    active: value,
-                    scale: scale,
-                    compact: compact,
-                  ),
-                ),
-                Container(
-                  width: toggleSize,
-                  height: toggleSize,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: value
-                        ? tokens.colors.gold.withValues(alpha: 0.82)
-                        : tokens.colors.black.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: value
-                          ? tokens.colors.goldBright
-                          : tokens.colors.steel.withValues(alpha: 0.45),
-                    ),
-                  ),
-                  child: value
-                      ? MainMenuAssetIcon(
-                          fieldPlanToolbarConfirmIconPath,
-                          size: toggleSize * 0.63,
-                        )
-                      : null,
-                ),
-              ],
+            Expanded(
+              child: _VariantText(
+                tokens: tokens,
+                language: language,
+                variants: variants,
+                row: row,
+                active: value,
+                scale: scale,
+                compact: compact,
+              ),
             ),
-          ),
+            Container(
+              width: toggleSize,
+              height: toggleSize,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: value
+                    ? tokens.colors.gold.withValues(alpha: 0.82)
+                    : tokens.colors.black.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: value
+                      ? tokens.colors.goldBright
+                      : tokens.colors.steel.withValues(alpha: 0.45),
+                ),
+              ),
+              child: value
+                  ? MainMenuAssetIcon(
+                      fieldPlanToolbarConfirmIconPath,
+                      size: toggleSize * 0.63,
+                    )
+                  : null,
+            ),
+          ],
         ),
       ),
     );

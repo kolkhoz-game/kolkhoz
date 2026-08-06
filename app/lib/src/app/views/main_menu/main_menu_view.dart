@@ -18,6 +18,7 @@ import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_typography.dart';
 import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
+import 'package:kolkhoz_app/src/app/views/shared/notebook_page_switcher.dart';
 import 'package:kolkhoz_app/src/app/profile/views/progression_overview.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
@@ -905,28 +906,25 @@ class _FieldPlanMenuButton extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(
-      button: true,
-      selected: selected,
-      enabled: enabled,
-      label: label,
-      child: Opacity(
-        opacity: enabled ? 1 : 0.5,
-        child: TactileControlSurface(
-          enabled: enabled,
-          onPressed: onPressed,
-          pressTravel: 4,
-          hoverLift: -2,
-          hoverScale: 1.012,
-          child: SizedBox(
-            height: height,
-            child: CustomPaint(
-              painter: _FieldPlanButtonBorderPainter(
-                pointed: selected,
-                shadow: true,
-              ),
-              child: content,
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: TactileButton(
+        enabled: enabled,
+        selected: selected,
+        semanticLabel: label,
+        semanticSelected: selected,
+        onPressed: onPressed,
+        pressTravel: 4,
+        hoverLift: -2,
+        hoverScale: 1.012,
+        child: SizedBox(
+          height: height,
+          child: CustomPaint(
+            painter: _FieldPlanButtonBorderPainter(
+              pointed: selected,
+              shadow: true,
             ),
+            child: content,
           ),
         ),
       ),
@@ -1105,34 +1103,29 @@ class _FieldPlanCompactUtilityButton extends StatelessWidget {
           );
     return Tooltip(
       message: label,
-      child: Semantics(
-        container: true,
-        button: true,
-        selected: selected,
+      excludeFromSemantics: true,
+      child: TactileButton(
         enabled: onPressed != null,
-        label: label,
-        child: ExcludeSemantics(
-          child: TactileControlSurface(
-            enabled: onPressed != null,
-            onPressed: onPressed,
-            pressTravel: 2.5,
-            hoverLift: -1,
-            hoverScale: 1.08,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  visual,
-                  if (badgeCount > 0)
-                    Positioned(
-                      right: -7,
-                      top: -6,
-                      child: _FieldPlanBadge(count: badgeCount),
-                    ),
-                ],
-              ),
-            ),
+        selected: selected,
+        semanticLabel: label,
+        semanticSelected: selected,
+        onPressed: onPressed,
+        pressTravel: 2.5,
+        hoverLift: -1,
+        hoverScale: 1.08,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              visual,
+              if (badgeCount > 0)
+                Positioned(
+                  right: -7,
+                  top: -6,
+                  child: _FieldPlanBadge(count: badgeCount),
+                ),
+            ],
           ),
         ),
       ),
@@ -1159,52 +1152,46 @@ class _FieldPlanUtilityButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? const Color(0xfff0dfb7) : const Color(0xffd2bb83);
-    return Semantics(
-      container: true,
-      button: true,
-      selected: selected,
+    return TactileButton(
       enabled: onPressed != null,
-      label: label,
-      child: ExcludeSemantics(
-        child: TactileControlSurface(
-          enabled: onPressed != null,
-          onPressed: onPressed,
-          pressTravel: 2.5,
-          hoverLift: -1,
-          hoverScale: 1.025,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+      selected: selected,
+      semanticLabel: label,
+      semanticSelected: selected,
+      onPressed: onPressed,
+      pressTravel: 2.5,
+      hoverLift: -1,
+      hoverScale: 1.025,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(icon, size: 22, color: color),
-                  if (badgeCount > 0)
-                    Positioned(
-                      right: -7,
-                      top: -6,
-                      child: _FieldPlanBadge(count: badgeCount),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 5),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label.toUpperCase(),
-                    maxLines: 1,
-                    style: fieldPlanDisplayTextStyle.copyWith(
-                      color: color,
-                      fontSize: 14,
-                      letterSpacing: 0.9,
-                    ),
-                  ),
+              Icon(icon, size: 22, color: color),
+              if (badgeCount > 0)
+                Positioned(
+                  right: -7,
+                  top: -6,
+                  child: _FieldPlanBadge(count: badgeCount),
                 ),
-              ),
             ],
           ),
-        ),
+          const SizedBox(width: 5),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label.toUpperCase(),
+                maxLines: 1,
+                style: fieldPlanDisplayTextStyle.copyWith(
+                  color: color,
+                  fontSize: 14,
+                  letterSpacing: 0.9,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1228,23 +1215,21 @@ class _FieldPlanUtilityIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
-      child: Semantics(
-        button: true,
-        label: label,
-        child: TactileControlSurface(
-          onPressed: onPressed,
-          pressTravel: 2.5,
-          hoverLift: -1,
-          hoverScale: 1.08,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 7),
-            child: Image.asset(
-              asset,
-              width: 23,
-              height: 23,
-              filterQuality: FilterQuality.high,
-              isAntiAlias: true,
-            ),
+      excludeFromSemantics: true,
+      child: TactileButton(
+        semanticLabel: label,
+        onPressed: onPressed,
+        pressTravel: 2.5,
+        hoverLift: -1,
+        hoverScale: 1.08,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7),
+          child: Image.asset(
+            asset,
+            width: 23,
+            height: 23,
+            filterQuality: FilterQuality.high,
+            isAntiAlias: true,
           ),
         ),
       ),
@@ -1310,97 +1295,91 @@ class _FieldPlanProfilePlaque extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      enabled: onPressed != null,
-      label: KolkhozSettingsTab.profile.title(
-        Localizations.localeOf(context).languageCode == 'ru'
-            ? KolkhozLanguage.ru
-            : KolkhozLanguage.en,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: TactileControlSurface(
-          key: const Key('field-plan-profile-plaque'),
-          enabled: onPressed != null,
-          onPressed: onPressed,
-          pressTravel: 4,
-          hoverLift: -2,
-          hoverScale: 1.012,
-          child: Container(
-            width: 340,
-            height: 76,
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: const Color(0xf221231f),
-              border: Border.all(
-                color: selected
-                    ? const Color(0xffc44a30)
-                    : const Color(0xffc8ae72),
-                width: 3,
+    return Material(
+      color: Colors.transparent,
+      child: TactileButton(
+        key: const Key('field-plan-profile-plaque'),
+        enabled: onPressed != null,
+        selected: selected,
+        semanticSelected: selected,
+        semanticLabel: KolkhozSettingsTab.profile.title(
+          Localizations.localeOf(context).languageCode == 'ru'
+              ? KolkhozLanguage.ru
+              : KolkhozLanguage.en,
+        ),
+        onPressed: onPressed,
+        pressTravel: 4,
+        hoverLift: -2,
+        hoverScale: 1.012,
+        child: Container(
+          width: 340,
+          height: 76,
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: const Color(0xf221231f),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xffc44a30)
+                  : const Color(0xffc8ae72),
+              width: 3,
+            ),
+            boxShadow: const [
+              BoxShadow(color: Color(0xaa11120f), offset: Offset(5, 6)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: const Color(0xffd9c797),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xffc23b29), width: 4),
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    _fieldPlanPortraitPath(portraitAsset),
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                  ),
+                ),
               ),
-              boxShadow: const [
-                BoxShadow(color: Color(0xaa11120f), offset: Offset(5, 6)),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: const Color(0xffd9c797),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xffc23b29),
-                      width: 4,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      _fieldPlanPortraitPath(portraitAsset),
-                      fit: BoxFit.cover,
-                      alignment: Alignment.topCenter,
+              const SizedBox(width: 12),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${language.strings.kolkhozappComrade.toUpperCase()} '
+                    '${displayName.toUpperCase()}',
+                    maxLines: 1,
+                    style: fieldPlanDisplayTextStyle.copyWith(
+                      color: const Color(0xffead7a6),
+                      fontSize: 25,
+                      letterSpacing: 1.4,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '${language.strings.kolkhozappComrade.toUpperCase()} '
-                      '${displayName.toUpperCase()}',
-                      maxLines: 1,
-                      style: fieldPlanDisplayTextStyle.copyWith(
-                        color: const Color(0xffead7a6),
-                        fontSize: 25,
-                        letterSpacing: 1.4,
-                      ),
-                    ),
+              ),
+              const SizedBox(width: 7),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    cloudSignedIn ? Icons.star : Icons.star_border,
+                    color: const Color(0xffb43827),
+                    size: 26,
                   ),
-                ),
-                const SizedBox(width: 7),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Icon(
-                      cloudSignedIn ? Icons.star : Icons.star_border,
-                      color: const Color(0xffb43827),
-                      size: 26,
+                  if (badgeCount > 0)
+                    Positioned(
+                      right: -7,
+                      top: -6,
+                      child: _FieldPlanBadge(count: badgeCount),
                     ),
-                    if (badgeCount > 0)
-                      Positioned(
-                        right: -7,
-                        top: -6,
-                        child: _FieldPlanBadge(count: badgeCount),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -1724,6 +1703,7 @@ class _LobbyPanel extends StatelessWidget {
       playerControllers: playerControllers,
       gameLobby: gameLobby,
       demoMode: demoMode,
+      active: creatingGame,
       variants: variants,
       displayName: displayName,
       portraitAsset: portraitAsset,
@@ -1750,13 +1730,6 @@ class _LobbyPanel extends StatelessWidget {
       onSaveFavoriteSetup: onSaveFavoriteSetup,
       onUseFavoriteSetup: onUseFavoriteSetup,
     );
-    final secondaryPanelKind = showingProfile
-        ? 'profile-$initialSettingsTab'
-        : showingOnline
-        ? 'online'
-        : showingRules
-        ? 'rules'
-        : 'none';
     final secondaryPanel = showingProfile
         ? SettingsPanel(
             tokens: tokens,
@@ -1832,6 +1805,14 @@ class _LobbyPanel extends StatelessWidget {
             onRestartTutorialPressed: onRestartTutorialPressed,
           )
         : const SizedBox.shrink();
+    final panelPageIndex = creatingGame
+        ? 0
+        : showingOnline
+        ? 1
+        : showingRules
+        ? 2
+        : 3;
+    final activePanel = creatingGame ? variantPanel : secondaryPanel;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1846,16 +1827,16 @@ class _LobbyPanel extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Offstage(offstage: !creatingGame, child: variantPanel),
-          if (!creatingGame)
-            MechanicalPanelSwitcher(
-              panelKey: secondaryPanelKind,
-              child: secondaryPanel,
-            ),
-        ],
+      child: NotebookMenuSwitcher(
+        pageCount: 4,
+        pageIndex: panelPageIndex,
+        tokens: tokens,
+        showBinding: !creatingGame,
+        showBindingWhileTurning: true,
+        compactBinding: compactRail,
+        keyPrefix: 'main-menu',
+        retainedPages: {0: variantPanel},
+        child: activePanel,
       ),
     );
   }
@@ -2198,8 +2179,11 @@ class _SettingsPanelState extends State<SettingsPanel> {
         ),
         MainMenuGoldDivider(tokens: widget.tokens),
         Expanded(
-          child: MechanicalPanelSwitcher(
-            panelKey: selectedTab,
+          child: NotebookMenuSwitcher(
+            pageCount: KolkhozSettingsTab.values.length,
+            pageIndex: selectedTab.index,
+            tokens: widget.tokens,
+            keyPrefix: 'settings',
             child: _tabBody(),
           ),
         ),
@@ -2228,35 +2212,27 @@ class _SettingsTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconSize = (height * 0.72).clamp(24.0, 38.0);
-    return Semantics(
-      container: true,
-      button: true,
-      selected: selected,
-      label: label,
-      child: ExcludeSemantics(
-        child: Tooltip(
-          message: label,
-          child: ChromeAssetButton(
-            label: label,
-            tokens: tokens,
-            backgroundAsset: selected
-                ? chromeButtonPrimaryAsset
-                : chromeButtonSecondaryAsset,
-            textColor: selected
-                ? tokens.colors.onAccent
-                : tokens.colors.cardInk,
-            textSize: _settingsTabTextSize(height),
-            onPressed: onPressed,
-            iconAsset: iconAsset,
-            iconSize: iconSize,
-            height: height,
-            padding: EdgeInsets.symmetric(
-              horizontal: (height * 0.08).clamp(3.0, 6.0),
-            ),
-            spacing: (height * 0.08).clamp(3.0, 5.0),
-            expandLabel: false,
-          ),
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: ChromeAssetButton(
+        label: label,
+        tokens: tokens,
+        backgroundAsset: selected
+            ? chromeButtonPrimaryAsset
+            : chromeButtonSecondaryAsset,
+        textColor: selected ? tokens.colors.onAccent : tokens.colors.cardInk,
+        textSize: _settingsTabTextSize(height),
+        onPressed: onPressed,
+        selected: selected,
+        iconAsset: iconAsset,
+        iconSize: iconSize,
+        height: height,
+        padding: EdgeInsets.symmetric(
+          horizontal: (height * 0.08).clamp(3.0, 6.0),
         ),
+        spacing: (height * 0.08).clamp(3.0, 5.0),
+        expandLabel: false,
       ),
     );
   }

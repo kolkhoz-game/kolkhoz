@@ -185,7 +185,7 @@ void registerLobbyAndProfileTests() {
     expect(resumed, isTrue);
   });
 
-  testWidgets('narrow preset tabs reserve space between icons and labels', (
+  testWidgets('preset tabs fill their row without overlapping labels', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -222,7 +222,11 @@ void registerLobbyAndProfileTests() {
     await tester.pumpAndSettle();
 
     final kolkhozTab = find.byKey(const ValueKey('field-plan-preset-kolkhoz'));
+    final customTab = find.byKey(const ValueKey('field-plan-preset-custom'));
+    final presetRow = find.byKey(const ValueKey('field-plan-preset-row'));
     expect(kolkhozTab, findsOneWidget);
+    expect(customTab, findsOneWidget);
+    expect(presetRow, findsOneWidget);
     final icon = find.descendant(of: kolkhozTab, matching: find.byType(Image));
     final text = find.descendant(
       of: kolkhozTab,
@@ -231,10 +235,9 @@ void registerLobbyAndProfileTests() {
     expect(icon, findsOneWidget);
     expect(text, findsOneWidget);
     expect(tester.getRect(icon).overlaps(tester.getRect(text)), isFalse);
-
     expect(
-      find.byKey(const ValueKey('field-plan-preset-custom')),
-      findsOneWidget,
+      tester.getSize(kolkhozTab).width + tester.getSize(customTab).width + 6,
+      closeTo(tester.getSize(presetRow).width, 0.01),
     );
   });
 
@@ -595,9 +598,15 @@ void registerLobbyAndProfileTests() {
       greaterThan(0),
     );
 
-    final displayTab = find.bySemanticsLabel('DISPLAY');
+    final displayTab = find.semantics.byPredicate(
+      (node) =>
+          node.getSemanticsData().label == 'DISPLAY' &&
+          node.flagsCollection.isButton,
+    );
     expect(displayTab, findsOneWidget);
-    final displayTabRect = tester.getRect(displayTab);
+    final displayTabRect = tester.getRect(
+      find.descendant(of: tabStrip, matching: findAppText('DISPLAY')),
+    );
     expect(displayTabRect.left, greaterThanOrEqualTo(0));
     expect(displayTabRect.right, lessThanOrEqualTo(844));
 
@@ -915,15 +924,16 @@ void registerLobbyAndProfileTests() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       await tester.tap(findAppText('ADD PLAYERS'));
       await tester.pumpAndSettle();
       expect(findAppText('52 CARDS / 5 YEARS'), findsNothing);
-      expect(find.bySemanticsLabel('Kolkhoz'), findsOneWidget);
-      expect(find.bySemanticsLabel('52 Card Deck'), findsOneWidget);
-      expect(find.bySemanticsLabel('5 Year Plan'), findsOneWidget);
-      expect(find.bySemanticsLabel('Exchange Soap for an Awl'), findsOneWidget);
-      expect(find.bySemanticsLabel('Enemy of the People'), findsOneWidget);
+      expect(find.bySemanticsLabel('Kolkhoz'), findsNothing);
+      expect(find.bySemanticsLabel('52 Card Deck'), findsNothing);
+      expect(find.bySemanticsLabel('5 Year Plan'), findsNothing);
+      expect(find.bySemanticsLabel('Exchange Soap for an Awl'), findsNothing);
+      expect(find.bySemanticsLabel('Enemy of the People'), findsNothing);
       final backCenter = tester.getCenter(findAppText('BACK TO SETUP')).dy;
       final startCenter = tester
           .getCenter(findAppText('START OFFLINE GAME'))
@@ -985,6 +995,7 @@ void registerLobbyAndProfileTests() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(findAppText('RULES'), findsOneWidget);
       expect(findAppText('HOW TO PLAY'), findsWidgets);
@@ -1358,34 +1369,6 @@ void registerLobbyAndProfileTests() {
       findAssetImage(fieldPlanPlayerBeekeeper.fieldPlanPath),
       findsWidgets,
     );
-    final summaryTooltip = find
-        .byWidgetPredicate(
-          (widget) =>
-              widget is Tooltip &&
-              widget.triggerMode == TooltipTriggerMode.manual &&
-              widget.richMessage != null,
-        )
-        .first;
-    final tooltipText = tester
-        .widget<Tooltip>(summaryTooltip)
-        .richMessage!
-        .toPlainText();
-    final tactileChip = find.ancestor(
-      of: summaryTooltip,
-      matching: find.byType(TactileControlSurface),
-    );
-    expect(tactileChip, findsOneWidget);
-    await tester.tap(tactileChip);
-    await tester.pump();
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is RichText && widget.text.toPlainText() == tooltipText,
-      ),
-      findsOneWidget,
-    );
-    await tester.tapAt(Offset.zero);
-    await tester.pump();
 
     await tester.tap(find.bySemanticsLabel('P2 OPEN'));
     await tester.pumpAndSettle();
@@ -1433,7 +1416,7 @@ void registerLobbyAndProfileTests() {
     expect(changedControllers![1], KolkhozPlayerController.heuristicAI);
   });
 
-  testWidgets('narrow landscape lobby keeps variants and seats compact', (
+  testWidgets('narrow landscape lobby reserves the setup area for seats', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -1478,24 +1461,7 @@ void registerLobbyAndProfileTests() {
           widget.triggerMode == TooltipTriggerMode.manual &&
           widget.richMessage != null,
     );
-    expect(summaryChips, findsAtLeast(8));
-    final summaryCenters = [
-      for (final element in summaryChips.evaluate())
-        tester.getCenter(
-          find.byElementPredicate((candidate) => candidate == element),
-        ),
-    ];
-    final summaryTop = summaryCenters
-        .map((center) => center.dy)
-        .reduce(
-          (current, candidate) => current < candidate ? current : candidate,
-        );
-    final summaryBottom = summaryCenters
-        .map((center) => center.dy)
-        .reduce(
-          (current, candidate) => current > candidate ? current : candidate,
-        );
-    expect(summaryBottom - summaryTop, lessThan(1));
+    expect(summaryChips, findsNothing);
 
     final p1 = find.bySemanticsLabel('P1 Mira');
     final p2 = find.bySemanticsLabel('P2 OPEN');
@@ -1579,7 +1545,7 @@ void registerLobbyAndProfileTests() {
     expect(find.bySemanticsLabel('P2 Easy'), findsOneWidget);
   });
 
-  testWidgets('lobby resumes last started setup on seat screen', (
+  testWidgets('lobby opens setup before reusing last started seats', (
     tester,
   ) async {
     var starts = 0;
@@ -1636,7 +1602,12 @@ void registerLobbyAndProfileTests() {
       ),
     );
 
-    expect(findAppText('ADD PLAYERS'), findsNothing);
+    expect(findAppText('ADD PLAYERS'), findsOneWidget);
+    expect(findAppText('START OFFLINE GAME'), findsNothing);
+
+    await tester.tap(findAppText('ADD PLAYERS'));
+    await tester.pumpAndSettle();
+
     expect(findAppText('START OFFLINE GAME'), findsWidgets);
     expect(findAppText('PRIVATE'), findsOneWidget);
     expect(find.bySemanticsLabel('P2 Easy'), findsOneWidget);
@@ -1794,8 +1765,20 @@ void registerLobbyAndProfileTests() {
     expect(findAppText('PRIVATE'), findsWidgets);
 
     await tester.tap(findAppText('JOIN GAME').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.byKey(const Key('main-menu-page-curl')), findsOneWidget);
     await tester.pumpAndSettle();
     await tester.tap(findAppText('CREATE GAME').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.byKey(const Key('main-menu-page-curl')), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(findAppText('ADD PLAYERS'), findsWidgets);
+    expect(findAppText('START ONLINE GAME'), findsNothing);
+
+    await tester.tap(findAppText('ADD PLAYERS').first);
     await tester.pumpAndSettle();
     expect(findAppText('START ONLINE GAME'), findsWidgets);
 
@@ -1822,6 +1805,8 @@ void registerLobbyAndProfileTests() {
     await tester.ensureVisible(findAppText('START ONLINE GAME').first);
     await tester.tap(findAppText('START ONLINE GAME').first);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.byKey(const Key('create-game-page-curl')), findsOneWidget);
 
     expect(hostedControllers, isNotNull);
     expect(hostedControllers![0], KolkhozPlayerController.human);

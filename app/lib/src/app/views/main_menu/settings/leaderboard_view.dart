@@ -282,108 +282,105 @@ class _LeaderboardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label:
-          '${player.displayLabel}, rank $rank${isCurrentUser ? ', you' : ''}',
-      child: Material(
-        key: isCurrentUser ? const Key('leaderboard-current-user-row') : null,
-        color: isCurrentUser
-            ? tokens.colors.redDark.withValues(alpha: 0.88)
-            : tokens.colors.black.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(tokens.radius.sm),
-        child: TactileControlSurface(
-          onPressed: onTap,
-          pressTravel: 2,
-          hoverLift: -0.5,
-          hoverScale: 1.01,
-          child: Container(
-            height: 46,
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(tokens.radius.sm),
-              border: Border.all(
-                color: isCurrentUser
-                    ? tokens.colors.redBright
-                    : tokens.colors.gold.withValues(alpha: 0.32),
-                width: isCurrentUser ? 1.5 : 1,
+    return Material(
+      key: isCurrentUser ? const Key('leaderboard-current-user-row') : null,
+      color: isCurrentUser
+          ? tokens.colors.redDark.withValues(alpha: 0.88)
+          : tokens.colors.black.withValues(alpha: 0.16),
+      borderRadius: BorderRadius.circular(tokens.radius.sm),
+      child: TactileButton(
+        semanticLabel:
+            '${player.displayLabel}, rank $rank${isCurrentUser ? ', you' : ''}',
+        onPressed: onTap,
+        pressTravel: 2,
+        hoverLift: -0.5,
+        hoverScale: 1.01,
+        child: Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(tokens.radius.sm),
+            border: Border.all(
+              color: isCurrentUser
+                  ? tokens.colors.redBright
+                  : tokens.colors.gold.withValues(alpha: 0.32),
+              width: isCurrentUser ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              PlayerProfilePortraitImage(
+                tokens: tokens,
+                asset: player.portraitAsset ?? defaultProfilePortraitAsset,
+                size: 34,
+                selected: false,
               ),
-            ),
-            child: Row(
-              children: [
-                PlayerProfilePortraitImage(
-                  tokens: tokens,
-                  asset: player.portraitAsset ?? defaultProfilePortraitAsset,
-                  size: 34,
-                  selected: false,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    player.displayLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: kolkhozFontStyle.copyWith(
-                      color: tokens.colors.cream,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  player.displayLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: kolkhozFontStyle.copyWith(
+                    color: tokens.colors.cream,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 8),
-                _LeaderboardStatusIcon(
-                  asset:
-                      'assets/art/field_plan/shared/pictograms/controller-online-player.png',
-                  active: player.inGame,
-                  activeLabel: 'IN GAME',
-                  inactiveLabel: player.isOnline ? 'ONLINE' : 'NOT IN GAME',
-                ),
-                const SizedBox(width: 5),
-                _LeaderboardStatusIcon(
-                  asset: 'assets/art/field_plan/shared/pictograms/comrade.png',
-                  active: player.isComrade,
-                  activeLabel: 'COMRADE',
-                  inactiveLabel: 'NOT A COMRADE',
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 58,
-                  child: Text(
-                    '$rating',
-                    textAlign: TextAlign.end,
-                    style: kolkhozFontStyle.copyWith(
-                      color: tokens.colors.cardInk,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
+              ),
+              const SizedBox(width: 8),
+              _LeaderboardStatusIcon(
+                asset:
+                    'assets/art/field_plan/shared/pictograms/controller-online-player.png',
+                active: player.inGame,
+                activeLabel: 'IN GAME',
+                inactiveLabel: player.isOnline ? 'ONLINE' : 'NOT IN GAME',
+              ),
+              const SizedBox(width: 5),
+              _LeaderboardStatusIcon(
+                asset: 'assets/art/field_plan/shared/pictograms/comrade.png',
+                active: player.isComrade,
+                activeLabel: 'COMRADE',
+                inactiveLabel: 'NOT A COMRADE',
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 58,
+                child: Text(
+                  '$rating',
+                  textAlign: TextAlign.end,
+                  style: kolkhozFontStyle.copyWith(
+                    color: tokens.colors.cardInk,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 48,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        '#',
-                        style: kolkhozFontStyle.copyWith(
-                          color: tokens.colors.gold,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      DisplayText(
-                        '$rank',
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 48,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      '#',
+                      style: kolkhozFontStyle.copyWith(
                         color: tokens.colors.gold,
-                        size: DisplayTextSize.caption,
-                        variant: DisplayTextWeight.bold,
-                        maxLines: 1,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
                       ),
-                    ],
-                  ),
+                    ),
+                    DisplayText(
+                      '$rank',
+                      color: tokens.colors.gold,
+                      size: DisplayTextSize.caption,
+                      variant: DisplayTextWeight.bold,
+                      maxLines: 1,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -412,6 +409,7 @@ class _LeaderboardStatusIcon extends StatelessWidget {
       image: true,
       child: Tooltip(
         message: label,
+        excludeFromSemantics: true,
         child: Opacity(
           opacity: active ? 1 : 0.22,
           child: MainMenuAssetIcon(asset, size: 20),

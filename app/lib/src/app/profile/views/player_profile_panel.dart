@@ -651,20 +651,13 @@ class _ProfilePortraitSlot extends StatelessWidget {
     if (onPressed == null) {
       return Semantics(label: semanticsLabel, child: child);
     }
-    return Semantics(
-      button: true,
-      enabled: true,
-      label: semanticsLabel,
-      onTap: onPressed,
-      child: ExcludeSemantics(
-        child: TactileControlSurface(
-          onPressed: onPressed,
-          pressTravel: 2,
-          hoverLift: -1,
-          hoverScale: 1.04,
-          child: child,
-        ),
-      ),
+    return TactileButton(
+      semanticLabel: semanticsLabel,
+      onPressed: onPressed,
+      pressTravel: 2,
+      hoverLift: -1,
+      hoverScale: 1.04,
+      child: child,
     );
   }
 }

@@ -372,7 +372,7 @@ class _RecentGamesPanel extends StatelessWidget {
           )
         else
           for (final game in games)
-            TactileControlSurface(
+            TactileButton(
               enabled: profileController != null,
               onPressed: profileController == null
                   ? null

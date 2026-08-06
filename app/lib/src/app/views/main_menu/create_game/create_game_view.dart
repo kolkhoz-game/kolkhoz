@@ -20,6 +20,7 @@ import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_const
 import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 import 'package:kolkhoz_app/src/app/profile/views/player_profile_panel.dart';
 import 'package:kolkhoz_app/src/app/views/shared/printed_underlay.dart';
+import 'package:kolkhoz_app/src/app/views/shared/notebook_page_switcher.dart';
 import '../main_menu_view.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/remote_game_engine/remote_lobby_projection.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.dart';
@@ -34,6 +35,7 @@ class CreateGameView extends StatefulWidget {
     required this.playerControllers,
     required this.gameLobby,
     required this.demoMode,
+    required this.active,
     required this.variants,
     required this.displayName,
     required this.portraitAsset,
@@ -68,6 +70,7 @@ class CreateGameView extends StatefulWidget {
   final List<KolkhozPlayerController> playerControllers;
   final GameLobby? gameLobby;
   final bool demoMode;
+  final bool active;
   final KolkhozGameVariants variants;
   final String displayName;
   final String portraitAsset;
@@ -122,6 +125,7 @@ class CreateGameView extends StatefulWidget {
 class _VariantPanelState extends State<CreateGameView> {
   static const setupPageKey = ValueKey('create-game-setup-page');
   static const lobbyPageKey = ValueKey('create-game-lobby-page');
+  static const hostedLobbyPageKey = ValueKey('create-game-hosted-lobby-page');
 
   late List<_LobbySeatChoice> seatChoices;
   final Set<String> invitedLobbyComradeUserIDs = {};
@@ -142,22 +146,23 @@ class _VariantPanelState extends State<CreateGameView> {
     super.initState();
     seatChoices = _initialSeatChoices();
     browserJoinable = widget.lastStartedSetup?.browserJoinable ?? true;
-    showingSeatLobby = widget.lastStartedSetup != null && !widget.demoMode;
+    showingSeatLobby = false;
   }
 
   @override
   void didUpdateWidget(covariant CreateGameView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      showingSeatLobby = false;
+      selectedSeatPlayerID = null;
+    }
     if (widget.demoMode && !oldWidget.demoMode) {
       showingSeatLobby = false;
     }
     if (widget.lastStartedSetup != oldWidget.lastStartedSetup &&
-        widget.lastStartedSetup != null &&
-        !showingSeatLobby &&
-        !widget.demoMode) {
+        !showingSeatLobby) {
       seatChoices = _initialSeatChoices();
-      browserJoinable = widget.lastStartedSetup!.browserJoinable;
-      showingSeatLobby = true;
+      browserJoinable = widget.lastStartedSetup?.browserJoinable ?? true;
     }
   }
 
@@ -337,18 +342,38 @@ class _VariantPanelState extends State<CreateGameView> {
   }
 
   @override
-  Widget build(BuildContext context) => Navigator(
-    pages: [
-      MaterialPage<void>(key: setupPageKey, child: _buildSetupStep()),
-      if (showingSeatLobby && !widget.demoMode)
-        MaterialPage<void>(key: lobbyPageKey, child: _buildLobbyStep()),
-    ],
-    onDidRemovePage: (page) {
-      if (page.key == lobbyPageKey && showingSeatLobby) {
-        setState(() => showingSeatLobby = false);
-      }
-    },
-  );
+  Widget build(BuildContext context) {
+    final hostedOnlineUpdate = widget.showHostedInviteCode
+        ? widget.onlineSessionUpdate
+        : null;
+    final pageIndex = hostedOnlineUpdate != null
+        ? 2
+        : showingSeatLobby && !widget.demoMode
+        ? 1
+        : 0;
+    Widget page(Key key, Widget child) => KeyedSubtree(
+      key: key,
+      child: PrintedPaperSurface(tokens: widget.tokens, child: child),
+    );
+    return NotebookPageSwitcher(
+      pageIndex: pageIndex,
+      tokens: widget.tokens,
+      keyPrefix: 'create-game',
+      animate: widget.active,
+      showBinding: true,
+      compactBinding: widget.compactRail,
+      pages: [
+        page(setupPageKey, _buildSetupStep()),
+        page(lobbyPageKey, _buildLobbyStep()),
+        page(
+          hostedLobbyPageKey,
+          hostedOnlineUpdate == null
+              ? const SizedBox.shrink()
+              : _buildHostedOnlineLobbyStep(hostedOnlineUpdate),
+        ),
+      ],
+    );
+  }
 
   void showLobbyStep(bool show) {
     if (showingSeatLobby == show) {
@@ -392,77 +417,62 @@ class _VariantPanelState extends State<CreateGameView> {
   Widget _buildFieldPlanSetupStep() {
     final custom =
         widget.selectedPreset == KolkhozGamePreset.custom && !widget.demoMode;
-    return PrintedPaperSurface(
-      tokens: widget.tokens,
-      child: Padding(
-        padding: EdgeInsets.all(widget.compactRail ? 8 : 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: widget.compactRail ? 7 : 10,
-          children: [
-            _FieldPlanPresetSelector(
+    return Padding(
+      padding: EdgeInsets.all(widget.compactRail ? 8 : 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: widget.compactRail ? 7 : 10,
+        children: [
+          _FieldPlanPresetSelector(
+            tokens: widget.tokens,
+            language: widget.language,
+            selectedPreset: widget.selectedPreset,
+            compact: widget.compactRail,
+            onPresetChanged: widget.demoMode ? null : widget.onPresetChanged,
+          ),
+          Expanded(
+            child: KolkhozScrollbar(
               tokens: widget.tokens,
-              language: widget.language,
-              selectedPreset: widget.selectedPreset,
-              compact: widget.compactRail,
-              onPresetChanged: widget.demoMode ? null : widget.onPresetChanged,
+              childBuilder: (context, scrollController) =>
+                  SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.only(right: 8, bottom: 12),
+                    child: custom
+                        ? CustomVariantOptions(
+                            tokens: widget.tokens,
+                            language: widget.language,
+                            variants: widget.customVariants,
+                            compact: widget.compactRail,
+                            onChanged: widget.onCustomVariantsChanged,
+                          )
+                        : _FieldPlanVariantLedger(
+                            tokens: widget.tokens,
+                            language: widget.language,
+                            variants: widget.variants,
+                            demoMode: widget.demoMode,
+                            compact: widget.compactRail,
+                          ),
+                  ),
             ),
-            Expanded(
-              child: KolkhozScrollbar(
-                tokens: widget.tokens,
-                childBuilder: (context, scrollController) =>
-                    SingleChildScrollView(
-                      controller: scrollController,
-                      padding: const EdgeInsets.only(right: 8, bottom: 12),
-                      child: custom
-                          ? CustomVariantOptions(
-                              tokens: widget.tokens,
-                              language: widget.language,
-                              variants: widget.customVariants,
-                              compact: widget.compactRail,
-                              onChanged: widget.onCustomVariantsChanged,
-                            )
-                          : _FieldPlanVariantLedger(
-                              tokens: widget.tokens,
-                              language: widget.language,
-                              variants: widget.variants,
-                              demoMode: widget.demoMode,
-                              compact: widget.compactRail,
-                            ),
-                    ),
-              ),
-            ),
-            if (widget.demoMode)
-              _primaryCommandButton(
-                label: widget.language.strings.kolkhozappStartDemo,
-                iconAsset: 'assets/ui/Icons/icon-demo.png',
-                onPressed: startGame,
-              )
-            else
-              _setupCommandRow(),
-          ],
-        ),
+          ),
+          if (widget.demoMode)
+            _primaryCommandButton(
+              label: widget.language.strings.kolkhozappStartDemo,
+              iconAsset: 'assets/ui/Icons/icon-demo.png',
+              onPressed: startGame,
+            )
+          else
+            _setupCommandRow(),
+        ],
       ),
     );
   }
 
   Widget _buildLobbyStep() {
-    final hostedOnlineUpdate = widget.showHostedInviteCode
-        ? widget.onlineSessionUpdate
-        : null;
-    if (hostedOnlineUpdate != null) {
-      return _buildHostedOnlineLobbyStep(hostedOnlineUpdate);
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 10,
       children: [
-        _PresetSummaryStrip(
-          tokens: widget.tokens,
-          language: widget.language,
-          variants: widget.variants,
-          compact: widget.compactRail,
-        ),
         if (onlineStatus != null &&
             (!onlineStatusIsError || !onlineStatusDisablesAction))
           OnlineStatusBanner(
@@ -470,7 +480,6 @@ class _VariantPanelState extends State<CreateGameView> {
             message: onlineStatus!,
             isError: onlineStatusIsError,
           ),
-        MainMenuGoldDivider(tokens: widget.tokens),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -717,74 +726,68 @@ class _VariantPanelState extends State<CreateGameView> {
         if (widget.hostedInviteCode != null)
           SizedBox(
             width: widget.compactRail ? 134 : 164,
-            child: Semantics(
-              button: true,
-              label:
-                  '${widget.language.strings.kolkhozappInviteCode} ${widget.hostedInviteCode!}',
-              child: ExcludeSemantics(
-                child: Tooltip(
-                  message: widget.language.strings.kolkhozappCopyCode,
-                  child: TactileControlSurface(
-                    onPressed: () => unawaited(
-                      copyHostedInviteCode(widget.hostedInviteCode!),
-                    ),
-                    pressTravel: 3,
-                    hoverLift: -1,
-                    hoverScale: 1.025,
-                    child: SizedBox(
-                      height: height,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          const Positioned.fill(
-                            child: ChromeButtonBackground(
-                              asset: chromeButtonSecondaryAsset,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 9),
-                            child: Row(
-                              spacing: 7,
-                              children: [
-                                const MainMenuAssetIcon(
-                                  'assets/art/field_plan/shared/pictograms/add-friend.png',
-                                  size: 22,
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    spacing: 2,
-                                    children: [
-                                      ChromeScaledLabel(
-                                        widget
-                                            .language
-                                            .strings
-                                            .kolkhozappInviteCode,
-                                        color: widget.tokens.colors.cardInk,
-                                        size: DisplayTextSize.xSmall,
-                                        textAlign: TextAlign.start,
-                                      ),
-                                      ChromeScaledLabel(
-                                        widget.hostedInviteCode!,
-                                        color: widget.tokens.colors.cardInk,
-                                        size: DisplayTextSize.caption,
-                                        textAlign: TextAlign.start,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const MainMenuAssetIcon(
-                                  fieldPlanToolbarConfirmIconPath,
-                                  size: 18,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+            child: Tooltip(
+              message: widget.language.strings.kolkhozappCopyCode,
+              excludeFromSemantics: true,
+              child: TactileButton(
+                semanticLabel:
+                    '${widget.language.strings.kolkhozappInviteCode} ${widget.hostedInviteCode!}',
+                onPressed: () =>
+                    unawaited(copyHostedInviteCode(widget.hostedInviteCode!)),
+                pressTravel: 3,
+                hoverLift: -1,
+                hoverScale: 1.025,
+                child: SizedBox(
+                  height: height,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      const Positioned.fill(
+                        child: ChromeButtonBackground(
+                          asset: chromeButtonSecondaryAsset,
+                        ),
                       ),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 9),
+                        child: Row(
+                          spacing: 7,
+                          children: [
+                            const MainMenuAssetIcon(
+                              'assets/art/field_plan/shared/pictograms/add-friend.png',
+                              size: 22,
+                            ),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                spacing: 2,
+                                children: [
+                                  ChromeScaledLabel(
+                                    widget
+                                        .language
+                                        .strings
+                                        .kolkhozappInviteCode,
+                                    color: widget.tokens.colors.cardInk,
+                                    size: DisplayTextSize.xSmall,
+                                    textAlign: TextAlign.start,
+                                  ),
+                                  ChromeScaledLabel(
+                                    widget.hostedInviteCode!,
+                                    color: widget.tokens.colors.cardInk,
+                                    size: DisplayTextSize.caption,
+                                    textAlign: TextAlign.start,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const MainMenuAssetIcon(
+                              fieldPlanToolbarConfirmIconPath,
+                              size: 18,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1158,80 +1161,71 @@ class _VariantHeaderIconChip extends StatelessWidget {
         if (description.isNotEmpty) TextSpan(text: '\n$description'),
       ],
     );
-    return Semantics(
-      button: true,
-      label: label,
-      onTap: showTooltip,
-      child: ExcludeSemantics(
-        child: TactileControlSurface(
-          onPressed: showTooltip,
-          pressTravel: 2,
-          hoverLift: -1,
-          hoverScale: 1.04,
-          child: Tooltip(
-            key: tooltipKey,
-            richMessage: tooltipText,
-            triggerMode: TooltipTriggerMode.manual,
-            waitDuration: const Duration(milliseconds: 250),
-            showDuration: const Duration(seconds: 8),
-            exitDuration: const Duration(milliseconds: 150),
-            preferBelow: true,
-            constraints: const BoxConstraints(maxWidth: 320),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            decoration: BoxDecoration(
-              color: tokens.colors.cardFill,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: tokens.colors.gold.withValues(alpha: 0.82),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: tokens.colors.black.withValues(alpha: 0.35),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+    return TactileButton(
+      semanticLabel: label,
+      onPressed: showTooltip,
+      pressTravel: 2,
+      hoverLift: -1,
+      hoverScale: 1.04,
+      child: Tooltip(
+        key: tooltipKey,
+        richMessage: tooltipText,
+        excludeFromSemantics: true,
+        triggerMode: TooltipTriggerMode.manual,
+        waitDuration: const Duration(milliseconds: 250),
+        showDuration: const Duration(seconds: 8),
+        exitDuration: const Duration(milliseconds: 150),
+        preferBelow: true,
+        constraints: const BoxConstraints(maxWidth: 320),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: tokens.colors.cardFill,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: tokens.colors.gold.withValues(alpha: 0.82),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: tokens.colors.black.withValues(alpha: 0.35),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: SizedBox(
-              width: chipWidth,
-              height: height,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Positioned.fill(
-                    child: ChromeButtonBackground(
-                      asset: chromeButtonPrimaryAsset,
-                    ),
+          ],
+        ),
+        child: SizedBox(
+          width: chipWidth,
+          height: height,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const Positioned.fill(
+                child: ChromeButtonBackground(asset: chromeButtonPrimaryAsset),
+              ),
+              if (showLabel)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: compact ? 5 : 7,
+                    children: [
+                      VariantIcon(iconAsset, size: iconSize),
+                      Expanded(
+                        child: ChromeScaledLabel(
+                          label,
+                          color: tokens.colors.onAccent,
+                          size: compact
+                              ? DisplayTextSize.caption2
+                              : DisplayTextSize.caption,
+                          uppercase: false,
+                        ),
+                      ),
+                    ],
                   ),
-                  if (showLabel)
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 8 : 10,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        spacing: compact ? 5 : 7,
-                        children: [
-                          VariantIcon(iconAsset, size: iconSize),
-                          Expanded(
-                            child: ChromeScaledLabel(
-                              label,
-                              color: tokens.colors.onAccent,
-                              size: compact
-                                  ? DisplayTextSize.caption2
-                                  : DisplayTextSize.caption,
-                              uppercase: false,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    VariantIcon(iconAsset, size: iconSize),
-                ],
-              ),
-            ),
+                )
+              else
+                VariantIcon(iconAsset, size: iconSize),
+            ],
           ),
         ),
       ),
@@ -1268,24 +1262,18 @@ class _FieldPlanPresetSelector extends StatelessWidget {
         final narrow = constraints.maxWidth < 650;
         final height = compact || narrow ? 60.0 : 76.0;
         return SizedBox(
-          height: narrow ? height * 2 + 6 : height,
-          child: GridView.count(
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: narrow ? 2 : 4,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
-            childAspectRatio: narrow
-                ? constraints.maxWidth / 2 / height
-                : constraints.maxWidth / 4 / height,
+          key: const Key('field-plan-preset-row'),
+          height: height,
+          child: Row(
+            spacing: 6,
             children: [
               for (final preset in betaGamePresets)
-                Semantics(
-                  button: true,
-                  selected: selectedPreset == preset,
-                  label: presetTitle(preset, language),
+                Expanded(
                   child: MechanicalSelectionSurface(
                     key: Key('field-plan-preset-${preset.name}'),
                     selected: selectedPreset == preset,
+                    semanticSelected: selectedPreset == preset,
+                    semanticLabel: presetTitle(preset, language),
                     enabled: onPresetChanged != null,
                     onPressed: onPresetChanged == null
                         ? null
@@ -1616,21 +1604,16 @@ class _SeatLobbyColumn extends StatelessWidget {
               size: compact ? 20 : 22,
             ),
     );
-    return Semantics(
-      button: true,
-      enabled: onPressed != null,
-      selected: selected,
-      label: semanticLabel,
-      child: ExcludeSemantics(
-        child: Tooltip(
-          message: semanticLabel,
-          child: MechanicalSelectionSurface(
-            selected: selected,
-            enabled: onPressed != null,
-            onPressed: onPressed,
-            child: card,
-          ),
-        ),
+    return Tooltip(
+      message: semanticLabel,
+      excludeFromSemantics: true,
+      child: MechanicalSelectionSurface(
+        selected: selected,
+        semanticSelected: selected,
+        semanticLabel: semanticLabel,
+        enabled: onPressed != null,
+        onPressed: onPressed,
+        child: card,
       ),
     );
   }
@@ -2262,73 +2245,68 @@ class _HostedComradeInviteStrip extends StatelessWidget {
                           : language.strings.kolkhozappGameInvite;
                       final semanticLabel =
                           '${comrade.displayLabel} $actionLabel';
-                      return Semantics(
-                        button: true,
-                        enabled: enabled,
-                        label: semanticLabel,
-                        child: ExcludeSemantics(
-                          child: Tooltip(
-                            message: semanticLabel,
-                            child: Opacity(
-                              opacity: enabled ? 1 : 0.64,
-                              child: TactileControlSurface(
-                                key: ValueKey(
-                                  'hosted-comrade-invite-${comrade.userID}',
+                      return Tooltip(
+                        message: semanticLabel,
+                        excludeFromSemantics: true,
+                        child: Opacity(
+                          opacity: enabled ? 1 : 0.64,
+                          child: TactileButton(
+                            key: ValueKey(
+                              'hosted-comrade-invite-${comrade.userID}',
+                            ),
+                            enabled: enabled,
+                            semanticLabel: semanticLabel,
+                            onPressed: enabled
+                                ? () => unawaited(onInvite!(comrade.userID))
+                                : null,
+                            pressTravel: 3,
+                            hoverLift: -1,
+                            hoverScale: 1.025,
+                            child: SizedBox(
+                              width: compact ? 132 : 154,
+                              child: VariantRowBackground(
+                                tokens: tokens,
+                                active: invited || inviting,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 5,
                                 ),
-                                enabled: enabled,
-                                onPressed: enabled
-                                    ? () => unawaited(onInvite!(comrade.userID))
-                                    : null,
-                                pressTravel: 3,
-                                hoverLift: -1,
-                                hoverScale: 1.025,
-                                child: SizedBox(
-                                  width: compact ? 132 : 154,
-                                  child: VariantRowBackground(
-                                    tokens: tokens,
-                                    active: invited || inviting,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 5,
+                                child: Row(
+                                  spacing: 7,
+                                  children: [
+                                    PlayerProfilePortraitImage(
+                                      tokens: tokens,
+                                      asset:
+                                          comrade.portraitAsset ??
+                                          defaultProfilePortraitAsset,
+                                      size: compact ? 28 : 32,
+                                      selected: invited || inviting,
                                     ),
-                                    child: Row(
-                                      spacing: 7,
-                                      children: [
-                                        PlayerProfilePortraitImage(
-                                          tokens: tokens,
-                                          asset:
-                                              comrade.portraitAsset ??
-                                              defaultProfilePortraitAsset,
-                                          size: compact ? 28 : 32,
-                                          selected: invited || inviting,
-                                        ),
-                                        Expanded(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            spacing: 1,
-                                            children: [
-                                              ChromeScaledLabel(
-                                                comrade.displayLabel,
-                                                color: tokens.colors.cardInk,
-                                                size: DisplayTextSize.caption2,
-                                                textAlign: TextAlign.start,
-                                              ),
-                                              ChromeScaledLabel(
-                                                actionLabel,
-                                                color: tokens.colors.cardInk
-                                                    .withValues(alpha: 0.66),
-                                                size: DisplayTextSize.xSmall,
-                                                textAlign: TextAlign.start,
-                                              ),
-                                            ],
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        spacing: 1,
+                                        children: [
+                                          ChromeScaledLabel(
+                                            comrade.displayLabel,
+                                            color: tokens.colors.cardInk,
+                                            size: DisplayTextSize.caption2,
+                                            textAlign: TextAlign.start,
                                           ),
-                                        ),
-                                      ],
+                                          ChromeScaledLabel(
+                                            actionLabel,
+                                            color: tokens.colors.cardInk
+                                                .withValues(alpha: 0.66),
+                                            size: DisplayTextSize.xSmall,
+                                            textAlign: TextAlign.start,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -2368,75 +2346,70 @@ class _OnlineGameOptionToggle extends StatelessWidget {
     final foreground = selected
         ? tokens.colors.activeSurfaceText
         : tokens.colors.cardInk;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      toggled: selected,
-      label: label,
-      child: ExcludeSemantics(
-        child: Tooltip(
-          message: label,
-          child: Opacity(
-            opacity: enabled ? 1 : 0.58,
-            child: MechanicalSelectionSurface(
-              selected: selected,
-              enabled: enabled,
-              onPressed: enabled ? onTap : null,
-              child: SizedBox(
-                width: 138,
-                height: 62,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Positioned.fill(
-                      child: ChromeButtonBackground(
-                        asset: selected
-                            ? chromeButtonPrimaryAsset
-                            : chromeButtonSecondaryAsset,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 6, 10, 7),
-                      child: Row(
-                        spacing: 8,
-                        children: [
-                          MainMenuAssetIcon(
-                            iconAsset,
-                            size: 30,
-                            opacity: selected ? 1 : 0.82,
-                          ),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              spacing: 2,
-                              children: [
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 13,
-                                  child: ChromeScaledLabel(
-                                    title,
-                                    color: foreground.withValues(alpha: 0.68),
-                                    size: DisplayTextSize.caption2,
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 18,
-                                  child: ChromeScaledLabel(
-                                    label,
-                                    color: foreground,
-                                    size: DisplayTextSize.caption,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.58,
+        child: MechanicalSelectionSurface(
+          selected: selected,
+          semanticToggled: selected,
+          semanticLabel: label,
+          enabled: enabled,
+          onPressed: enabled ? onTap : null,
+          child: SizedBox(
+            width: 138,
+            height: 62,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned.fill(
+                  child: ChromeButtonBackground(
+                    asset: selected
+                        ? chromeButtonPrimaryAsset
+                        : chromeButtonSecondaryAsset,
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 7),
+                  child: Row(
+                    spacing: 8,
+                    children: [
+                      MainMenuAssetIcon(
+                        iconAsset,
+                        size: 30,
+                        opacity: selected ? 1 : 0.82,
+                      ),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          spacing: 2,
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              height: 13,
+                              child: ChromeScaledLabel(
+                                title,
+                                color: foreground.withValues(alpha: 0.68),
+                                size: DisplayTextSize.caption2,
+                              ),
+                            ),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 18,
+                              child: ChromeScaledLabel(
+                                label,
+                                color: foreground,
+                                size: DisplayTextSize.caption,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -2694,48 +2667,42 @@ class ImageTabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
     final active = selected && enabled;
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return ChromeAssetButton(
+      label: enabled ? label : '',
+      semanticLabel: label,
+      backgroundAsset: active
+          ? chromeButtonPrimaryAsset
+          : chromeButtonSecondaryAsset,
+      tokens: tokens,
+      textColor: active
+          ? tokens.colors.onAccent
+          : tokens.colors.cardInk.withValues(alpha: enabled ? 1 : 0.58),
+      textSize: textSize,
+      onPressed: onPressed,
       selected: selected,
-      label: label,
-      child: ExcludeSemantics(
-        child: ChromeAssetButton(
-          label: enabled ? label : '',
-          backgroundAsset: active
-              ? chromeButtonPrimaryAsset
-              : chromeButtonSecondaryAsset,
-          tokens: tokens,
-          textColor: active
-              ? tokens.colors.onAccent
-              : tokens.colors.cardInk.withValues(alpha: enabled ? 1 : 0.58),
-          textSize: textSize,
-          onPressed: onPressed,
-          iconAsset: enabled ? iconAsset : 'assets/ui/Icons/icon-lock.png',
-          iconSize: iconSize,
-          height: height,
-          padding: EdgeInsets.fromLTRB(
-            enabled && iconAsset == null ? 10 : horizontalPadding ?? 14,
-            3,
-            horizontalPadding == null ? 10 : horizontalPadding!,
-            0,
-          ),
-          spacing: enabled ? contentSpacing : 0,
-          expandLabel: false,
-          uppercase: enabled,
-          enabled: enabled,
-          disabledOpacity: 0.56,
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: tokens.colors.gold.withValues(alpha: 0.18),
-                    blurRadius: 5,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : null,
-        ),
+      iconAsset: enabled ? iconAsset : 'assets/ui/Icons/icon-lock.png',
+      iconSize: iconSize,
+      height: height,
+      padding: EdgeInsets.fromLTRB(
+        enabled && iconAsset == null ? 10 : horizontalPadding ?? 14,
+        3,
+        horizontalPadding == null ? 10 : horizontalPadding!,
+        0,
       ),
+      spacing: enabled ? contentSpacing : 0,
+      expandLabel: false,
+      uppercase: enabled,
+      enabled: enabled,
+      disabledOpacity: 0.56,
+      boxShadow: active
+          ? [
+              BoxShadow(
+                color: tokens.colors.gold.withValues(alpha: 0.18),
+                blurRadius: 5,
+                offset: const Offset(0, 1),
+              ),
+            ]
+          : null,
     );
   }
 }

@@ -190,49 +190,46 @@ class _RulesTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = selected ? tokens.colors.onAccent : tokens.colors.gold;
-    return Semantics(
-      button: true,
+    return MechanicalSelectionSurface(
       selected: selected,
-      label: label,
-      child: MechanicalSelectionSurface(
-        selected: selected,
-        onPressed: onPressed,
-        child: Material(
-          color: selected ? tokens.colors.red : tokens.colors.iron,
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: selected
-                    ? tokens.colors.onAccent
-                    : tokens.colors.gold.withValues(alpha: 0.66),
-              ),
+      semanticSelected: selected,
+      semanticLabel: label,
+      onPressed: onPressed,
+      child: Material(
+        color: selected ? tokens.colors.red : tokens.colors.iron,
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: selected
+                  ? tokens.colors.onAccent
+                  : tokens.colors.gold.withValues(alpha: 0.66),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  iconPath,
-                  width: 28,
-                  height: 28,
-                  filterQuality: FilterQuality.medium,
-                  isAntiAlias: true,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    label.toUpperCase(),
-                    overflow: TextOverflow.ellipsis,
-                    style: fieldPlanDisplayTextStyle.copyWith(
-                      color: foreground,
-                      fontSize: 18,
-                      letterSpacing: 1.3,
-                    ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                iconPath,
+                width: 28,
+                height: 28,
+                filterQuality: FilterQuality.medium,
+                isAntiAlias: true,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label.toUpperCase(),
+                  overflow: TextOverflow.ellipsis,
+                  style: fieldPlanDisplayTextStyle.copyWith(
+                    color: foreground,
+                    fontSize: 18,
+                    letterSpacing: 1.3,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
