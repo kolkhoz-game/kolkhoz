@@ -654,7 +654,9 @@ void registerTutorialAndLayoutTests() {
       await tester.pump();
       expect(findAppText('HERO OF SOCIALIST LABOR'), findsOneWidget);
       expect(
-        findAppText('YOUR CELLAR IS SAFE FROM THE FINAL REQUISITION.'),
+        findAppText(
+          'EVEN A FIELD POISONED BY THE SABOTEUR CANNOT BREACH YOUR PROTECTION.',
+        ),
         findsOneWidget,
       );
       await tester.pump(const Duration(milliseconds: 1700));

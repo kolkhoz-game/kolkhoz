@@ -257,6 +257,7 @@ class GameController extends ChangeNotifier {
     List<KolkhozPlayerController>? controllers,
     bool persist = true,
     bool tutorial = false,
+    int? seed,
   }) {
     try {
       _clearSession();
@@ -271,7 +272,7 @@ class GameController extends ChangeNotifier {
         throw StateError('All four seats must be ready before starting');
       }
       lifecycle = GameControllerLifecycle.starting;
-      currentSeed = _newSeed();
+      currentSeed = seed ?? _newSeed();
       finishedGameLobby = null;
       uiState = const GameUiState();
       _lastSyncedPhase = null;

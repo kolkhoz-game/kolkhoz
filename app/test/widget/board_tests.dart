@@ -339,7 +339,7 @@ void registerBoardTests() {
     );
     expect(cardControl.card.selected, isFalse);
     final materialButton = tester.widget<TextButton>(
-      find.ancestor(of: handCard, matching: find.byType(TextButton)),
+      find.descendant(of: handCard, matching: find.byType(TextButton)),
     );
     expect(materialButton.onPressed, isNotNull);
 
@@ -5946,7 +5946,7 @@ void registerBoardTests() {
 
     expect(
       find.descendant(
-        of: find.byKey(Key('static-hero-trick-target-${viewer.id}')),
+        of: find.byKey(Key('static-hero-trick-drop-area-${viewer.id}')),
         matching: find.byKey(
           ValueKey('provisional-trick-card-${selectedCard.id}'),
         ),
@@ -6964,11 +6964,7 @@ void registerBoardTests() {
       expect(source!.center, playerRect.center);
       expect(destination, finalTrickCardRect);
       expect(fallbackDestination, isNotNull);
-      expect(fallbackDestination!.center, trickRect.center);
-      expect(
-        fallbackDestination.height,
-        closeTo(defaultDesignTokens.card.small.height, 0.001),
-      );
+      expect(fallbackDestination, trickRect);
     },
   );
 
@@ -7650,7 +7646,7 @@ void registerBoardTests() {
         matching: find.byType(AnimatedScale),
       ),
     );
-    expect(feedbackScale.scale, closeTo(0.5, 0.001));
+    expect(feedbackScale.scale, cardDragMinimumTargetScale);
     await mouse.up();
 
     expect(activeCardDrag.value?.cardID, 'wheat-8');

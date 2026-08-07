@@ -1770,6 +1770,7 @@ void registerStoreAndOnlineTests() {
       addTearDown(store.dispose);
       store.startGame(
         persist: false,
+        seed: 20260706,
         variants: KolkhozGameVariants.demoKolkhoz,
         controllers: const [
           KolkhozPlayerController.human,
@@ -1783,6 +1784,7 @@ void registerStoreAndOnlineTests() {
         actionRevealReward: 0,
         actionRevealTrump: 0,
         actionSubmitAssignments: 1,
+        actionConfirmRewardSwaps: 1,
         actionContinueAfterRequisition: 1,
         actionConfirmSwap: 1,
         actionSetTrump: 2,
@@ -5581,25 +5583,13 @@ void registerStoreAndOnlineTests() {
     });
 
     final playerID = bridge.currentPlayer(engine);
+    final action = bridge.legalActions(engine).first;
     expect(bridge.phase(engine), kcPhasePlanning);
-    expect(
-      bridge.applyManual(
-        engine,
-        CEngineActionValue(
-          kind: kcActionSetTrump,
-          playerID: playerID,
-          suit: 0,
-          card: const EngineCardValue(suit: -1, value: 0),
-          handCard: const EngineCardValue(suit: -1, value: 0),
-          plotCard: const EngineCardValue(suit: -1, value: 0),
-          plotZone: -1,
-          targetSuit: -1,
-        ),
-      ),
-      0,
-    );
-    expect(bridge.phase(engine), isNot(kcPhasePlanning));
+    expect(action.playerID, playerID);
+    expect(bridge.applyManual(engine, action), 0);
     expect(bridge.phase(clone), kcPhasePlanning);
+    expect(bridge.currentPlayer(clone), playerID);
+    expect(bridge.legalActions(clone), isNotEmpty);
   });
 
   test('autosave store saves payloads and ignores corrupt files', () {
@@ -6036,125 +6026,122 @@ void registerStoreAndOnlineTests() {
     expect(findAssetImage(fieldPlanSunflowerIconPath), findsOneWidget);
   });
 
-  testWidgets('local requisition advances and logs one event per timer tick', (
-    tester,
-  ) async {
-    final store = GameController(autosaveEnabled: false)
-      ..animationSpeed = GameAnimationSpeed.normal;
-    store.startGame(
-      persist: false,
-      controllers: const [
-        KolkhozPlayerController.human,
-        KolkhozPlayerController.human,
-        KolkhozPlayerController.human,
-        KolkhozPlayerController.human,
-      ],
-    );
+  testWidgets(
+    'local requisition waits for nominations before presenting outcomes',
+    (tester) async {
+      final store = GameController(autosaveEnabled: false)
+        ..animationSpeed = GameAnimationSpeed.normal;
+      store.startGame(
+        persist: false,
+        seed: 81001,
+        controllers: const [
+          KolkhozPlayerController.human,
+          KolkhozPlayerController.human,
+          KolkhozPlayerController.human,
+          KolkhozPlayerController.human,
+        ],
+      );
 
-    const priority = {
-      actionSubmitAssignments: 0,
-      actionContinueAfterRequisition: 0,
-      actionConfirmSwap: 0,
-      actionSetTrump: 1,
-      actionPlayCard: 1,
-      actionAssign: 1,
-      actionSwap: 2,
-      actionUndoSwap: 3,
-    };
-    for (var guard = 0; guard < 500; guard += 1) {
-      final model = store.model!;
-      if (model.table.phase == phaseRequisition) break;
-      final assignedCardIDs = assignedAssignmentCardIDs(model);
-      final actions =
-          model.legalActions
-              .where(
-                (action) =>
-                    action.kind != actionAssign ||
-                    !assignedCardIDs.contains(action.engineAction.card?.id),
-              )
-              .toList()
-            ..sort(
-              (left, right) => (priority[left.kind] ?? 9).compareTo(
-                priority[right.kind] ?? 9,
-              ),
-            );
-      expect(actions, isNotEmpty);
-      store.applyLegalAction(actions.first);
+      const priority = {
+        actionSubmitAssignments: 0,
+        actionConfirmRewardSwaps: 0,
+        actionContinueAfterRequisition: 0,
+        actionConfirmSwap: 0,
+        actionSetTrump: 1,
+        actionPlayCard: 1,
+        actionAssign: 1,
+        actionSwap: 2,
+        actionUndoSwap: 3,
+      };
+      for (var guard = 0; guard < 500; guard += 1) {
+        final model = store.model!;
+        if (model.table.phase == phaseRequisition) break;
+        final assignedCardIDs = assignedAssignmentCardIDs(model);
+        final actions =
+            model.legalActions
+                .where(
+                  (action) =>
+                      action.kind != actionAssign ||
+                      !assignedCardIDs.contains(action.engineAction.card?.id),
+                )
+                .toList()
+              ..sort(
+                (left, right) => (priority[left.kind] ?? 9).compareTo(
+                  priority[right.kind] ?? 9,
+                ),
+              );
+        expect(actions, isNotEmpty);
+        store.applyLegalAction(actions.first);
+        while (store.currentTransition != null) {
+          store.completeTransition(store.currentTransition!.id);
+        }
+      }
+
+      expect(store.model!.table.phase, phaseRequisition);
+      for (var guard = 0; guard < 4; guard += 1) {
+        final nominations = store.model!.legalActions
+            .where((action) => action.kind == actionSelectRequisitionCard)
+            .toList(growable: false);
+        if (nominations.isEmpty) break;
+        store.applyLegalAction(nominations.first);
+        while (store.currentTransition != null) {
+          store.completeTransition(store.currentTransition!.id);
+        }
+      }
+      expect(
+        store.model!.legalActions.where(
+          (action) => action.kind == actionSelectRequisitionCard,
+        ),
+        isEmpty,
+      );
+      expect(
+        store.gameLogActions.where(
+          (action) => action.kind == actionSelectRequisitionCard,
+        ),
+        isNotEmpty,
+      );
+      expect(store.model!.table.requisitionEvents, isNotEmpty);
+
+      LegalAction? continueAction;
+      for (var guard = 0; guard < 512; guard += 1) {
+        while (store.currentTransition != null) {
+          store.completeTransition(store.currentTransition!.id);
+        }
+        final continueActions = store.model!.legalActions.where(
+          (action) => action.kind == actionContinueAfterRequisition,
+        );
+        if (continueActions.isNotEmpty) {
+          continueAction = continueActions.first;
+          break;
+        }
+        await tester.pump(
+          GameAnimationSpeed.normal.automaticStepDelay +
+              const Duration(milliseconds: 1),
+        );
+      }
+
+      expect(
+        continueAction,
+        isNotNull,
+        reason:
+            'events=${store.model!.table.requisitionEvents.length} '
+            'legal=${store.model!.legalActions.map((action) => action.kind).toList()} '
+            'transition=${store.currentTransition?.id}',
+      );
+      await tester.pump(GameAnimationSpeed.normal.automaticStepDelay * 2);
+      expect(
+        store.model!.legalActions.map((action) => action.kind),
+        contains(actionContinueAfterRequisition),
+      );
+
+      store.applyLegalAction(continueAction!);
       while (store.currentTransition != null) {
         store.completeTransition(store.currentTransition!.id);
       }
-    }
-
-    expect(store.model!.table.phase, phaseRequisition);
-    expect(store.model!.table.requisitionEvents, isEmpty);
-    expect(
-      store.gameLogActions.where(
-        (action) => action.kind == actionRequisitionEvent,
-      ),
-      isEmpty,
-    );
-
-    await tester.pump(GameAnimationSpeed.normal.automaticStepDelay);
-    expect(store.model!.table.requisitionEvents, hasLength(1));
-    expect(
-      store.gameLogActions.where(
-        (action) => action.kind == actionRequisitionEvent,
-      ),
-      hasLength(1),
-    );
-
-    await tester.pump(GameAnimationSpeed.normal.automaticStepDelay * 2);
-    expect(store.model!.table.requisitionEvents, hasLength(1));
-
-    store.completeTransition(store.currentTransition!.id);
-    await tester.pump(GameAnimationSpeed.normal.automaticStepDelay);
-    expect(store.model!.table.requisitionEvents, hasLength(2));
-    expect(
-      store.gameLogActions.where(
-        (action) => action.kind == actionRequisitionEvent,
-      ),
-      hasLength(2),
-    );
-
-    LegalAction? continueAction;
-    for (var guard = 0; guard < 512; guard += 1) {
-      while (store.currentTransition != null) {
-        store.completeTransition(store.currentTransition!.id);
-      }
-      final continueActions = store.model!.legalActions.where(
-        (action) => action.kind == actionContinueAfterRequisition,
-      );
-      if (continueActions.isNotEmpty) {
-        continueAction = continueActions.first;
-        break;
-      }
-      await tester.pump(
-        GameAnimationSpeed.normal.automaticStepDelay +
-            const Duration(milliseconds: 1),
-      );
-    }
-
-    expect(
-      continueAction,
-      isNotNull,
-      reason:
-          'events=${store.model!.table.requisitionEvents.length} '
-          'legal=${store.model!.legalActions.map((action) => action.kind).toList()} '
-          'transition=${store.currentTransition?.id}',
-    );
-    await tester.pump(GameAnimationSpeed.normal.automaticStepDelay * 2);
-    expect(
-      store.model!.legalActions.map((action) => action.kind),
-      contains(actionContinueAfterRequisition),
-    );
-
-    store.applyLegalAction(continueAction!);
-    while (store.currentTransition != null) {
-      store.completeTransition(store.currentTransition!.id);
-    }
-    expect(store.model!.table.phase, isNot(phaseRequisition));
-    store.dispose();
-  });
+      expect(store.model!.table.phase, isNot(phaseRequisition));
+      store.dispose();
+    },
+  );
 
   testWidgets('game log renders individual requisition outcomes', (
     tester,

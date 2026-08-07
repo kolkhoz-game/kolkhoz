@@ -129,9 +129,7 @@ class RealCEngineRecoveryTests(unittest.TestCase):
                 self.assertEqual(created.revision, 0)
                 self.assertEqual(created.state["phase"], 0)
                 self.assertEqual(created.state["legalActions"][0]["kind"], 10)
-                self.assertNotEqual(
-                    created.state["legalActions"][0]["playerID"], 0
-                )
+                self.assertNotEqual(created.state["legalActions"][0]["playerID"], 0)
 
                 applied = runtime.advance_automatic("ai-planner", now=0)
                 planning = runtime.state("ai-planner")

@@ -60,10 +60,7 @@ def normalize_variants(value: object) -> JsonObject:
             result[key] = value[key]
     if not bool(result["wrecker"]):
         result["finalYearTrump"] = False
-    if (
-        int(result["deckType"]) == 36
-        or bool(result["northernStyle"])
-    ):
+    if int(result["deckType"]) == 36 or bool(result["northernStyle"]):
         result["managedEconomy"] = False
     if bool(result["managedEconomy"]):
         result["lottoRewards"] = False
@@ -201,9 +198,9 @@ def privacy_safe_action_log(
         ):
             value["handCard"] = {"suit": -1, "value": -1}
             value["plotCard"] = {"suit": -1, "value": -1}
-        if (
-            optional_int(value.get("playerID")) != viewer_id
-            and value.get("kind") in (9, 17)
+        if optional_int(value.get("playerID")) != viewer_id and value.get("kind") in (
+            9,
+            17,
         ):
             value["card"] = {"suit": -1, "value": -1}
         result.append(value)

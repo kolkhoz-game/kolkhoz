@@ -53,17 +53,15 @@ class ContractNormalizationTests(unittest.TestCase):
         self.assertTrue(normalized["passCards"])
         self.assertTrue(variants_native(normalized).pass_cards)
 
-    def test_managed_economy_is_mutually_exclusive_with_other_reward_rules(self) -> None:
-        managed = normalize_variants(
-            {"managedEconomy": True, "lottoRewards": True}
-        )
+    def test_managed_economy_is_mutually_exclusive_with_other_reward_rules(
+        self,
+    ) -> None:
+        managed = normalize_variants({"managedEconomy": True, "lottoRewards": True})
         self.assertTrue(managed["managedEconomy"])
         self.assertFalse(managed["lottoRewards"])
         self.assertTrue(variants_native(managed).managed_economy)
 
-        northern = normalize_variants(
-            {"managedEconomy": True, "northernStyle": True}
-        )
+        northern = normalize_variants({"managedEconomy": True, "northernStyle": True})
         self.assertFalse(northern["managedEconomy"])
 
     def test_normalizes_four_supported_controllers_and_keeps_a_human(self) -> None:
@@ -153,9 +151,7 @@ class ProjectionContractTests(unittest.TestCase):
     def test_requisition_takes_each_medalists_highest_then_compares(self) -> None:
         pointer = self.engine.new_engine(
             81001,
-            variants=variants_native(
-                normalize_variants({"heroOfSovietUnion": False})
-            ),
+            variants=variants_native(normalize_variants({"heroOfSovietUnion": False})),
             controllers=controllers_native(["human"] * 4),
         )
         try:
@@ -191,19 +187,30 @@ class ProjectionContractTests(unittest.TestCase):
 
             actions = self.engine.legal_actions(pointer)
             self.assertEqual(
-                {(action.player_id, action.card.suit, action.card.value) for action in actions},
+                {
+                    (action.player_id, action.card.suit, action.card.value)
+                    for action in actions
+                },
                 {(0, 0, 10), (0, 1, 10), (1, 0, 9)},
             )
             self.engine.apply_action(
                 pointer,
-                next(action for action in actions if action.player_id == 0 and action.card.suit == 1),
+                next(
+                    action
+                    for action in actions
+                    if action.player_id == 0 and action.card.suit == 1
+                ),
             )
             state = self.engine.snapshot(pointer)
             self.assertEqual(state.players[0].plot_hidden.count, 3)
 
             self.engine.apply_action(
                 pointer,
-                next(action for action in self.engine.legal_actions(pointer) if action.player_id == 1),
+                next(
+                    action
+                    for action in self.engine.legal_actions(pointer)
+                    if action.player_id == 1
+                ),
             )
             state = self.engine.snapshot(pointer)
             self.assertEqual(state.exiled[1].count, 2)
@@ -211,7 +218,10 @@ class ProjectionContractTests(unittest.TestCase):
 
             second_round = self.engine.legal_actions(pointer)
             self.assertEqual(
-                {(action.player_id, action.card.suit, action.card.value) for action in second_round},
+                {
+                    (action.player_id, action.card.suit, action.card.value)
+                    for action in second_round
+                },
                 {(0, 0, 10), (1, 1, 7)},
             )
             for player_id in (0, 1):
@@ -254,7 +264,9 @@ class ProjectionContractTests(unittest.TestCase):
             self.assertEqual(state.exiled[1].count, 4)
             self.assertEqual(state.requisition_held_nomination_count, 1)
             held = state.requisition_held_nominations[0]
-            self.assertEqual((held.player_id, held.card.suit, held.card.value), (1, 1, 7))
+            self.assertEqual(
+                (held.player_id, held.card.suit, held.card.value), (1, 1, 7)
+            )
             self.assertEqual(
                 snapshot_json(self.engine, pointer, 0)["requisitionHeldNominations"],
                 [{"playerID": 1, "card": {"suit": 1, "value": 7}}],
@@ -271,12 +283,12 @@ class ProjectionContractTests(unittest.TestCase):
         finally:
             self.engine.free_engine(pointer)
 
-    def test_requisition_individual_losses_follow_each_players_medal_count(self) -> None:
+    def test_requisition_individual_losses_follow_each_players_medal_count(
+        self,
+    ) -> None:
         pointer = self.engine.new_engine(
             81003,
-            variants=variants_native(
-                normalize_variants({"heroOfSovietUnion": False})
-            ),
+            variants=variants_native(normalize_variants({"heroOfSovietUnion": False})),
             controllers=controllers_native(["human"] * 4),
         )
         try:
@@ -334,7 +346,10 @@ class ProjectionContractTests(unittest.TestCase):
             self.assertEqual(state.exiled[1].count, 3)
             self.assertEqual(state.requisition_rounds_remaining, 1)
             self.assertEqual(
-                {(action.player_id, action.card.value) for action in self.engine.legal_actions(pointer)},
+                {
+                    (action.player_id, action.card.value)
+                    for action in self.engine.legal_actions(pointer)
+                },
                 {(0, 8), (1, 7)},
             )
         finally:
@@ -344,9 +359,7 @@ class ProjectionContractTests(unittest.TestCase):
         pointer = self.engine.new_engine(
             81004,
             variants=variants_native(
-                normalize_variants(
-                    {"heroOfSovietUnion": False, "nomenclature": True}
-                )
+                normalize_variants({"heroOfSovietUnion": False, "nomenclature": True})
             ),
             controllers=controllers_native(["human"] * 4),
         )
@@ -446,7 +459,9 @@ class ProjectionContractTests(unittest.TestCase):
                 pointer,
                 KCAction(6, 0, -1, KCCard(-1, 0), KCCard(-1, 0), KCCard(-1, 0), -1, -1),
             )
-            self.assertEqual(self.engine.snapshot(pointer).requisition_rounds_remaining, 4)
+            self.assertEqual(
+                self.engine.snapshot(pointer).requisition_rounds_remaining, 4
+            )
             for _ in range(4):
                 self.assertEqual(
                     {action.player_id for action in self.engine.legal_actions(pointer)},
@@ -719,10 +734,7 @@ class ProjectionContractTests(unittest.TestCase):
             self.assertEqual(state.phase, 1)
             self.assertFalse(any(state.has_revealed_job))
             self.assertTrue(
-                all(
-                    state.managed_reward_offers[suit].suit == -1
-                    for suit in range(4)
-                )
+                all(state.managed_reward_offers[suit].suit == -1 for suit in range(4))
             )
         finally:
             self.engine.free_engine(pointer)
@@ -945,13 +957,17 @@ class ProjectionContractTests(unittest.TestCase):
             state.revealed_jobs[1] = KCCard(1, 5)
 
             finishing_action = self.engine.heuristic_action(pointer)
-            self.assertEqual((finishing_action.kind, finishing_action.target_suit), (5, 0))
+            self.assertEqual(
+                (finishing_action.kind, finishing_action.target_suit), (5, 0)
+            )
             state.controllers.seats[0] = 0
             self.engine.apply_action(pointer, finishing_action)
             state.controllers.seats[0] = 1
 
             redirected_action = self.engine.heuristic_action(pointer)
-            self.assertEqual((redirected_action.kind, redirected_action.target_suit), (5, 1))
+            self.assertEqual(
+                (redirected_action.kind, redirected_action.target_suit), (5, 1)
+            )
         finally:
             self.engine.free_engine(pointer)
 
