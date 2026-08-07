@@ -30,71 +30,6 @@ part 'rules_view.dart';
 
 const maxAccountEmailLength = 254;
 
-class _ProfileTextField extends StatelessWidget {
-  const _ProfileTextField({
-    required this.tokens,
-    required this.controller,
-    required this.label,
-    this.obscureText = false,
-    this.keyboardType,
-    this.autocorrect = true,
-    this.enableSuggestions = true,
-    this.maxLength = 24,
-    this.onChanged,
-  });
-
-  final DesignTokens tokens;
-  final TextEditingController controller;
-  final String label;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-  final bool autocorrect;
-  final bool enableSuggestions;
-  final int maxLength;
-  final ValueChanged<String>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: tokens.colors.black.withValues(alpha: 0.30),
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: tokens.colors.steel.withValues(alpha: 0.34)),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        autocorrect: autocorrect,
-        enableSuggestions: enableSuggestions,
-        maxLength: maxLength,
-        onChanged: onChanged,
-        minLines: 1,
-        maxLines: 1,
-        style: kolkhozFontStyle.copyWith(
-          color: tokens.colors.cream,
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          counterText: '',
-          labelStyle: kolkhozFontStyle.copyWith(
-            color: tokens.colors.creamDim.withValues(alpha: 0.72),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 8,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ProfilePortraitChoice extends StatelessWidget {
   const _ProfilePortraitChoice({
     required this.tokens,
@@ -112,7 +47,7 @@ class _ProfilePortraitChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MechanicalSelectionSurface(
+    return TactileButton(
       selected: selected,
       semanticSelected: selected,
       semanticLabel: unlocked ? asset : '$asset (locked)',

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
@@ -57,137 +58,394 @@ const tactileControlFocusScale = 1.01;
 const tactileControlPressTravel = 3.5;
 const tactileControlHoverLift = -1.5;
 
-/// Gives non-card controls the same physical pick-up and settle language as
-/// the gameplay surfaces without changing their visual ownership.
-class TactileControlSurface extends StatefulWidget {
-  const TactileControlSurface({
+class KolkhozFocusHandoff extends StatefulWidget {
+  const KolkhozFocusHandoff({
+    required this.handoffKey,
+    required this.semanticLabel,
     required this.child,
-    this.onPressed,
-    this.enabled = true,
-    this.pressTravel = tactileControlPressTravel,
-    this.hoverLift = tactileControlHoverLift,
-    this.pressScale = tactileControlPressScale,
-    this.hoverScale = tactileControlHoverScale,
-    this.haptics = true,
     super.key,
   });
 
+  final Object handoffKey;
+  final String semanticLabel;
   final Widget child;
-  final VoidCallback? onPressed;
-  final bool enabled;
-  final double pressTravel;
-  final double hoverLift;
-  final double pressScale;
-  final double hoverScale;
-  final bool haptics;
 
   @override
-  State<TactileControlSurface> createState() => _TactileControlSurfaceState();
+  State<KolkhozFocusHandoff> createState() => _KolkhozFocusHandoffState();
 }
 
-class _TactileControlSurfaceState extends State<TactileControlSurface> {
-  bool _hovered = false;
-  bool _focused = false;
-  bool _pressed = false;
+class KolkhozDirectionalFocusGroup extends StatelessWidget {
+  const KolkhozDirectionalFocusGroup({
+    required this.child,
+    this.axis,
+    super.key,
+  });
 
-  bool get _enabled => widget.enabled && widget.onPressed != null;
+  final Axis? axis;
+  final Widget child;
 
   @override
-  void didUpdateWidget(TactileControlSurface oldWidget) {
+  Widget build(BuildContext context) {
+    return FocusTraversalGroup(
+      policy: _KolkhozDirectionalFocusTraversalPolicy(axis),
+      child: child,
+    );
+  }
+}
+
+class _KolkhozDirectionalFocusTraversalPolicy
+    extends WidgetOrderTraversalPolicy {
+  _KolkhozDirectionalFocusTraversalPolicy(this.axis);
+
+  final Axis? axis;
+
+  @override
+  bool inDirection(FocusNode currentNode, TraversalDirection direction) {
+    final vertical = axis == null || axis == Axis.vertical;
+    final horizontal = axis == null || axis == Axis.horizontal;
+    if ((vertical && direction == TraversalDirection.down) ||
+        (horizontal && direction == TraversalDirection.right)) {
+      return next(currentNode);
+    }
+    if ((vertical && direction == TraversalDirection.up) ||
+        (horizontal && direction == TraversalDirection.left)) {
+      return previous(currentNode);
+    }
+    return super.inDirection(currentNode, direction);
+  }
+}
+
+class _KolkhozFocusHandoffState extends State<KolkhozFocusHandoff> {
+  final focusNode = FocusNode(debugLabel: 'Kolkhoz panel focus handoff');
+
+  @override
+  void didUpdateWidget(KolkhozFocusHandoff oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.enabled && !widget.enabled ||
-        oldWidget.onPressed != null && widget.onPressed == null) {
-      _hovered = false;
-      _focused = false;
-      _pressed = false;
-    }
+    if (oldWidget.handoffKey == widget.handoffKey) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) focusNode.requestFocus();
+    });
   }
 
-  void _setPressed(bool pressed) {
-    if (_pressed == pressed || !_enabled) {
-      return;
-    }
-    setState(() => _pressed = pressed);
-    if (pressed && widget.haptics) {
-      unawaited(HapticFeedback.selectionClick());
-    }
-  }
-
-  void _activate() {
-    if (_enabled) {
-      widget.onPressed?.call();
-    }
+  @override
+  void dispose() {
+    focusNode.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final scale = !_enabled
-        ? 1.0
-        : _pressed
-        ? widget.pressScale
-        : _hovered
-        ? widget.hoverScale
-        : _focused
-        ? tactileControlFocusScale
-        : 1.0;
-    final offset = !_enabled
-        ? 0.0
-        : _pressed
-        ? widget.pressTravel
-        : _hovered
-        ? widget.hoverLift
-        : 0.0;
-    final duration = reduceMotion
-        ? Duration.zero
-        : _pressed
-        ? tactileControlPressDuration
-        : _hovered
-        ? tactileControlHoverDuration
-        : tactileControlReleaseDuration;
-    final curve = _pressed ? Curves.easeOutCubic : Curves.easeOutBack;
-    final transform = Matrix4.translationValues(0, offset, 0)
-      ..multiply(Matrix4.diagonal3Values(scale, scale, 1));
-
-    return MouseRegion(
-      cursor: _enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: _enabled ? (_) => setState(() => _hovered = true) : null,
-      onExit: _enabled
-          ? (_) => setState(() {
-              _hovered = false;
-              _pressed = false;
-            })
-          : null,
-      child: FocusableActionDetector(
-        enabled: _enabled,
-        onShowFocusHighlight: (focused) => setState(() => _focused = focused),
-        actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              _activate();
-              return null;
-            },
-          ),
-        },
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: _enabled ? (_) => _setPressed(true) : null,
-          onTapUp: _enabled ? (_) => _setPressed(false) : null,
-          onTapCancel: _enabled ? () => _setPressed(false) : null,
-          onTap: _enabled ? _activate : null,
-          child: AnimatedContainer(
-            key: const Key('tactile-control-transform'),
-            duration: duration,
-            curve: curve,
-            transformAlignment: Alignment.center,
-            transform: transform,
-            child: widget.child,
-          ),
+    return FocusTraversalGroup(
+      policy: ReadingOrderTraversalPolicy(),
+      child: Semantics(
+        container: true,
+        label: widget.semanticLabel,
+        child: Focus(
+          focusNode: focusNode,
+          skipTraversal: true,
+          child: widget.child,
         ),
       ),
     );
   }
+}
+
+class KolkhozAlertDialog extends StatelessWidget {
+  const KolkhozAlertDialog({
+    required this.tokens,
+    required this.title,
+    required this.content,
+    this.actions = const <Widget>[],
+    super.key,
+  });
+
+  final DesignTokens tokens;
+  final Widget title;
+  final Widget content;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: tokens.colors.panel,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radius.md),
+        side: BorderSide(color: tokens.colors.gold.withValues(alpha: 0.7)),
+      ),
+      titleTextStyle: kolkhozFontStyle.copyWith(
+        color: tokens.colors.gold,
+        fontSize: 21,
+        fontWeight: FontWeight.w900,
+      ),
+      contentTextStyle: kolkhozFontStyle.copyWith(
+        color: tokens.colors.cream,
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+      ),
+      title: title,
+      content: content,
+      actions: actions,
+    );
+  }
+}
+
+class KolkhozDialog extends StatelessWidget {
+  const KolkhozDialog({
+    required this.tokens,
+    required this.child,
+    this.constraints = const BoxConstraints(maxWidth: 680, maxHeight: 640),
+    this.padding = const EdgeInsets.all(14),
+    this.semanticLabel,
+    super.key,
+  });
+
+  final DesignTokens tokens;
+  final Widget child;
+  final BoxConstraints constraints;
+  final EdgeInsetsGeometry padding;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = Padding(padding: padding, child: child);
+    return Dialog(
+      backgroundColor: tokens.colors.panel,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radius.md),
+        side: BorderSide(color: tokens.colors.gold.withValues(alpha: 0.7)),
+      ),
+      child: Semantics(
+        container: true,
+        namesRoute: semanticLabel != null,
+        label: semanticLabel,
+        child: ConstrainedBox(constraints: constraints, child: body),
+      ),
+    );
+  }
+}
+
+Future<bool> showKolkhozConfirmation({
+  required BuildContext context,
+  required DesignTokens tokens,
+  required String title,
+  required String message,
+  required String cancelLabel,
+  required String confirmLabel,
+  bool destructive = false,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => KolkhozAlertDialog(
+      tokens: tokens,
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TactileTextButton(
+          autofocus: true,
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(cancelLabel),
+        ),
+        TactileTextButton(
+          style: destructive
+              ? TextButton.styleFrom(foregroundColor: tokens.colors.redBright)
+              : null,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(confirmLabel),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}
+
+SnackBar kolkhozSnackBar({
+  required DesignTokens tokens,
+  required String message,
+  bool isError = false,
+}) {
+  return SnackBar(
+    key: ValueKey(isError ? 'kolkhoz-error-message' : 'kolkhoz-message'),
+    behavior: SnackBarBehavior.floating,
+    showCloseIcon: true,
+    backgroundColor: isError
+        ? tokens.colors.redDark
+        : tokens.colors.black.withValues(alpha: 0.94),
+    content: Semantics(
+      container: true,
+      liveRegion: true,
+      label: message,
+      excludeSemantics: true,
+      child: Text(message),
+    ),
+  );
+}
+
+/// A Material text form field with the app's visual treatment and native
+/// editing, focus, validation, autofill, and keyboard-action behavior.
+class KolkhozTextField extends StatelessWidget {
+  const KolkhozTextField({
+    required this.tokens,
+    required this.controller,
+    this.labelText,
+    this.hintText,
+    this.enabled = true,
+    this.obscureText = false,
+    this.keyboardType,
+    this.textInputAction,
+    this.textCapitalization = TextCapitalization.none,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.maxLength,
+    this.autofillHints,
+    this.inputFormatters,
+    this.onChanged,
+    this.onSubmitted,
+    this.validator,
+    this.autovalidateMode,
+    this.style,
+    this.hintStyle,
+    this.fillColor,
+    this.borderColor,
+    this.contentPadding,
+    this.textAlign = TextAlign.start,
+    this.textAlignVertical,
+    this.outlined = true,
+    super.key,
+  });
+
+  final DesignTokens tokens;
+  final TextEditingController controller;
+  final String? labelText;
+  final String? hintText;
+  final bool enabled;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final TextCapitalization textCapitalization;
+  final bool autocorrect;
+  final bool enableSuggestions;
+  final int? maxLength;
+  final Iterable<String>? autofillHints;
+  final List<TextInputFormatter>? inputFormatters;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final FormFieldValidator<String>? validator;
+  final AutovalidateMode? autovalidateMode;
+  final TextStyle? style;
+  final TextStyle? hintStyle;
+  final Color? fillColor;
+  final Color? borderColor;
+  final EdgeInsetsGeometry? contentPadding;
+  final TextAlign textAlign;
+  final TextAlignVertical? textAlignVertical;
+  final bool outlined;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(tokens.radius.md);
+    final restingColor =
+        borderColor ??
+        tokens.colors.steel.withValues(alpha: enabled ? 0.48 : 0.24);
+    final enabledBorder = outlined
+        ? OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: BorderSide(color: restingColor),
+          )
+        : UnderlineInputBorder(borderSide: BorderSide(color: restingColor));
+    final focusedBorder = outlined
+        ? OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: BorderSide(
+              color: Theme.of(context).focusColor,
+              width: 2,
+            ),
+          )
+        : UnderlineInputBorder(
+            borderSide: BorderSide(
+              color: Theme.of(context).focusColor,
+              width: 2,
+            ),
+          );
+    final errorBorder = outlined
+        ? OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: BorderSide(color: tokens.colors.redBright, width: 1.5),
+          )
+        : UnderlineInputBorder(
+            borderSide: BorderSide(color: tokens.colors.redBright, width: 1.5),
+          );
+    return TextFormField(
+      controller: controller,
+      enabled: enabled,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      textCapitalization: textCapitalization,
+      autocorrect: autocorrect,
+      enableSuggestions: enableSuggestions,
+      maxLength: maxLength,
+      autofillHints: autofillHints,
+      inputFormatters: inputFormatters,
+      onChanged: onChanged,
+      onFieldSubmitted: onSubmitted,
+      validator: validator,
+      autovalidateMode: autovalidateMode,
+      minLines: 1,
+      maxLines: 1,
+      textAlign: textAlign,
+      textAlignVertical: textAlignVertical,
+      cursorColor: tokens.colors.redDark,
+      style:
+          style ??
+          kolkhozFontStyle.copyWith(
+            color: tokens.colors.cream,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+      onTapOutside: (_) => FocusScope.of(context).unfocus(),
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        counterText: '',
+        filled: outlined || fillColor != null,
+        fillColor: fillColor ?? tokens.colors.black.withValues(alpha: 0.30),
+        labelStyle: kolkhozFontStyle.copyWith(
+          color: tokens.colors.creamDim.withValues(alpha: 0.78),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+        hintStyle: hintStyle,
+        contentPadding:
+            contentPadding ??
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        enabledBorder: enabledBorder,
+        disabledBorder: enabledBorder,
+        focusedBorder: focusedBorder,
+        errorBorder: errorBorder,
+        focusedErrorBorder: errorBorder,
+        errorStyle: kolkhozFontStyle.copyWith(
+          color: tokens.colors.redBright,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class UpperCaseTextFormatter extends TextInputFormatter {
+  const UpperCaseTextFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) => newValue.copyWith(
+    text: newValue.text.toUpperCase(),
+    composing: TextRange.empty,
+  );
 }
 
 /// Lets a Material text button own activation, focus, keyboard handling, and
@@ -206,6 +464,7 @@ class TactileButton extends StatefulWidget {
     this.haptics = true,
     this.focusNode,
     this.autofocus = false,
+    this.semanticKey,
     this.semanticLabel,
     this.semanticSelected,
     this.semanticToggled,
@@ -226,6 +485,7 @@ class TactileButton extends StatefulWidget {
   final bool haptics;
   final FocusNode? focusNode;
   final bool autofocus;
+  final Key? semanticKey;
   final String? semanticLabel;
   final bool? semanticSelected;
   final bool? semanticToggled;
@@ -239,6 +499,7 @@ class TactileButton extends StatefulWidget {
 class _TactileButtonState extends State<TactileButton> {
   late final WidgetStatesController statesController;
   bool wasPressed = false;
+  bool rebuildScheduled = false;
 
   bool get enabled => widget.enabled && widget.onPressed != null;
 
@@ -267,9 +528,24 @@ class _TactileButtonState extends State<TactileButton> {
       unawaited(HapticFeedback.selectionClick());
     }
     wasPressed = pressed;
-    if (mounted) {
-      setState(() {});
+    if (!mounted) {
+      return;
     }
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      if (rebuildScheduled) {
+        return;
+      }
+      rebuildScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        rebuildScheduled = false;
+        if (mounted) {
+          setState(() {});
+        }
+      });
+      return;
+    }
+    setState(() {});
   }
 
   @override
@@ -321,36 +597,28 @@ class _TactileButtonState extends State<TactileButton> {
         RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       ),
     );
-    final semanticChild =
-        widget.semanticLabel != null ||
-            widget.semanticSelected != null ||
-            widget.semanticToggled != null ||
-            widget.semanticExpanded != null
-        ? Semantics(
-            label: widget.semanticLabel,
-            selected: widget.semanticSelected,
-            toggled: widget.semanticToggled,
-            expanded: widget.semanticExpanded,
-            excludeSemantics: widget.semanticLabel != null,
-            child: widget.child,
-          )
-        : widget.child;
     // ButtonStyleButton installs its own text and icon themes around its child.
     // Custom-painted controls already own those visuals, so restore the
     // surrounding themes inside the Material button. TactileTextButton opts
     // into the ordinary TextButton styling instead.
     final visualChild = widget.useDefaultMaterialStyle
-        ? semanticChild
+        ? widget.child
         : DefaultTextStyle(
             style: DefaultTextStyle.of(context).style,
-            child: IconTheme(data: IconTheme.of(context), child: semanticChild),
+            child: IconTheme(data: IconTheme.of(context), child: widget.child),
           );
-    return AnimatedContainer(
+    final button = AnimatedContainer(
       key: const Key('tactile-control-transform'),
       duration: duration,
       curve: curve,
       transformAlignment: Alignment.center,
       transform: transform,
+      decoration: focused
+          ? BoxDecoration(
+              border: Border.all(color: Theme.of(context).focusColor, width: 2),
+              borderRadius: BorderRadius.circular(4),
+            )
+          : null,
       child: TextButton(
         statesController: statesController,
         focusNode: widget.focusNode,
@@ -362,6 +630,26 @@ class _TactileButtonState extends State<TactileButton> {
         child: visualChild,
       ),
     );
+    if (widget.semanticLabel == null &&
+        widget.semanticSelected == null &&
+        widget.semanticToggled == null &&
+        widget.semanticExpanded == null) {
+      return button;
+    }
+    return Semantics(
+      key: widget.semanticKey,
+      label: widget.semanticLabel,
+      button: true,
+      enabled: enabled,
+      focusable: enabled,
+      focused: focused,
+      selected: widget.semanticSelected,
+      toggled: widget.semanticToggled,
+      expanded: widget.semanticExpanded,
+      onTap: enabled ? widget.onPressed : null,
+      excludeSemantics: true,
+      child: button,
+    );
   }
 }
 
@@ -370,12 +658,14 @@ class TactileTextButton extends StatelessWidget {
     required this.onPressed,
     required this.child,
     this.style,
+    this.autofocus = false,
     super.key,
   });
 
   final VoidCallback? onPressed;
   final Widget child;
   final ButtonStyle? style;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) => TactileButton(
@@ -384,6 +674,7 @@ class TactileTextButton extends StatelessWidget {
     pressTravel: 2,
     hoverLift: -0.5,
     hoverScale: 1.03,
+    autofocus: autofocus,
     useDefaultMaterialStyle: true,
     child: child,
   );
@@ -453,55 +744,6 @@ class MechanicalPanelSwitcher extends StatelessWidget {
         );
       },
       child: KeyedSubtree(key: ValueKey(panelKey), child: child),
-    );
-  }
-}
-
-/// Treats mutually exclusive options like printed plates that seat into place.
-class MechanicalSelectionSurface extends StatelessWidget {
-  const MechanicalSelectionSurface({
-    required this.selected,
-    required this.onPressed,
-    required this.child,
-    this.enabled = true,
-    this.semanticLabel,
-    this.semanticSelected,
-    this.semanticToggled,
-    this.semanticExpanded,
-    super.key,
-  });
-
-  final bool selected;
-  final VoidCallback? onPressed;
-  final Widget child;
-  final bool enabled;
-  final String? semanticLabel;
-  final bool? semanticSelected;
-  final bool? semanticToggled;
-  final bool? semanticExpanded;
-
-  @override
-  Widget build(BuildContext context) {
-    final reduceMotion =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    return TactileButton(
-      enabled: enabled,
-      onPressed: onPressed,
-      selected: selected,
-      semanticLabel: semanticLabel,
-      semanticSelected: semanticSelected,
-      semanticToggled: semanticToggled,
-      semanticExpanded: semanticExpanded,
-      pressTravel: 4,
-      hoverLift: -1.5,
-      child: AnimatedScale(
-        scale: selected ? 1 : 0.985,
-        duration: reduceMotion
-            ? Duration.zero
-            : const Duration(milliseconds: 220),
-        curve: selected ? Curves.easeOutBack : Curves.easeOutCubic,
-        child: child,
-      ),
     );
   }
 }

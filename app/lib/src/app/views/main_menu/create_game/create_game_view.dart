@@ -355,23 +355,31 @@ class _VariantPanelState extends State<CreateGameView> {
       key: key,
       child: PrintedPaperSurface(tokens: widget.tokens, child: child),
     );
-    return NotebookPageSwitcher(
-      pageIndex: pageIndex,
-      tokens: widget.tokens,
-      keyPrefix: 'create-game',
-      animate: widget.active,
-      showBinding: true,
-      compactBinding: widget.compactRail,
-      pages: [
-        page(setupPageKey, _buildSetupStep()),
-        page(lobbyPageKey, _buildLobbyStep()),
-        page(
-          hostedLobbyPageKey,
-          hostedOnlineUpdate == null
-              ? const SizedBox.shrink()
-              : _buildHostedOnlineLobbyStep(hostedOnlineUpdate),
-        ),
-      ],
+    return KolkhozFocusHandoff(
+      handoffKey: pageIndex,
+      semanticLabel: switch (pageIndex) {
+        0 => widget.language.strings.lobbyCreateGame,
+        1 => widget.language.strings.kolkhozappContinueToLobby,
+        _ => widget.language.strings.kolkhozappWaitingForPlayers,
+      },
+      child: NotebookPageSwitcher(
+        pageIndex: pageIndex,
+        tokens: widget.tokens,
+        keyPrefix: 'create-game',
+        animate: widget.active,
+        showBinding: true,
+        compactBinding: widget.compactRail,
+        pages: [
+          page(setupPageKey, _buildSetupStep()),
+          page(lobbyPageKey, _buildLobbyStep()),
+          page(
+            hostedLobbyPageKey,
+            hostedOnlineUpdate == null
+                ? const SizedBox.shrink()
+                : _buildHostedOnlineLobbyStep(hostedOnlineUpdate),
+          ),
+        ],
+      ),
     );
   }
 
@@ -576,38 +584,41 @@ class _VariantPanelState extends State<CreateGameView> {
 
   Widget _lobbyCommandRow() {
     final height = widget.compactRail ? 50.0 : 56.0;
-    return Row(
-      spacing: 8,
-      children: [
-        SizedBox(
-          width: widget.compactRail ? 154 : 190,
-          child: _backToSetupButton(height: height),
-        ),
-        _OnlineGameOptionToggle(
-          tokens: widget.tokens,
-          title: widget.language.strings.kolkhozappAccess,
-          label: browserJoinable
-              ? widget.language.strings.kolkhozappBrowser
-              : widget.language.strings.kolkhozappLocked,
-          selected: browserJoinable,
-          enabled: hasOnlineSeats,
-          iconAsset: browserJoinable
-              ? 'assets/art/field_plan/shared/pictograms/online.png'
-              : 'assets/ui/Icons/icon-lock.png',
-          onTap: () => setState(() => browserJoinable = !browserJoinable),
-        ),
-        Expanded(
-          child: _primaryCommandButton(
-            label: _startButtonLabel(),
-            iconAsset: _startButtonIconAsset(),
-            onPressed:
-                startingOnline || _startButtonShowsBan() || hasUnassignedSeats
-                ? null
-                : startGame,
-            enabled: !_startButtonShowsBan() && !hasUnassignedSeats,
+    return KolkhozDirectionalFocusGroup(
+      axis: Axis.horizontal,
+      child: Row(
+        spacing: 8,
+        children: [
+          SizedBox(
+            width: widget.compactRail ? 154 : 190,
+            child: _backToSetupButton(height: height),
           ),
-        ),
-      ],
+          _OnlineGameOptionToggle(
+            tokens: widget.tokens,
+            title: widget.language.strings.kolkhozappAccess,
+            label: browserJoinable
+                ? widget.language.strings.kolkhozappBrowser
+                : widget.language.strings.kolkhozappLocked,
+            selected: browserJoinable,
+            enabled: hasOnlineSeats,
+            iconAsset: browserJoinable
+                ? 'assets/art/field_plan/shared/pictograms/online.png'
+                : 'assets/ui/Icons/icon-lock.png',
+            onTap: () => setState(() => browserJoinable = !browserJoinable),
+          ),
+          Expanded(
+            child: _primaryCommandButton(
+              label: _startButtonLabel(),
+              iconAsset: _startButtonIconAsset(),
+              onPressed:
+                  startingOnline || _startButtonShowsBan() || hasUnassignedSeats
+                  ? null
+                  : startGame,
+              enabled: !_startButtonShowsBan() && !hasUnassignedSeats,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -712,112 +723,116 @@ class _VariantPanelState extends State<CreateGameView> {
 
   Widget _hostedLobbyCommandRow(OnlineSessionUpdate update) {
     final height = widget.compactRail ? 50.0 : 56.0;
-    return Row(
-      spacing: 8,
-      children: [
-        SizedBox(
-          width: widget.compactRail ? 154 : 190,
-          child: _backToSetupButton(
-            height: height,
-            key: const Key('hosted-online-back-to-setup'),
-            onPressed: widget.onCancelOnlineGame ?? () => showLobbyStep(false),
-          ),
-        ),
-        if (widget.hostedInviteCode != null)
+    return KolkhozDirectionalFocusGroup(
+      axis: Axis.horizontal,
+      child: Row(
+        spacing: 8,
+        children: [
           SizedBox(
-            width: widget.compactRail ? 134 : 164,
-            child: Tooltip(
-              message: widget.language.strings.kolkhozappCopyCode,
-              excludeFromSemantics: true,
-              child: TactileButton(
-                semanticLabel:
-                    '${widget.language.strings.kolkhozappInviteCode} ${widget.hostedInviteCode!}',
-                onPressed: () =>
-                    unawaited(copyHostedInviteCode(widget.hostedInviteCode!)),
-                pressTravel: 3,
-                hoverLift: -1,
-                hoverScale: 1.025,
-                child: SizedBox(
-                  height: height,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      const Positioned.fill(
-                        child: ChromeButtonBackground(
-                          asset: chromeButtonSecondaryAsset,
+            width: widget.compactRail ? 154 : 190,
+            child: _backToSetupButton(
+              height: height,
+              key: const Key('hosted-online-back-to-setup'),
+              onPressed:
+                  widget.onCancelOnlineGame ?? () => showLobbyStep(false),
+            ),
+          ),
+          if (widget.hostedInviteCode != null)
+            SizedBox(
+              width: widget.compactRail ? 134 : 164,
+              child: Tooltip(
+                message: widget.language.strings.kolkhozappCopyCode,
+                excludeFromSemantics: true,
+                child: TactileButton(
+                  semanticLabel:
+                      '${widget.language.strings.kolkhozappInviteCode} ${widget.hostedInviteCode!}',
+                  onPressed: () =>
+                      unawaited(copyHostedInviteCode(widget.hostedInviteCode!)),
+                  pressTravel: 3,
+                  hoverLift: -1,
+                  hoverScale: 1.025,
+                  child: SizedBox(
+                    height: height,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        const Positioned.fill(
+                          child: ChromeButtonBackground(
+                            asset: chromeButtonSecondaryAsset,
+                          ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 9),
-                        child: Row(
-                          spacing: 7,
-                          children: [
-                            const MainMenuAssetIcon(
-                              'assets/art/field_plan/shared/pictograms/add-friend.png',
-                              size: 22,
-                            ),
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                spacing: 2,
-                                children: [
-                                  ChromeScaledLabel(
-                                    widget
-                                        .language
-                                        .strings
-                                        .kolkhozappInviteCode,
-                                    color: widget.tokens.colors.cardInk,
-                                    size: DisplayTextSize.xSmall,
-                                    textAlign: TextAlign.start,
-                                  ),
-                                  ChromeScaledLabel(
-                                    widget.hostedInviteCode!,
-                                    color: widget.tokens.colors.cardInk,
-                                    size: DisplayTextSize.caption,
-                                    textAlign: TextAlign.start,
-                                  ),
-                                ],
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 9),
+                          child: Row(
+                            spacing: 7,
+                            children: [
+                              const MainMenuAssetIcon(
+                                'assets/art/field_plan/shared/pictograms/add-friend.png',
+                                size: 22,
                               ),
-                            ),
-                            const MainMenuAssetIcon(
-                              fieldPlanToolbarConfirmIconPath,
-                              size: 18,
-                            ),
-                          ],
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  spacing: 2,
+                                  children: [
+                                    ChromeScaledLabel(
+                                      widget
+                                          .language
+                                          .strings
+                                          .kolkhozappInviteCode,
+                                      color: widget.tokens.colors.cardInk,
+                                      size: DisplayTextSize.xSmall,
+                                      textAlign: TextAlign.start,
+                                    ),
+                                    ChromeScaledLabel(
+                                      widget.hostedInviteCode!,
+                                      color: widget.tokens.colors.cardInk,
+                                      size: DisplayTextSize.caption,
+                                      textAlign: TextAlign.start,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const MainMenuAssetIcon(
+                                fieldPlanToolbarConfirmIconPath,
+                                size: 18,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
+          Expanded(
+            child: DeadlineCountdownBuilder(
+              deadlineEpochSeconds: update.started
+                  ? null
+                  : update.lobbyCountdownEndsAt,
+              serverEpochSeconds: update.serverTime,
+              maxSeconds: 30,
+              builder: (context, countdownSeconds) {
+                final waitingLabel = countdownSeconds == null
+                    ? widget.language.strings.kolkhozappWaitingForPlayers
+                    : widget.language.strings.kolkhozappGameStartsInValue1s(
+                        value1: countdownSeconds,
+                      );
+                return WaitingRoomEnterButton(
+                  tokens: widget.tokens,
+                  language: widget.language,
+                  tableReady: update.started,
+                  waitingLabel: waitingLabel,
+                  height: height,
+                  onPressed: widget.onEnterOnlineGame,
+                );
+              },
+            ),
           ),
-        Expanded(
-          child: DeadlineCountdownBuilder(
-            deadlineEpochSeconds: update.started
-                ? null
-                : update.lobbyCountdownEndsAt,
-            serverEpochSeconds: update.serverTime,
-            maxSeconds: 30,
-            builder: (context, countdownSeconds) {
-              final waitingLabel = countdownSeconds == null
-                  ? widget.language.strings.kolkhozappWaitingForPlayers
-                  : widget.language.strings.kolkhozappGameStartsInValue1s(
-                      value1: countdownSeconds,
-                    );
-              return WaitingRoomEnterButton(
-                tokens: widget.tokens,
-                language: widget.language,
-                tableReady: update.started,
-                waitingLabel: waitingLabel,
-                height: height,
-                onPressed: widget.onEnterOnlineGame,
-              );
-            },
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -855,64 +870,69 @@ class _VariantPanelState extends State<CreateGameView> {
     final secondaryTextSize = widget.compactRail
         ? DisplayTextSize.caption
         : DisplayTextSize.headline;
-    return Row(
-      spacing: 8,
-      children: [
-        Expanded(
-          child: SizedBox(
-            height: height,
-            child: ChromeAssetButton.command(
-              label: widget.language.strings.kolkhozappSaveFavorite,
-              prominent: false,
-              tokens: widget.tokens,
-              onPressed: widget.onSaveFavoriteSetup,
-              textSize: secondaryTextSize,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              expandLabel: false,
-              surfaceKey: const Key('save-favorite-setup-button'),
+    return KolkhozDirectionalFocusGroup(
+      axis: Axis.horizontal,
+      child: Row(
+        spacing: 8,
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: height,
+              child: ChromeAssetButton.command(
+                label: widget.language.strings.kolkhozappSaveFavorite,
+                prominent: false,
+                tokens: widget.tokens,
+                onPressed: widget.onSaveFavoriteSetup,
+                textSize: secondaryTextSize,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                expandLabel: false,
+                surfaceKey: const Key('save-favorite-setup-button'),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: SizedBox(
-            height: height,
-            child: ChromeAssetButton.command(
-              label: widget.language.strings.kolkhozappUseFavorite,
-              prominent: false,
-              tokens: widget.tokens,
-              onPressed: widget.favoriteSetup != null ? useFavoriteSetup : null,
-              enabled: widget.favoriteSetup != null,
-              textSize: secondaryTextSize,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              expandLabel: false,
-              surfaceKey: const Key('use-favorite-setup-button'),
+          Expanded(
+            child: SizedBox(
+              height: height,
+              child: ChromeAssetButton.command(
+                label: widget.language.strings.kolkhozappUseFavorite,
+                prominent: false,
+                tokens: widget.tokens,
+                onPressed: widget.favoriteSetup != null
+                    ? useFavoriteSetup
+                    : null,
+                enabled: widget.favoriteSetup != null,
+                textSize: secondaryTextSize,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                expandLabel: false,
+                surfaceKey: const Key('use-favorite-setup-button'),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          flex: 2,
-          child: SizedBox(
-            height: height,
-            child: ChromeAssetButton.command(
-              width: double.infinity,
-              label: widget.language.strings.kolkhozappContinueToLobby,
-              prominent: true,
-              tokens: widget.tokens,
-              onPressed: () => showLobbyStep(true),
-              iconAsset:
-                  'assets/art/field_plan/shared/pictograms/add-friend.png',
-              iconSize: widget.compactRail ? 22 : 28,
-              textSize: widget.compactRail
-                  ? DisplayTextSize.headline
-                  : DisplayTextSize.title,
-              padding: widget.compactRail
-                  ? const EdgeInsets.symmetric(horizontal: 8)
-                  : null,
-              expandLabel: false,
+          Expanded(
+            flex: 2,
+            child: SizedBox(
+              height: height,
+              child: ChromeAssetButton.command(
+                width: double.infinity,
+                label: widget.language.strings.kolkhozappContinueToLobby,
+                prominent: true,
+                tokens: widget.tokens,
+                onPressed: () => showLobbyStep(true),
+                iconAsset:
+                    'assets/art/field_plan/shared/pictograms/add-friend.png',
+                iconSize: widget.compactRail ? 22 : 28,
+                textSize: widget.compactRail
+                    ? DisplayTextSize.headline
+                    : DisplayTextSize.title,
+                padding: widget.compactRail
+                    ? const EdgeInsets.symmetric(horizontal: 8)
+                    : null,
+                expandLabel: false,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1257,66 +1277,69 @@ class _FieldPlanPresetSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 650;
-        final height = compact || narrow ? 60.0 : 76.0;
-        return SizedBox(
-          key: const Key('field-plan-preset-row'),
-          height: height,
-          child: Row(
-            spacing: 6,
-            children: [
-              for (final preset in betaGamePresets)
-                Expanded(
-                  child: MechanicalSelectionSurface(
-                    key: Key('field-plan-preset-${preset.name}'),
-                    selected: selectedPreset == preset,
-                    semanticSelected: selectedPreset == preset,
-                    semanticLabel: presetTitle(preset, language),
-                    enabled: onPresetChanged != null,
-                    onPressed: onPresetChanged == null
-                        ? null
-                        : () => onPresetChanged!(preset),
-                    child: PrintedUnderlay(
-                      tokens: tokens,
-                      tone: selectedPreset == preset
-                          ? PrintedUnderlayTone.primary
-                          : PrintedUnderlayTone.neutral,
-                      focused: selectedPreset == preset,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ArtAssetImage(
-                            asset: _assetFor(preset),
-                            width: compact ? 34 : 46,
-                            height: compact ? 34 : 46,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(width: 7),
-                          Flexible(
-                            child: Text(
-                              presetTitle(preset, language).toUpperCase(),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: fieldPlanDisplayTextStyle.copyWith(
-                                color: selectedPreset == preset
-                                    ? tokens.colors.onAccent
-                                    : tokens.colors.cream,
-                                fontSize: compact ? 14 : 18,
+    return KolkhozDirectionalFocusGroup(
+      axis: Axis.horizontal,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 650;
+          final height = compact || narrow ? 60.0 : 76.0;
+          return SizedBox(
+            key: const Key('field-plan-preset-row'),
+            height: height,
+            child: Row(
+              spacing: 6,
+              children: [
+                for (final preset in betaGamePresets)
+                  Expanded(
+                    child: TactileButton(
+                      key: Key('field-plan-preset-${preset.name}'),
+                      selected: selectedPreset == preset,
+                      semanticSelected: selectedPreset == preset,
+                      semanticLabel: presetTitle(preset, language),
+                      enabled: onPresetChanged != null,
+                      onPressed: onPresetChanged == null
+                          ? null
+                          : () => onPresetChanged!(preset),
+                      child: PrintedUnderlay(
+                        tokens: tokens,
+                        tone: selectedPreset == preset
+                            ? PrintedUnderlayTone.primary
+                            : PrintedUnderlayTone.neutral,
+                        focused: selectedPreset == preset,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ArtAssetImage(
+                              asset: _assetFor(preset),
+                              width: compact ? 34 : 46,
+                              height: compact ? 34 : 46,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(width: 7),
+                            Flexible(
+                              child: Text(
+                                presetTitle(preset, language).toUpperCase(),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: fieldPlanDisplayTextStyle.copyWith(
+                                  color: selectedPreset == preset
+                                      ? tokens.colors.onAccent
+                                      : tokens.colors.cream,
+                                  fontSize: compact ? 14 : 18,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -1607,7 +1630,7 @@ class _SeatLobbyColumn extends StatelessWidget {
     return Tooltip(
       message: semanticLabel,
       excludeFromSemantics: true,
-      child: MechanicalSelectionSurface(
+      child: TactileButton(
         selected: selected,
         semanticSelected: selected,
         semanticLabel: semanticLabel,
@@ -2351,66 +2374,73 @@ class _OnlineGameOptionToggle extends StatelessWidget {
       excludeFromSemantics: true,
       child: Opacity(
         opacity: enabled ? 1 : 0.58,
-        child: MechanicalSelectionSurface(
-          selected: selected,
-          semanticToggled: selected,
-          semanticLabel: label,
-          enabled: enabled,
-          onPressed: enabled ? onTap : null,
-          child: SizedBox(
-            width: 138,
-            height: 62,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned.fill(
-                  child: ChromeButtonBackground(
-                    asset: selected
-                        ? chromeButtonPrimaryAsset
-                        : chromeButtonSecondaryAsset,
-                  ),
+        child: SizedBox(
+          width: 138,
+          height: 62,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned.fill(
+                child: ChromeButtonBackground(
+                  asset: selected
+                      ? chromeButtonPrimaryAsset
+                      : chromeButtonSecondaryAsset,
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 7),
-                  child: Row(
-                    spacing: 8,
-                    children: [
-                      MainMenuAssetIcon(
-                        iconAsset,
-                        size: 30,
-                        opacity: selected ? 1 : 0.82,
-                      ),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          spacing: 2,
-                          children: [
-                            SizedBox(
-                              width: double.infinity,
-                              height: 13,
-                              child: ChromeScaledLabel(
-                                title,
-                                color: foreground.withValues(alpha: 0.68),
-                                size: DisplayTextSize.caption2,
-                              ),
-                            ),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 18,
-                              child: ChromeScaledLabel(
-                                label,
-                                color: foreground,
-                                size: DisplayTextSize.caption,
-                              ),
-                            ),
-                          ],
+              ),
+              Positioned.fill(
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: SwitchListTile(
+                    value: selected,
+                    onChanged: enabled ? (_) => onTap() : null,
+                    contentPadding: const EdgeInsets.fromLTRB(4, 4, 2, 4),
+                    visualDensity: VisualDensity.compact,
+                    activeThumbColor: tokens.colors.goldBright,
+                    activeTrackColor: tokens.colors.gold.withValues(alpha: 0.5),
+                    inactiveThumbColor: tokens.colors.steel,
+                    inactiveTrackColor: tokens.colors.black.withValues(
+                      alpha: 0.16,
+                    ),
+                    title: Row(
+                      spacing: 3,
+                      children: [
+                        MainMenuAssetIcon(
+                          iconAsset,
+                          size: 22,
+                          opacity: selected ? 1 : 0.82,
                         ),
-                      ),
-                    ],
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            spacing: 2,
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                height: 13,
+                                child: ChromeScaledLabel(
+                                  title,
+                                  color: foreground.withValues(alpha: 0.68),
+                                  size: DisplayTextSize.caption2,
+                                ),
+                              ),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 18,
+                                child: ChromeScaledLabel(
+                                  label,
+                                  color: foreground,
+                                  size: DisplayTextSize.caption,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -535,31 +535,18 @@ class PlayerIdentityPanel extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKolkhozConfirmation(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: tokens.colors.panel,
-        title: const Text('DELETE YOUR ACCOUNT?'),
-        content: const Text(
+      tokens: tokens,
+      title: 'DELETE YOUR ACCOUNT?',
+      message:
           'This permanently removes linked identities, profile data, online history, '
           'and synchronized progress. Purchases and histories are not transferred.',
-        ),
-        actions: [
-          TactileTextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCEL'),
-          ),
-          TactileTextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: tokens.colors.redBright,
-            ),
-            child: const Text('DELETE ACCOUNT'),
-          ),
-        ],
-      ),
+      cancelLabel: 'CANCEL',
+      confirmLabel: 'DELETE ACCOUNT',
+      destructive: true,
     );
-    if (confirmed == true) await onDeleteAccount?.call();
+    if (confirmed) await onDeleteAccount?.call();
   }
 
   Future<void> _showSource(
@@ -568,8 +555,8 @@ class PlayerIdentityPanel extends StatelessWidget {
   ) async {
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: tokens.colors.panel,
+      builder: (context) => KolkhozAlertDialog(
+        tokens: tokens,
         title: const Text('LINK ANOTHER DEVICE'),
         content: AnimatedBuilder(
           animation: runtime,
@@ -639,33 +626,67 @@ class PlayerIdentityPanel extends StatelessWidget {
     KolkhozIdentityRuntime runtime,
   ) async {
     final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    Future<void> redeem(BuildContext dialogContext) async {
+      if (!(formKey.currentState?.validate() ?? false)) return;
+      final preview = await runtime.redeem(controller.text.trim());
+      if (!dialogContext.mounted) return;
+      final source = jsonObject(preview['source']);
+      final target = jsonObject(preview['target']);
+      final confirmed = await showKolkhozConfirmation(
+        context: dialogContext,
+        tokens: tokens,
+        title: 'CONFIRM DEVICE LINK',
+        message:
+            'Keep ${source['displayName']} (${source['id']}) and connect '
+            '${target['displayName']} (${target['provider']})? No histories are merged.',
+        cancelLabel: 'BACK',
+        confirmLabel: 'CONFIRM',
+      );
+      if (confirmed && dialogContext.mounted) {
+        Navigator.pop(dialogContext);
+        if (context.mounted) await _showTargetWait(context, runtime);
+      }
+    }
+
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: tokens.colors.panel,
+      builder: (context) => KolkhozAlertDialog(
+        tokens: tokens,
         title: const Text('ENTER OR SCAN LINK CODE'),
         content: SizedBox(
           width: 360,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 10,
-            children: [
-              TextField(
-                key: const Key('device-link-code-field'),
-                controller: controller,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: 'ABCD-EFGH-JKLM'),
-              ),
-              SizedBox(
-                height: 180,
-                child: MobileScanner(
-                  onDetect: (capture) {
-                    final value = capture.barcodes.firstOrNull?.rawValue;
-                    if (value != null) controller.text = value;
-                  },
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 10,
+              children: [
+                KolkhozTextField(
+                  key: const Key('device-link-code-field'),
+                  tokens: tokens,
+                  controller: controller,
+                  labelText: 'ABCD-EFGH-JKLM',
+                  textInputAction: TextInputAction.done,
+                  textCapitalization: TextCapitalization.characters,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  validator: (value) => value?.trim().isEmpty ?? true
+                      ? 'ENTER OR SCAN LINK CODE'
+                      : null,
+                  onSubmitted: (_) => unawaited(redeem(context)),
                 ),
-              ),
-            ],
+                SizedBox(
+                  height: 180,
+                  child: MobileScanner(
+                    onDetect: (capture) {
+                      final value = capture.barcodes.firstOrNull?.rawValue;
+                      if (value != null) controller.text = value;
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -674,36 +695,7 @@ class PlayerIdentityPanel extends StatelessWidget {
             child: const Text('CANCEL'),
           ),
           TactileTextButton(
-            onPressed: () async {
-              final preview = await runtime.redeem(controller.text);
-              if (!context.mounted) return;
-              final source = jsonObject(preview['source']);
-              final target = jsonObject(preview['target']);
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('CONFIRM DEVICE LINK'),
-                  content: Text(
-                    'Keep ${source['displayName']} (${source['id']}) and connect '
-                    '${target['displayName']} (${target['provider']})? No histories are merged.',
-                  ),
-                  actions: [
-                    TactileTextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('BACK'),
-                    ),
-                    TactileTextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('CONFIRM'),
-                    ),
-                  ],
-                ),
-              );
-              if (confirmed == true && context.mounted) {
-                Navigator.pop(context);
-                await _showTargetWait(context, runtime);
-              }
-            },
+            onPressed: () => unawaited(redeem(context)),
             child: const Text('CONTINUE'),
           ),
         ],
@@ -718,8 +710,8 @@ class PlayerIdentityPanel extends StatelessWidget {
   ) async {
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: tokens.colors.panel,
+      builder: (context) => KolkhozAlertDialog(
+        tokens: tokens,
         title: const Text('WAITING FOR SOURCE DEVICE'),
         content: AnimatedBuilder(
           animation: runtime,
@@ -757,6 +749,7 @@ class _RecoveryEmailControls extends StatefulWidget {
 }
 
 class _RecoveryEmailControlsState extends State<_RecoveryEmailControls> {
+  final formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final codeController = TextEditingController();
   bool codeSent = false;
@@ -766,6 +759,40 @@ class _RecoveryEmailControlsState extends State<_RecoveryEmailControls> {
     emailController.dispose();
     codeController.dispose();
     super.dispose();
+  }
+
+  String? validateEmail(String? value) {
+    final email = value?.trim() ?? '';
+    final at = email.indexOf('@');
+    if (at <= 0 ||
+        at == email.length - 1 ||
+        !email.substring(at + 1).contains('.')) {
+      return 'ENTER A VALID RECOVERY EMAIL';
+    }
+    return null;
+  }
+
+  String? validateCode(String? value) {
+    if (!codeSent) return null;
+    return RegExp(r'^\d{6}$').hasMatch(value ?? '')
+        ? null
+        : 'ENTER THE SIX-DIGIT CODE';
+  }
+
+  Future<void> submit() async {
+    if (!(formKey.currentState?.validate() ?? false)) return;
+    if (!codeSent) {
+      final sent = await widget.runtime.requestEmailCode(
+        emailController.text.trim(),
+      );
+      if (mounted && sent) setState(() => codeSent = true);
+      return;
+    }
+    TextInput.finishAutofillContext();
+    await widget.runtime.verifyEmailCode(
+      emailController.text.trim(),
+      codeController.text,
+    );
   }
 
   @override
@@ -778,56 +805,69 @@ class _RecoveryEmailControlsState extends State<_RecoveryEmailControls> {
         style: kolkhozFontStyle.copyWith(color: widget.tokens.colors.creamDim),
       );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 8,
-      children: [
-        TextField(
-          key: const Key('recovery-email-field'),
-          controller: emailController,
-          keyboardType: TextInputType.emailAddress,
-          autocorrect: false,
-          decoration: const InputDecoration(labelText: 'RECOVERY EMAIL'),
-        ),
-        if (codeSent)
-          TextField(
-            key: const Key('recovery-code-field'),
-            controller: codeController,
-            keyboardType: TextInputType.number,
-            maxLength: 6,
-            decoration: const InputDecoration(
-              labelText: 'SIX-DIGIT LOGIN CODE',
-              counterText: '',
-            ),
-          ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: SizedBox(
-            width: 220,
-            height: 42,
-            child: ChromeAssetButton.command(
-              label: codeSent ? 'VERIFY EMAIL' : 'ADD RECOVERY EMAIL',
-              prominent: true,
+    return Form(
+      key: formKey,
+      child: AutofillGroup(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 8,
+          children: [
+            KolkhozTextField(
+              key: const Key('recovery-email-field'),
               tokens: widget.tokens,
-              onPressed: widget.runtime.busy
-                  ? null
-                  : () async {
-                      if (!codeSent) {
-                        final sent = await widget.runtime.requestEmailCode(
-                          emailController.text,
-                        );
-                        if (mounted && sent) setState(() => codeSent = true);
-                        return;
-                      }
-                      await widget.runtime.verifyEmailCode(
-                        emailController.text,
-                        codeController.text,
-                      );
-                    },
+              controller: emailController,
+              enabled: !widget.runtime.busy,
+              labelText: 'RECOVERY EMAIL',
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: codeSent
+                  ? TextInputAction.next
+                  : TextInputAction.done,
+              autofillHints: const [AutofillHints.email],
+              autocorrect: false,
+              enableSuggestions: false,
+              validator: validateEmail,
+              onSubmitted: (_) {
+                if (!widget.runtime.busy && !codeSent) unawaited(submit());
+              },
             ),
-          ),
+            if (codeSent)
+              KolkhozTextField(
+                key: const Key('recovery-code-field'),
+                tokens: widget.tokens,
+                controller: codeController,
+                enabled: !widget.runtime.busy,
+                labelText: 'SIX-DIGIT LOGIN CODE',
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                maxLength: 6,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
+                validator: validateCode,
+                onSubmitted: (_) {
+                  if (!widget.runtime.busy) unawaited(submit());
+                },
+              ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: 220,
+                height: 42,
+                child: ChromeAssetButton.command(
+                  label: codeSent ? 'VERIFY EMAIL' : 'ADD RECOVERY EMAIL',
+                  prominent: true,
+                  tokens: widget.tokens,
+                  onPressed: widget.runtime.busy
+                      ? null
+                      : () => unawaited(submit()),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

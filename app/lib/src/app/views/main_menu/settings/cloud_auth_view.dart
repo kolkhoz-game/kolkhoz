@@ -1,5 +1,7 @@
 part of 'settings_view.dart';
 
+enum _CloudAuthAction { signIn, resetPassword, signUp }
+
 class CloudAuthView extends StatefulWidget {
   const CloudAuthView({
     super.key,
@@ -31,10 +33,12 @@ class CloudAuthView extends StatefulWidget {
 }
 
 class _CloudAuthPanelState extends State<CloudAuthView> {
+  final formKey = GlobalKey<FormState>();
   late final TextEditingController emailController;
   late final TextEditingController passwordController;
   late final TextEditingController confirmPasswordController;
   String? localMessage;
+  _CloudAuthAction validationAction = _CloudAuthAction.signIn;
 
   @override
   void initState() {
@@ -59,17 +63,60 @@ class _CloudAuthPanelState extends State<CloudAuthView> {
     setState(() => localMessage = null);
   }
 
-  void submitSignUp() {
-    final password = passwordController.text;
-    final confirmPassword = confirmPasswordController.text;
-    if (password != confirmPassword) {
-      setState(() {
-        localMessage = widget.language.strings.kolkhozappPasswordsDoNotMatch;
-      });
-      return;
+  String? validateEmail(String? value) {
+    final email = value?.trim() ?? '';
+    if (email.isEmpty) {
+      return widget.language == KolkhozLanguage.ru
+          ? 'ВВЕДИТЕ ЭЛЕКТРОННУЮ ПОЧТУ'
+          : 'ENTER EMAIL';
     }
+    final at = email.indexOf('@');
+    if (at <= 0 ||
+        at == email.length - 1 ||
+        !email.substring(at + 1).contains('.')) {
+      return widget.language == KolkhozLanguage.ru
+          ? 'ПРОВЕРЬТЕ АДРЕС ПОЧТЫ'
+          : 'ENTER A VALID EMAIL';
+    }
+    return null;
+  }
+
+  String? validatePassword(String? value) {
+    if (validationAction == _CloudAuthAction.resetPassword) return null;
+    if (value?.isNotEmpty ?? false) return null;
+    return widget.language == KolkhozLanguage.ru
+        ? 'ВВЕДИТЕ ПАРОЛЬ'
+        : 'ENTER PASSWORD';
+  }
+
+  String? validateConfirmation(String? value) {
+    if (validationAction != _CloudAuthAction.signUp) return null;
+    if (value == passwordController.text) return null;
+    return widget.language.strings.kolkhozappPasswordsDoNotMatch;
+  }
+
+  bool validate(_CloudAuthAction action) {
+    setState(() => validationAction = action);
+    if (!(formKey.currentState?.validate() ?? false)) return false;
     clearLocalMessage();
-    widget.onSignUp?.call(emailController.text, password);
+    return true;
+  }
+
+  void submitSignIn() {
+    if (!validate(_CloudAuthAction.signIn)) return;
+    TextInput.finishAutofillContext();
+    widget.onSignIn?.call(emailController.text.trim(), passwordController.text);
+  }
+
+  void submitPasswordReset() {
+    if (!validate(_CloudAuthAction.resetPassword)) return;
+    widget.onResetPassword?.call(emailController.text.trim());
+  }
+
+  void submitSignUp() {
+    if (!validate(_CloudAuthAction.signUp)) return;
+    TextInput.finishAutofillContext();
+    widget.onSignUp?.call(emailController.text.trim(), passwordController.text);
   }
 
   @override
@@ -119,88 +166,112 @@ class _CloudAuthPanelState extends State<CloudAuthView> {
             message: localMessage!,
             isError: true,
           ),
-        if (widget.configured && widget.ready) ...[
-          _ProfileTextField(
-            tokens: widget.tokens,
-            controller: emailController,
-            label: widget.language.strings.kolkhozappEmail,
-            keyboardType: TextInputType.emailAddress,
-            autocorrect: false,
-            enableSuggestions: false,
-            maxLength: maxAccountEmailLength,
-            onChanged: (_) => clearLocalMessage(),
-          ),
-          _ProfileTextField(
-            tokens: widget.tokens,
-            controller: passwordController,
-            label: widget.language.strings.kolkhozappPassword,
-            obscureText: true,
-            maxLength: 72,
-            onChanged: (_) => clearLocalMessage(),
-          ),
-          _ProfileTextField(
-            tokens: widget.tokens,
-            controller: confirmPasswordController,
-            label: widget.language.strings.kolkhozappConfirmPassword,
-            obscureText: true,
-            maxLength: 72,
-            onChanged: (_) => clearLocalMessage(),
-          ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            children: [
-              SizedBox(
-                width: 142,
-                height: 38,
-                child: ChromeAssetButton.command(
-                  label: widget.busy
-                      ? widget.language.strings.kolkhozappWorking
-                      : widget.language.strings.kolkhozappSignIn,
-                  prominent: false,
-                  tokens: widget.tokens,
-                  onPressed: widget.busy || widget.onSignIn == null
-                      ? null
-                      : () {
-                          clearLocalMessage();
-                          widget.onSignIn!(
-                            emailController.text,
-                            passwordController.text,
-                          );
-                        },
-                ),
+        if (widget.configured && widget.ready)
+          Form(
+            key: formKey,
+            child: AutofillGroup(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 8,
+                children: [
+                  KolkhozTextField(
+                    tokens: widget.tokens,
+                    controller: emailController,
+                    labelText: widget.language.strings.kolkhozappEmail,
+                    enabled: !widget.busy,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.email],
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    maxLength: maxAccountEmailLength,
+                    validator: validateEmail,
+                    onChanged: (_) => clearLocalMessage(),
+                  ),
+                  KolkhozTextField(
+                    tokens: widget.tokens,
+                    controller: passwordController,
+                    labelText: widget.language.strings.kolkhozappPassword,
+                    enabled: !widget.busy,
+                    obscureText: true,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.password],
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    maxLength: 72,
+                    validator: validatePassword,
+                    onChanged: (_) => clearLocalMessage(),
+                  ),
+                  KolkhozTextField(
+                    tokens: widget.tokens,
+                    controller: confirmPasswordController,
+                    labelText:
+                        widget.language.strings.kolkhozappConfirmPassword,
+                    enabled: !widget.busy,
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.newPassword],
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    maxLength: 72,
+                    validator: validateConfirmation,
+                    onChanged: (_) => clearLocalMessage(),
+                    onSubmitted: (_) {
+                      if (!widget.busy && widget.onSignUp != null) {
+                        submitSignUp();
+                      }
+                    },
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.end,
+                    children: [
+                      SizedBox(
+                        width: 142,
+                        height: 38,
+                        child: ChromeAssetButton.command(
+                          label: widget.busy
+                              ? widget.language.strings.kolkhozappWorking
+                              : widget.language.strings.kolkhozappSignIn,
+                          prominent: false,
+                          tokens: widget.tokens,
+                          onPressed: widget.busy || widget.onSignIn == null
+                              ? null
+                              : submitSignIn,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 142,
+                        height: 38,
+                        child: ChromeAssetButton.command(
+                          label: widget.language.strings.kolkhozappReset,
+                          prominent: false,
+                          tokens: widget.tokens,
+                          onPressed:
+                              widget.busy || widget.onResetPassword == null
+                              ? null
+                              : submitPasswordReset,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 142,
+                        height: 38,
+                        child: ChromeAssetButton.command(
+                          label: widget.language.strings.kolkhozappCreate,
+                          prominent: true,
+                          tokens: widget.tokens,
+                          onPressed: widget.busy || widget.onSignUp == null
+                              ? null
+                              : submitSignUp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              SizedBox(
-                width: 142,
-                height: 38,
-                child: ChromeAssetButton.command(
-                  label: widget.language.strings.kolkhozappReset,
-                  prominent: false,
-                  tokens: widget.tokens,
-                  onPressed: widget.busy || widget.onResetPassword == null
-                      ? null
-                      : () {
-                          clearLocalMessage();
-                          widget.onResetPassword!(emailController.text);
-                        },
-                ),
-              ),
-              SizedBox(
-                width: 142,
-                height: 38,
-                child: ChromeAssetButton.command(
-                  label: widget.language.strings.kolkhozappCreate,
-                  prominent: true,
-                  tokens: widget.tokens,
-                  onPressed: widget.busy || widget.onSignUp == null
-                      ? null
-                      : submitSignUp,
-                ),
-              ),
-            ],
+            ),
           ),
-        ],
       ],
     );
   }

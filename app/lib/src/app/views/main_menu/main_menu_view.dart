@@ -422,121 +422,147 @@ class StandaloneLobby extends StatelessWidget {
                     ? contentHeight
                     : (usableHeight * 0.38).clamp(250.0, 360.0);
 
-                final menuRail = SizedBox(
-                  width: railWidth,
-                  height: railHeight,
-                  child: _FieldPlanMenuRail(
-                    language: language,
-                    appearance: appearance,
-                    compact: shortLandscape,
-                    showingHome: showingHome,
-                    showingRules: showingRules,
-                    showingOnline: showingOnline,
-                    showingProfile: showingProfile,
-                    settingsSelected:
-                        showingProfile &&
-                        initialSettingsTab != KolkhozSettingsTab.profile,
-                    demoMode: demoMode,
-                    cloudConfigured: cloudConfigured,
-                    cloudReady: cloudReady,
-                    cloudSignedIn: cloudSignedIn,
-                    cloudAuthBusy: cloudAuthBusy,
-                    comradeRequestCount:
-                        comradesSummary.incomingRequests.length,
-                    displayName: displayName,
-                    portraitAsset: portraitAsset,
-                    onResumeLocalGame: onResumeLocalGame,
-                    onOfflinePressed: onOfflinePressed,
-                    onOnlinePressed: onOnlinePressed,
-                    onProfilePressed: onProfilePressed,
-                    profileFeaturesEnabled: profileFeaturesEnabled,
-                    onSettingsPressed: onSettingsPressed,
-                    onRulesPressed: onRulesPressed,
-                    onLanguageToggle: onLanguageToggle,
-                    onAppearanceToggle: onAppearanceToggle,
+                final menuRail = FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: SizedBox(
+                    width: railWidth,
+                    height: railHeight,
+                    child: _FieldPlanMenuRail(
+                      language: language,
+                      appearance: appearance,
+                      compact: shortLandscape,
+                      showingHome: showingHome,
+                      showingRules: showingRules,
+                      showingOnline: showingOnline,
+                      showingProfile: showingProfile,
+                      settingsSelected:
+                          showingProfile &&
+                          initialSettingsTab != KolkhozSettingsTab.profile,
+                      demoMode: demoMode,
+                      cloudConfigured: cloudConfigured,
+                      cloudReady: cloudReady,
+                      cloudSignedIn: cloudSignedIn,
+                      cloudAuthBusy: cloudAuthBusy,
+                      comradeRequestCount:
+                          comradesSummary.incomingRequests.length,
+                      displayName: displayName,
+                      portraitAsset: portraitAsset,
+                      onResumeLocalGame: onResumeLocalGame,
+                      onOfflinePressed: onOfflinePressed,
+                      onOnlinePressed: onOnlinePressed,
+                      onProfilePressed: onProfilePressed,
+                      profileFeaturesEnabled: profileFeaturesEnabled,
+                      onSettingsPressed: onSettingsPressed,
+                      onRulesPressed: onRulesPressed,
+                      onLanguageToggle: onLanguageToggle,
+                      onAppearanceToggle: onAppearanceToggle,
+                    ),
                   ),
                 );
-                final panel = SizedBox(
-                  width: panelWidth,
-                  height: panelHeight,
-                  child: _LobbyPanel(
-                    tokens: tokens,
-                    language: language,
-                    selectedPreset: selectedPreset,
-                    customVariants: customVariants,
-                    playerControllers: playerControllers,
-                    gameLobby: gameLobby,
-                    demoMode: demoMode,
-                    appearance: appearance,
-                    cardBack: cardBack,
-                    compactRail: shortLandscape,
-                    animationSpeed: animationSpeed,
-                    confirmNewGame: confirmNewGame,
-                    confirmMainMenu: confirmMainMenu,
-                    showInvalidTapHints: showInvalidTapHints,
-                    soundEnabled: soundEnabled,
-                    showingRules: showingRules,
-                    showingOnline: showingOnline,
-                    showingProfile: showingProfile,
-                    profileFeaturesEnabled: profileFeaturesEnabled,
-                    initialSettingsTab: initialSettingsTab,
-                    hostedInviteCode: hostedInviteCode,
-                    onlineSessionUpdate: onlineSessionUpdate,
-                    showHostedInviteCode: showHostedInviteCode,
-                    displayName: displayName,
-                    portraitAsset: portraitAsset,
-                    profileStats: profileStats,
-                    progression: progression,
-                    unlockedCardBacks: unlockedCardBacks,
-                    favoriteSetup: favoriteSetup,
-                    lastStartedSetup: lastStartedSetup,
-                    comradesSummary: comradesSummary,
-                    cloudConfigured: cloudConfigured,
-                    cloudReady: cloudReady,
-                    cloudSignedIn: cloudSignedIn,
-                    cloudEmail: cloudEmail,
-                    cloudAuthBusy: cloudAuthBusy,
-                    cloudAuthMessage: cloudAuthMessage,
-                    cloudAuthIsError: cloudAuthIsError,
-                    onTutorialPressed: onTutorialPressed,
-                    hasTutorialProgress: hasTutorialProgress,
-                    onRestartTutorialPressed: onRestartTutorialPressed,
-                    onStart: onStart,
-                    onHostOnline: onHostOnline,
-                    onHostOnlineSeries: onHostOnlineSeries,
-                    onInviteOnlineComrades: onInviteOnlineComrades,
-                    onJoinOnline: onJoinOnline,
-                    onWatchOnline: onWatchOnline,
-                    onRememberStartedSetup: onRememberStartedSetup,
-                    onMatchmakeOnline: onMatchmakeOnline,
-                    onKickOnlinePlayer: onKickOnlinePlayer,
-                    onEnterOnlineGame: onEnterOnlineGame,
-                    onSyncActiveSession: onSyncActiveSession,
-                    onCancelOnlineGame: onCancelOnlineGame,
-                    onPresetChanged: onPresetChanged,
-                    onCustomVariantsChanged: onCustomVariantsChanged,
-                    onPlayerControllersChanged: onPlayerControllersChanged,
-                    onAnimationSpeedChanged: onAnimationSpeedChanged,
-                    onConfirmNewGameChanged: onConfirmNewGameChanged,
-                    onConfirmMainMenuChanged: onConfirmMainMenuChanged,
-                    onShowInvalidTapHintsChanged: onShowInvalidTapHintsChanged,
-                    onSoundEnabledChanged: onSoundEnabledChanged,
-                    onLanguageToggle: onLanguageToggle,
-                    onAppearanceToggle: onAppearanceToggle,
-                    onCardBackChanged: onCardBackChanged,
-                    onDisplayNameChanged: onDisplayNameChanged,
-                    onPortraitChanged: onPortraitChanged,
-                    onSaveFavoriteSetup: onSaveFavoriteSetup,
-                    onUseFavoriteSetup: onUseFavoriteSetup,
-                    onCloudSignIn: onCloudSignIn,
-                    onCloudSignUp: onCloudSignUp,
-                    onCloudResetPassword: onCloudResetPassword,
-                    onCloudDeleteAccount: onCloudDeleteAccount,
-                    onComradeRequestToUser: onComradeRequestToUser,
-                    menuRemoteConnection: menuRemoteConnection,
-                    mainMenuController: mainMenuController,
-                    profileController: profileController,
-                    onStartDailyChallenge: onStartDailyChallenge,
+                final panelKey = showingRules
+                    ? 'rules'
+                    : showingOnline
+                    ? 'online'
+                    : showingProfile
+                    ? 'profile-${initialSettingsTab.name}'
+                    : 'offline';
+                final panelLabel = showingRules
+                    ? language.strings.lobbyHowToPlay
+                    : showingOnline
+                    ? language.strings.lobbyJoinGame
+                    : showingProfile
+                    ? initialSettingsTab.title(language)
+                    : language.t(
+                        demoMode
+                            ? KolkhozText.lobbyPlayDemo
+                            : KolkhozText.lobbyCreateGame,
+                      );
+                final panel = KolkhozFocusHandoff(
+                  handoffKey: panelKey,
+                  semanticLabel: panelLabel,
+                  child: SizedBox(
+                    width: panelWidth,
+                    height: panelHeight,
+                    child: _LobbyPanel(
+                      tokens: tokens,
+                      language: language,
+                      selectedPreset: selectedPreset,
+                      customVariants: customVariants,
+                      playerControllers: playerControllers,
+                      gameLobby: gameLobby,
+                      demoMode: demoMode,
+                      appearance: appearance,
+                      cardBack: cardBack,
+                      compactRail: shortLandscape,
+                      animationSpeed: animationSpeed,
+                      confirmNewGame: confirmNewGame,
+                      confirmMainMenu: confirmMainMenu,
+                      showInvalidTapHints: showInvalidTapHints,
+                      soundEnabled: soundEnabled,
+                      showingRules: showingRules,
+                      showingOnline: showingOnline,
+                      showingProfile: showingProfile,
+                      profileFeaturesEnabled: profileFeaturesEnabled,
+                      initialSettingsTab: initialSettingsTab,
+                      hostedInviteCode: hostedInviteCode,
+                      onlineSessionUpdate: onlineSessionUpdate,
+                      showHostedInviteCode: showHostedInviteCode,
+                      displayName: displayName,
+                      portraitAsset: portraitAsset,
+                      profileStats: profileStats,
+                      progression: progression,
+                      unlockedCardBacks: unlockedCardBacks,
+                      favoriteSetup: favoriteSetup,
+                      lastStartedSetup: lastStartedSetup,
+                      comradesSummary: comradesSummary,
+                      cloudConfigured: cloudConfigured,
+                      cloudReady: cloudReady,
+                      cloudSignedIn: cloudSignedIn,
+                      cloudEmail: cloudEmail,
+                      cloudAuthBusy: cloudAuthBusy,
+                      cloudAuthMessage: cloudAuthMessage,
+                      cloudAuthIsError: cloudAuthIsError,
+                      onTutorialPressed: onTutorialPressed,
+                      hasTutorialProgress: hasTutorialProgress,
+                      onRestartTutorialPressed: onRestartTutorialPressed,
+                      onStart: onStart,
+                      onHostOnline: onHostOnline,
+                      onHostOnlineSeries: onHostOnlineSeries,
+                      onInviteOnlineComrades: onInviteOnlineComrades,
+                      onJoinOnline: onJoinOnline,
+                      onWatchOnline: onWatchOnline,
+                      onRememberStartedSetup: onRememberStartedSetup,
+                      onMatchmakeOnline: onMatchmakeOnline,
+                      onKickOnlinePlayer: onKickOnlinePlayer,
+                      onEnterOnlineGame: onEnterOnlineGame,
+                      onSyncActiveSession: onSyncActiveSession,
+                      onCancelOnlineGame: onCancelOnlineGame,
+                      onPresetChanged: onPresetChanged,
+                      onCustomVariantsChanged: onCustomVariantsChanged,
+                      onPlayerControllersChanged: onPlayerControllersChanged,
+                      onAnimationSpeedChanged: onAnimationSpeedChanged,
+                      onConfirmNewGameChanged: onConfirmNewGameChanged,
+                      onConfirmMainMenuChanged: onConfirmMainMenuChanged,
+                      onShowInvalidTapHintsChanged:
+                          onShowInvalidTapHintsChanged,
+                      onSoundEnabledChanged: onSoundEnabledChanged,
+                      onLanguageToggle: onLanguageToggle,
+                      onAppearanceToggle: onAppearanceToggle,
+                      onCardBackChanged: onCardBackChanged,
+                      onDisplayNameChanged: onDisplayNameChanged,
+                      onPortraitChanged: onPortraitChanged,
+                      onSaveFavoriteSetup: onSaveFavoriteSetup,
+                      onUseFavoriteSetup: onUseFavoriteSetup,
+                      onCloudSignIn: onCloudSignIn,
+                      onCloudSignUp: onCloudSignUp,
+                      onCloudResetPassword: onCloudResetPassword,
+                      onCloudDeleteAccount: onCloudDeleteAccount,
+                      onComradeRequestToUser: onComradeRequestToUser,
+                      menuRemoteConnection: menuRemoteConnection,
+                      mainMenuController: mainMenuController,
+                      profileController: profileController,
+                      onStartDailyChallenge: onStartDailyChallenge,
+                    ),
                   ),
                 );
 
@@ -984,30 +1010,34 @@ class _FieldPlanUtilityStrip extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             if (profileFeaturesEnabled)
-              _FieldPlanCompactUtilityButton(
+              _FieldPlanUtilityButton(
                 label: KolkhozSettingsTab.profile.title(language),
                 icon: Icons.person,
                 badgeCount: badgeCount,
                 selected: profileSelected,
+                compact: true,
                 onPressed: onProfilePressed,
               ),
-            _FieldPlanCompactUtilityButton(
+            _FieldPlanUtilityButton(
               key: const Key('field-plan-menu-language'),
               label: language.strings.lobbyLanguage,
               asset: language.toggleIconAsset,
+              compact: true,
               onPressed: onLanguageToggle,
             ),
-            _FieldPlanCompactUtilityButton(
+            _FieldPlanUtilityButton(
               key: const Key('field-plan-menu-theme'),
               label: language.strings.lobbyTheme,
               asset: appearance.toggleIconAsset,
+              compact: true,
               onPressed: onAppearanceToggle,
             ),
-            _FieldPlanCompactUtilityButton(
+            _FieldPlanUtilityButton(
               key: const Key('field-plan-menu-settings'),
               label: language.strings.lobbySettings,
               icon: Icons.settings,
               selected: settingsSelected,
+              compact: true,
               onPressed: onSettingsPressed,
             ),
           ],
@@ -1036,18 +1066,20 @@ class _FieldPlanUtilityStrip extends StatelessWidget {
                 onPressed: onProfilePressed,
               ),
             ),
-          _FieldPlanUtilityIconButton(
+          _FieldPlanUtilityButton(
             key: const Key('field-plan-menu-language'),
             label: language.strings.lobbyLanguage,
             tooltip: language.toggleTitle,
             asset: language.toggleIconAsset,
+            iconOnly: true,
             onPressed: onLanguageToggle,
           ),
-          _FieldPlanUtilityIconButton(
+          _FieldPlanUtilityButton(
             key: const Key('field-plan-menu-theme'),
             label: language.strings.lobbyTheme,
             tooltip: appearance.toggleTitle(language),
             asset: appearance.toggleIconAsset,
+            iconOnly: true,
             onPressed: onAppearanceToggle,
           ),
           Expanded(
@@ -1071,8 +1103,8 @@ class _FieldPlanUtilityStrip extends StatelessWidget {
   }
 }
 
-class _FieldPlanCompactUtilityButton extends StatelessWidget {
-  const _FieldPlanCompactUtilityButton({
+class _FieldPlanUtilityButton extends StatelessWidget {
+  const _FieldPlanUtilityButton({
     super.key,
     required this.label,
     required this.onPressed,
@@ -1080,79 +1112,47 @@ class _FieldPlanCompactUtilityButton extends StatelessWidget {
     this.asset,
     this.selected = false,
     this.badgeCount = 0,
+    this.compact = false,
+    this.iconOnly = false,
+    this.tooltip,
   });
 
   final String label;
-  final VoidCallback? onPressed;
   final IconData? icon;
   final String? asset;
   final bool selected;
+  final VoidCallback? onPressed;
   final int badgeCount;
+  final bool compact;
+  final bool iconOnly;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
     final color = selected ? const Color(0xfff0dfb7) : const Color(0xffd2bb83);
+    final iconSize = iconOnly ? 23.0 : 22.0;
     final visual = icon != null
-        ? Icon(icon, size: 22, color: color)
+        ? Icon(icon, size: iconSize, color: color)
         : Image.asset(
             asset!,
-            width: 22,
-            height: 22,
+            width: iconSize,
+            height: iconSize,
             filterQuality: FilterQuality.high,
             isAntiAlias: true,
           );
-    return Tooltip(
-      message: label,
-      excludeFromSemantics: true,
-      child: TactileButton(
-        enabled: onPressed != null,
-        selected: selected,
-        semanticLabel: label,
-        semanticSelected: selected,
-        onPressed: onPressed,
-        pressTravel: 2.5,
-        hoverLift: -1,
-        hoverScale: 1.08,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              visual,
-              if (badgeCount > 0)
-                Positioned(
-                  right: -7,
-                  top: -6,
-                  child: _FieldPlanBadge(count: badgeCount),
-                ),
-            ],
+    final visualWithBadge = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        visual,
+        if (badgeCount > 0)
+          Positioned(
+            right: -7,
+            top: -6,
+            child: _FieldPlanBadge(count: badgeCount),
           ),
-        ),
-      ),
+      ],
     );
-  }
-}
-
-class _FieldPlanUtilityButton extends StatelessWidget {
-  const _FieldPlanUtilityButton({
-    super.key,
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onPressed,
-    this.badgeCount = 0,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback? onPressed;
-  final int badgeCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? const Color(0xfff0dfb7) : const Color(0xffd2bb83);
-    return TactileButton(
+    final button = TactileButton(
       enabled: onPressed != null,
       selected: selected,
       semanticLabel: label,
@@ -1160,79 +1160,46 @@ class _FieldPlanUtilityButton extends StatelessWidget {
       onPressed: onPressed,
       pressTravel: 2.5,
       hoverLift: -1,
-      hoverScale: 1.025,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(icon, size: 22, color: color),
-              if (badgeCount > 0)
-                Positioned(
-                  right: -7,
-                  top: -6,
-                  child: _FieldPlanBadge(count: badgeCount),
+      hoverScale: compact || iconOnly ? 1.08 : 1.025,
+      child: compact
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+              child: visualWithBadge,
+            )
+          : iconOnly
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 7),
+              child: visualWithBadge,
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                visualWithBadge,
+                const SizedBox(width: 5),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label.toUpperCase(),
+                      maxLines: 1,
+                      style: fieldPlanDisplayTextStyle.copyWith(
+                        color: color,
+                        fontSize: 14,
+                        letterSpacing: 0.9,
+                      ),
+                    ),
+                  ),
                 ),
-            ],
-          ),
-          const SizedBox(width: 5),
-          Flexible(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label.toUpperCase(),
-                maxLines: 1,
-                style: fieldPlanDisplayTextStyle.copyWith(
-                  color: color,
-                  fontSize: 14,
-                  letterSpacing: 0.9,
-                ),
-              ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
-  }
-}
-
-class _FieldPlanUtilityIconButton extends StatelessWidget {
-  const _FieldPlanUtilityIconButton({
-    super.key,
-    required this.label,
-    required this.tooltip,
-    required this.asset,
-    required this.onPressed,
-  });
-
-  final String label;
-  final String tooltip;
-  final String asset;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
+    if (!compact && !iconOnly && tooltip == null) {
+      return button;
+    }
     return Tooltip(
-      message: tooltip,
+      message: tooltip ?? label,
       excludeFromSemantics: true,
-      child: TactileButton(
-        semanticLabel: label,
-        onPressed: onPressed,
-        pressTravel: 2.5,
-        hoverLift: -1,
-        hoverScale: 1.08,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7),
-          child: Image.asset(
-            asset,
-            width: 23,
-            height: 23,
-            filterQuality: FilterQuality.high,
-            isAntiAlias: true,
-          ),
-        ),
-      ),
+      child: button,
     );
   }
 }
@@ -2154,37 +2121,44 @@ class _SettingsPanelState extends State<SettingsPanel> {
             final tabHeight = (tabWidth * 0.30).clamp(38.0, 52.0);
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(
-                spacing: spacing,
-                children: [
-                  for (final tab in KolkhozSettingsTab.values)
-                    KeyedSubtree(
-                      key: _tabKeys[tab],
-                      child: SizedBox(
-                        width: tabWidth,
-                        child: _SettingsTabButton(
-                          tokens: widget.tokens,
-                          label: tab.title(widget.language),
-                          iconAsset: tab.iconAsset,
-                          selected: selectedTab == tab,
-                          height: tabHeight,
-                          onPressed: () => _selectTab(tab),
+              child: KolkhozDirectionalFocusGroup(
+                axis: Axis.horizontal,
+                child: Row(
+                  spacing: spacing,
+                  children: [
+                    for (final tab in KolkhozSettingsTab.values)
+                      KeyedSubtree(
+                        key: _tabKeys[tab],
+                        child: SizedBox(
+                          width: tabWidth,
+                          child: _SettingsTabButton(
+                            tokens: widget.tokens,
+                            label: tab.title(widget.language),
+                            iconAsset: tab.iconAsset,
+                            selected: selectedTab == tab,
+                            height: tabHeight,
+                            onPressed: () => _selectTab(tab),
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             );
           },
         ),
         MainMenuGoldDivider(tokens: widget.tokens),
         Expanded(
-          child: NotebookMenuSwitcher(
-            pageCount: KolkhozSettingsTab.values.length,
-            pageIndex: selectedTab.index,
-            tokens: widget.tokens,
-            keyPrefix: 'settings',
-            child: _tabBody(),
+          child: KolkhozFocusHandoff(
+            handoffKey: selectedTab,
+            semanticLabel: selectedTab.title(widget.language),
+            child: NotebookMenuSwitcher(
+              pageCount: KolkhozSettingsTab.values.length,
+              pageIndex: selectedTab.index,
+              tokens: widget.tokens,
+              keyPrefix: 'settings',
+              child: _tabBody(),
+            ),
           ),
         ),
       ],

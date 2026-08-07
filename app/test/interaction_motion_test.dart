@@ -152,7 +152,7 @@ void main() {
 
     final dismiss = find.ancestor(
       of: find.byKey(const Key('field-plan-surface-dismiss')),
-      matching: find.byType(TactileControlSurface),
+      matching: find.byType(TactileButton),
     );
     expect(dismiss, findsOneWidget);
 

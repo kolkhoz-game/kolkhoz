@@ -801,7 +801,7 @@ void registerTutorialAndLayoutTests() {
       ),
     );
 
-    final portrait = tester.widget<TactileControlSurface>(
+    final portrait = tester.widget<TactileButton>(
       find.byKey(const Key('player-portrait-0-inspect')),
     );
     portrait.onPressed!();
@@ -843,12 +843,7 @@ void registerTutorialAndLayoutTests() {
           widget.properties.label == 'Cancel',
     );
     expect(closeSemantics, findsOneWidget);
-    final closeControl = find.descendant(
-      of: closeSemantics,
-      matching: find.byType(TactileControlSurface),
-    );
-    expect(closeControl, findsOneWidget);
-    await tester.tap(closeControl);
+    await tester.tap(closeSemantics);
     expect(closed, isTrue);
   });
 

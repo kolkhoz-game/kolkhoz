@@ -16,7 +16,7 @@ Trick visibleAssignmentTrick(TableViewModel model) {
   if (model.table.phase != phaseAssignment) {
     return model.table.trick;
   }
-  final assignedIDs = assignedAssignmentCardIDs(model);
+  final assignedIDs = committedAssignmentCardIDs(model);
   return Trick(
     plays: model.table.lastTrick.plays
         .where((play) => !assignedIDs.contains(play.card.id))
@@ -31,6 +31,29 @@ Set<String> assignedAssignmentCardIDs(TableViewModel model) {
       for (final card in job.assignedCards) card.id,
   };
 }
+
+Set<String> committedAssignmentCardIDs(TableViewModel model) {
+  return {
+    for (final job in model.table.jobs)
+      for (final card in job.assignedCards)
+        if (!card.provisional) card.id,
+  };
+}
+
+Map<String, String> pendingAssignmentTargets(TableViewModel model) {
+  if (model.table.phase != phaseAssignment) {
+    return const {};
+  }
+  return {
+    for (final job in model.table.jobs)
+      for (final card in job.assignedCards)
+        if (card.provisional) card.id: job.suit,
+  };
+}
+
+List<TableCard> visibleAssignedJobCards(Job job) => job.assignedCards
+    .where((card) => !card.provisional)
+    .toList(growable: false);
 
 bool assignmentCardHasLegalTarget(TableViewModel model, String? cardID) =>
     cardID != null &&

@@ -729,34 +729,27 @@ class _PosterTrickGrid extends StatelessWidget {
                               height: _trickProfileHeight,
                               child: MotionTrackedRegion(
                                 motionKey: playerCardMotionSourceKey(seat.id),
-                                child: Semantics(
-                                  button: true,
-                                  label: seat.name,
-                                  onTap: () => onInspectSeat(seat.id),
-                                  child: ExcludeSemantics(
-                                    child: TactileControlSurface(
-                                      key: Key(
-                                        'player-portrait-${seat.id}-inspect',
-                                      ),
-                                      onPressed: () => onInspectSeat(seat.id),
-                                      pressTravel: 2,
-                                      hoverLift: -1,
-                                      hoverScale: 1.025,
-                                      child: _TrickPlayerProfile(
-                                        seat: seat,
-                                        model: model,
-                                        tokens: tokens,
-                                        maxTricks: maxTricks,
-                                        winning:
-                                            displayedWinnerSeatID == seat.id,
-                                        portraitOnRight: isLeftColumn,
-                                        heroWithinReach:
-                                            heroOfSovietUnion &&
-                                            seat.medals == maxTricks - 1 &&
-                                            (phase == phaseTrick ||
-                                                phase == phaseAssignment),
-                                      ),
-                                    ),
+                                child: TactileButton(
+                                  key: Key(
+                                    'player-portrait-${seat.id}-inspect',
+                                  ),
+                                  onPressed: () => onInspectSeat(seat.id),
+                                  semanticLabel: seat.name,
+                                  pressTravel: 2,
+                                  hoverLift: -1,
+                                  hoverScale: 1.025,
+                                  child: _TrickPlayerProfile(
+                                    seat: seat,
+                                    model: model,
+                                    tokens: tokens,
+                                    maxTricks: maxTricks,
+                                    winning: displayedWinnerSeatID == seat.id,
+                                    portraitOnRight: isLeftColumn,
+                                    heroWithinReach:
+                                        heroOfSovietUnion &&
+                                        seat.medals == maxTricks - 1 &&
+                                        (phase == phaseTrick ||
+                                            phase == phaseAssignment),
                                   ),
                                 ),
                               ),
@@ -1243,80 +1236,73 @@ class _JobPosterZone extends StatelessWidget {
     final rewardWidth = _fieldJobRewardBaseWidth * counterScale;
     final assignmentMarkerClearance =
         counterWidth + markerHorizontalInset + 10 * contentScale;
-    final zone = Semantics(
+    final zone = TactileButton(
       key: Key('static-hero-job-${job.suit}'),
-      button: handler != null,
       enabled: handler != null,
-      label: '${job.suit}, $hours of ${job.requiredHours} hours',
-      onTap: handler,
-      child: ExcludeSemantics(
-        child: TactileControlSurface(
-          enabled: handler != null,
-          onPressed: handler,
-          pressTravel: 3,
-          hoverLift: -1.5,
-          hoverScale: 1.018,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                left: isLeftColumn ? 0 : assignmentMarkerClearance,
-                right: isLeftColumn ? assignmentMarkerClearance : 0,
-                top: 0,
-                bottom: 0,
-                child: DecoratedBox(
-                  key: Key('static-hero-job-assignment-${job.suit}'),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: handler == null
-                          ? Colors.transparent
-                          : const Color(0xffffdc65),
-                      width: handler == null ? 0 : 3 * contentScale,
-                    ),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(8 * contentScale),
-                    child: _PosterCardFan(
-                      cards: [
-                        for (final card in job.assignedCards)
-                          _PosterCardEntry(card: card),
-                      ],
-                      tokens: tokens,
-                      trump: model.table.trump,
-                      maxPerRow: 6,
-                      maxScale: double.infinity,
-                    ),
-                  ),
+      onPressed: handler,
+      semanticLabel: '${job.suit}, $hours of ${job.requiredHours} hours',
+      pressTravel: 3,
+      hoverLift: -1.5,
+      hoverScale: 1.018,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: isLeftColumn ? 0 : assignmentMarkerClearance,
+            right: isLeftColumn ? assignmentMarkerClearance : 0,
+            top: 0,
+            bottom: 0,
+            child: DecoratedBox(
+              key: Key('static-hero-job-assignment-${job.suit}'),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: handler == null
+                      ? Colors.transparent
+                      : const Color(0xffffdc65),
+                  width: handler == null ? 0 : 3 * contentScale,
                 ),
               ),
-              Positioned(
-                left: isLeftColumn ? null : markerHorizontalInset,
-                right: isLeftColumn ? markerHorizontalInset : null,
-                top: isTopRow ? null : markerVerticalInset,
-                bottom: isTopRow ? markerVerticalInset : null,
-                child: _FieldJobMarker(
-                  suit: job.suit,
-                  reward: job.reward,
-                  rewardAbove: isTopRow,
-                  gap: 6 * contentScale,
+              child: Padding(
+                padding: EdgeInsets.all(8 * contentScale),
+                child: _PosterCardFan(
+                  cards: [
+                    for (final card in job.assignedCards)
+                      _PosterCardEntry(card: card),
+                  ],
                   tokens: tokens,
                   trump: model.table.trump,
-                  counterWidth: counterWidth,
-                  counterHeight: counterHeight,
-                  rewardWidth: rewardWidth,
-                  counter: _PosterPlacard(
-                    key: Key('static-hero-job-counter-${job.suit}'),
-                    text: counterText,
-                    iconAsset: fieldPlanGameCropIconPath(job.suit),
-                    active: handler != null,
-                    complete: hours >= job.requiredHours,
-                    scale: counterScale,
-                  ),
+                  maxPerRow: 6,
+                  maxScale: double.infinity,
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            left: isLeftColumn ? null : markerHorizontalInset,
+            right: isLeftColumn ? markerHorizontalInset : null,
+            top: isTopRow ? null : markerVerticalInset,
+            bottom: isTopRow ? markerVerticalInset : null,
+            child: _FieldJobMarker(
+              suit: job.suit,
+              reward: job.reward,
+              rewardAbove: isTopRow,
+              gap: 6 * contentScale,
+              tokens: tokens,
+              trump: model.table.trump,
+              counterWidth: counterWidth,
+              counterHeight: counterHeight,
+              rewardWidth: rewardWidth,
+              counter: _PosterPlacard(
+                key: Key('static-hero-job-counter-${job.suit}'),
+                text: counterText,
+                iconAsset: fieldPlanGameCropIconPath(job.suit),
+                active: handler != null,
+                complete: hours >= job.requiredHours,
+                scale: counterScale,
+              ),
+            ),
+          ),
+        ],
       ),
     );
     final dropZone = model.table.phase != phaseAssignment || onAction == null
@@ -1744,10 +1730,29 @@ class _PosterFanCard extends StatelessWidget {
                         size: cardSize,
                       ),
                     )
-                  : GestureDetector(
+                  : entry.onTap == null
+                  ? entry.hidden
+                        ? ScaledHighlightableCardBack(
+                            card: card,
+                            tokens: tokens,
+                            size: cardSize,
+                          )
+                        : GameCard(
+                            card: card,
+                            tokens: tokens,
+                            trump: trump,
+                            sizeOverride: cardSize,
+                            motionTracked: false,
+                          )
+                  : TactileButton(
                       key: Key('static-hero-card-${card.id}'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: entry.onTap,
+                      semanticLabel: '${card.rank} of ${card.suit}',
+                      onPressed: entry.onTap,
+                      pressTravel: 0,
+                      hoverLift: 0,
+                      pressScale: 1,
+                      hoverScale: 1,
+                      haptics: false,
                       child: entry.hidden
                           ? ScaledHighlightableCardBack(
                               card: card,

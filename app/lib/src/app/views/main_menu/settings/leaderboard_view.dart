@@ -101,29 +101,25 @@ class _LeaderboardPanelState extends State<LeaderboardView> {
     if (!mounted) return;
     await showDialog<void>(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: widget.tokens.colors.panel,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: ExpandedPlayerProfile(
-              tokens: widget.tokens,
-              displayName: profile.displayLabel,
-              portraitAsset:
-                  profile.portraitAsset ?? defaultProfilePortraitAsset,
-              subtitle: 'GLOBAL PLAYER PROFILE',
-              statGroups: kolkhozProfileStatGroups(
-                stats: profile.stats,
-                language: widget.language,
-              ),
-              footer: Align(
-                alignment: Alignment.centerRight,
-                child: TactileTextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('CLOSE'),
-                ),
-              ),
+      builder: (context) => KolkhozDialog(
+        tokens: widget.tokens,
+        constraints: const BoxConstraints(maxWidth: 520),
+        semanticLabel: profile.displayLabel,
+        child: ExpandedPlayerProfile(
+          tokens: widget.tokens,
+          displayName: profile.displayLabel,
+          portraitAsset: profile.portraitAsset ?? defaultProfilePortraitAsset,
+          subtitle: 'GLOBAL PLAYER PROFILE',
+          statGroups: kolkhozProfileStatGroups(
+            stats: profile.stats,
+            language: widget.language,
+          ),
+          footer: Align(
+            alignment: Alignment.centerRight,
+            child: TactileTextButton(
+              autofocus: true,
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('CLOSE'),
             ),
           ),
         ),

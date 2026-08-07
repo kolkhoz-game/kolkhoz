@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
 import 'package:kolkhoz_app/src/app/profile/profile_controller/profile_remote_connection.dart';
@@ -44,6 +45,52 @@ const _comrades = OnlineComradesResponse(
 );
 
 void main() {
+  testWidgets('main menu supports reading-order keyboard navigation', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final semantics = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(1600, 900));
+    for (final appearance in KolkhozAppearance.values) {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: kolkhozTheme(appearance.tokens),
+          home: SizedBox.expand(child: _lobby(appearance: appearance)),
+        ),
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final createGame = find.descendant(
+        of: find.byKey(const Key('field-plan-menu-local')),
+        matching: find.bySemanticsLabel('Create Game'),
+      );
+      expect(
+        tester
+            .getSemantics(createGame)
+            .flagsCollection
+            .isFocused
+            .toBoolOrNull(),
+        isTrue,
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final joinGame = find.descendant(
+        of: find.byKey(const Key('field-plan-menu-online')),
+        matching: find.bySemanticsLabel('Join Game'),
+      );
+      expect(
+        tester.getSemantics(joinGame).flagsCollection.isFocused.toBoolOrNull(),
+        isTrue,
+        reason: appearance.name,
+      );
+    }
+    semantics.dispose();
+  });
+
   testWidgets('add players curls between notebook pages', (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final semantics = tester.ensureSemantics();
@@ -159,11 +206,11 @@ void main() {
   });
 }
 
-Widget _lobby() {
+Widget _lobby({KolkhozAppearance appearance = KolkhozAppearance.dark}) {
   return StandaloneLobby(
-    tokens: KolkhozAppearance.dark.tokens,
+    tokens: appearance.tokens,
     language: KolkhozLanguage.en,
-    appearance: KolkhozAppearance.dark,
+    appearance: appearance,
     onStart: () {},
     selectedPreset: KolkhozGamePreset.kolkhoz,
     customVariants: KolkhozGameVariants.kolkhoz,

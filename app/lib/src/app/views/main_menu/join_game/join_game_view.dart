@@ -509,39 +509,33 @@ class _OnlinePanelState extends State<JoinGameView> {
                 ),
               ),
               Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: widget.tokens.colors.black.withValues(alpha: 0.30),
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(
-                      color: widget.tokens.colors.steel.withValues(alpha: 0.34),
-                    ),
+                child: KolkhozTextField(
+                  tokens: widget.tokens,
+                  controller: inviteController,
+                  labelText: widget.language.strings.kolkhozappInviteCode,
+                  enabled: !busy,
+                  textInputAction: TextInputAction.done,
+                  textCapitalization: TextCapitalization.characters,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  maxLength: 12,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+                    const UpperCaseTextFormatter(),
+                    LengthLimitingTextInputFormatter(12),
+                  ],
+                  style: kolkhozFontStyle.copyWith(
+                    color: widget.tokens.colors.cream,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                   ),
-                  child: TextField(
-                    controller: inviteController,
-                    minLines: 1,
-                    maxLines: 1,
-                    style: kolkhozFontStyle.copyWith(
-                      color: widget.tokens.colors.cream,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: widget.language.strings.kolkhozappInviteCode,
-                      labelStyle: kolkhozFontStyle.copyWith(
-                        color: widget.tokens.colors.creamDim.withValues(
-                          alpha: 0.72,
-                        ),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                    ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
+                  onSubmitted: (_) {
+                    if (!busy && !buttonShowsBan) unawaited(assignGame());
+                  },
                 ),
               ),
               SizedBox(
@@ -1077,52 +1071,46 @@ Future<void> _showLobbyPlayerProfile({
       : language.strings.kolkhozappNotComrade;
   return showDialog<void>(
     context: context,
-    builder: (context) => Dialog(
-      backgroundColor: tokens.colors.panel,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: ExpandedPlayerProfile(
-            key: Key('lobby-player-profile-${profile.seatID}'),
-            tokens: tokens,
-            displayName: displayName == null || displayName.isEmpty
-                ? language.strings.kolkhozappHuman
-                : displayName,
-            portraitAsset: profile.portraitAsset ?? defaultProfilePortraitAsset,
-            subtitle: language.strings.kolkhozappPlayer,
-            statGroups: kolkhozProfileStatGroups(
-              stats: profile.stats,
-              language: language,
-            ),
-            chips: canManageRelationship
-                ? [
-                    PlayerProfileChip(
-                      label: relationshipLabel,
-                      active: isComrade,
-                    ),
-                  ]
-                : const [],
-            action: canManageRelationship && !isComrade && !hasOutgoingRequest
-                ? PlayerProfileAction(
-                    label: language.t(
-                      hasIncomingRequest
-                          ? KolkhozText.kolkhozappAccept
-                          : KolkhozText.kolkhozappAddComrade,
-                    ),
-                    iconAsset:
-                        'assets/art/field_plan/shared/pictograms/add-friend.png',
-                    prominent: hasIncomingRequest,
-                    onPressed: () => unawaited(onComradeRequestToUser(userID)),
-                  )
-                : null,
-            footer: Align(
-              alignment: Alignment.centerRight,
-              child: TactileTextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('CLOSE'),
-              ),
-            ),
+    builder: (context) => KolkhozDialog(
+      tokens: tokens,
+      constraints: const BoxConstraints(maxWidth: 520),
+      semanticLabel: displayName == null || displayName.isEmpty
+          ? language.strings.kolkhozappHuman
+          : displayName,
+      child: ExpandedPlayerProfile(
+        key: Key('lobby-player-profile-${profile.seatID}'),
+        tokens: tokens,
+        displayName: displayName == null || displayName.isEmpty
+            ? language.strings.kolkhozappHuman
+            : displayName,
+        portraitAsset: profile.portraitAsset ?? defaultProfilePortraitAsset,
+        subtitle: language.strings.kolkhozappPlayer,
+        statGroups: kolkhozProfileStatGroups(
+          stats: profile.stats,
+          language: language,
+        ),
+        chips: canManageRelationship
+            ? [PlayerProfileChip(label: relationshipLabel, active: isComrade)]
+            : const [],
+        action: canManageRelationship && !isComrade && !hasOutgoingRequest
+            ? PlayerProfileAction(
+                label: language.t(
+                  hasIncomingRequest
+                      ? KolkhozText.kolkhozappAccept
+                      : KolkhozText.kolkhozappAddComrade,
+                ),
+                iconAsset:
+                    'assets/art/field_plan/shared/pictograms/add-friend.png',
+                prominent: hasIncomingRequest,
+                onPressed: () => unawaited(onComradeRequestToUser(userID)),
+              )
+            : null,
+        footer: Align(
+          alignment: Alignment.centerRight,
+          child: TactileTextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('CLOSE'),
           ),
         ),
       ),
@@ -1817,89 +1805,97 @@ class _OpenSessionRow extends StatelessWidget {
           userID != currentUserID &&
           comradeUserIDs.contains(userID);
     });
-    return Column(
-      spacing: 0,
-      children: [
-        MechanicalSelectionSurface(
-          selected: expanded,
-          semanticExpanded: expanded,
-          semanticLabel:
-              '$title, '
-              '${session.ranked ? language.strings.kolkhozappRanked : language.strings.kolkhozappCasual}'
-              '${hasComrade ? ', ${language.strings.kolkhozappComrade}' : ''}',
-          onPressed: onToggle,
-          child: VariantRowBackground(
-            tokens: tokens,
-            active: expanded,
-            child: Row(
-              spacing: 10,
-              children: [
+    return ExpansionTile(
+      key: ValueKey('${session.sessionID}-$expanded'),
+      initiallyExpanded: expanded,
+      onExpansionChanged: (value) {
+        if (value != expanded) {
+          onToggle();
+        }
+      },
+      showTrailingIcon: false,
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: EdgeInsets.zero,
+      minTileHeight: 0,
+      collapsedShape: const Border(),
+      shape: const Border(),
+      title: Semantics(
+        label:
+            '$title, '
+            '${session.ranked ? language.strings.kolkhozappRanked : language.strings.kolkhozappCasual}'
+            '${hasComrade ? ', ${language.strings.kolkhozappComrade}' : ''}',
+        excludeSemantics: true,
+        child: VariantRowBackground(
+          tokens: tokens,
+          active: expanded,
+          child: Row(
+            spacing: 10,
+            children: [
+              _OpenSessionBadgeIcon(
+                tokens: tokens,
+                label: session.ranked
+                    ? language.strings.kolkhozappRanked
+                    : language.strings.kolkhozappCasual,
+                asset: session.ranked
+                    ? fieldPlanMedalIconPath
+                    : fieldPlanHowToPlayPictogram.fieldPlanPath,
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 4,
+                  children: [
+                    VariantPixelLine(
+                      height: displayTextSlotHeight(DisplayTextSize.caption),
+                      child: DisplayText(
+                        title,
+                        color: titleColor,
+                        size: DisplayTextSize.caption,
+                        variant: DisplayTextWeight.bold,
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                      ),
+                    ),
+                    VariantPixelLine(
+                      height: displayTextSlotHeight(DisplayTextSize.caption2),
+                      child: DisplayText(
+                        language.strings.kolkhozappOpenOpenseats(
+                          openSeats: openSeats,
+                        ),
+                        color: bodyColor,
+                        size: DisplayTextSize.caption2,
+                        variant: DisplayTextWeight.regular,
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (hasComrade)
                 _OpenSessionBadgeIcon(
                   tokens: tokens,
-                  label: session.ranked
-                      ? language.strings.kolkhozappRanked
-                      : language.strings.kolkhozappCasual,
-                  asset: session.ranked
-                      ? fieldPlanMedalIconPath
-                      : fieldPlanHowToPlayPictogram.fieldPlanPath,
+                  label: language.strings.kolkhozappComrade,
+                  asset: 'assets/art/field_plan/shared/pictograms/comrade.png',
                 ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 4,
-                    children: [
-                      VariantPixelLine(
-                        height: displayTextSlotHeight(DisplayTextSize.caption),
-                        child: DisplayText(
-                          title,
-                          color: titleColor,
-                          size: DisplayTextSize.caption,
-                          variant: DisplayTextWeight.bold,
-                          maxLines: 1,
-                          overflow: TextOverflow.clip,
-                        ),
-                      ),
-                      VariantPixelLine(
-                        height: displayTextSlotHeight(DisplayTextSize.caption2),
-                        child: DisplayText(
-                          language.strings.kolkhozappOpenOpenseats(
-                            openSeats: openSeats,
-                          ),
-                          color: bodyColor,
-                          size: DisplayTextSize.caption2,
-                          variant: DisplayTextWeight.regular,
-                          maxLines: 1,
-                          overflow: TextOverflow.clip,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (hasComrade)
-                  _OpenSessionBadgeIcon(
-                    tokens: tokens,
-                    label: language.strings.kolkhozappComrade,
-                    asset:
-                        'assets/art/field_plan/shared/pictograms/comrade.png',
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
-        if (expanded)
-          _OpenSessionDetails(
-            tokens: tokens,
-            language: language,
-            session: session,
-            hostName: hostName == null || hostName.isEmpty
-                ? language.strings.kolkhozappWaiting
-                : hostName,
-            currentUserID: currentUserID,
-            comradeUserIDs: comradeUserIDs,
-            incomingComradeRequestUserIDs: incomingComradeRequestUserIDs,
-            outgoingComradeRequestUserIDs: outgoingComradeRequestUserIDs,
-            onComradeRequestToUser: onComradeRequestToUser,
-          ),
+      ),
+      children: [
+        _OpenSessionDetails(
+          tokens: tokens,
+          language: language,
+          session: session,
+          hostName: hostName == null || hostName.isEmpty
+              ? language.strings.kolkhozappWaiting
+              : hostName,
+          currentUserID: currentUserID,
+          comradeUserIDs: comradeUserIDs,
+          incomingComradeRequestUserIDs: incomingComradeRequestUserIDs,
+          outgoingComradeRequestUserIDs: outgoingComradeRequestUserIDs,
+          onComradeRequestToUser: onComradeRequestToUser,
+        ),
       ],
     );
   }

@@ -130,44 +130,25 @@ class _ProfilePanelState extends State<ProfileView> {
     }
     final selected = await showDialog<String>(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: widget.tokens.colors.panel,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: widget.tokens.colors.gold.withValues(alpha: 0.72),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: widget.tokens.colors.black.withValues(alpha: 0.42),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
+      builder: (context) => KolkhozDialog(
+        tokens: widget.tokens,
+        constraints: const BoxConstraints(maxWidth: 620),
+        semanticLabel: 'Choose portrait',
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final asset in profilePortraitAssets)
+              _ProfilePortraitChoice(
+                tokens: widget.tokens,
+                asset: asset,
+                selected: widget.portraitAsset == asset,
+                unlocked: isProfilePortraitUnlocked(widget.progression, asset),
+                onPressed: isProfilePortraitUnlocked(widget.progression, asset)
+                    ? () => Navigator.of(context).pop(asset)
+                    : null,
               ),
-            ],
-          ),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final asset in profilePortraitAssets)
-                _ProfilePortraitChoice(
-                  tokens: widget.tokens,
-                  asset: asset,
-                  selected: widget.portraitAsset == asset,
-                  unlocked: isProfilePortraitUnlocked(
-                    widget.progression,
-                    asset,
-                  ),
-                  onPressed:
-                      isProfilePortraitUnlocked(widget.progression, asset)
-                      ? () => Navigator.of(context).pop(asset)
-                      : null,
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -204,33 +185,37 @@ class _ProfilePanelState extends State<ProfileView> {
                         ? null
                         : showPortraitPicker,
                     portraitSemanticsLabel: widget.portraitAsset,
-                    title: TextField(
+                    title: KolkhozTextField(
+                      tokens: widget.tokens,
                       controller: displayNameController,
                       enabled: widget.onDisplayNameChanged != null,
                       maxLength: 24,
-                      minLines: 1,
-                      maxLines: 1,
+                      textInputAction: TextInputAction.done,
+                      textCapitalization: TextCapitalization.words,
+                      autofillHints: const [AutofillHints.nickname],
+                      outlined: false,
                       style: kolkhozFontStyle.copyWith(
                         color: widget.tokens.colors.cream,
                         fontSize: 28,
                         height: 1.0,
                         fontWeight: FontWeight.w700,
                       ),
-                      cursorColor: widget.tokens.colors.goldBright,
-                      decoration: InputDecoration(
-                        counterText: '',
-                        hintText: defaultProfileDisplayName,
-                        hintStyle: kolkhozFontStyle.copyWith(
-                          color: widget.tokens.colors.creamDim.withValues(
-                            alpha: 0.74,
-                          ),
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
+                      hintText: defaultProfileDisplayName,
+                      hintStyle: kolkhozFontStyle.copyWith(
+                        color: widget.tokens.colors.creamDim.withValues(
+                          alpha: 0.74,
                         ),
-                        border: InputBorder.none,
-                        isCollapsed: true,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
                       ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      onSubmitted: (_) {
+                        final normalized = displayNameController.text.trim();
+                        if (normalized != displayNameController.text) {
+                          displayNameController.text = normalized;
+                        }
+                        FocusScope.of(context).unfocus();
+                      },
                     ),
                   ),
                   Column(
@@ -545,125 +530,131 @@ class _ReplayDialogState extends State<_ReplayDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => Dialog(
-    backgroundColor: widget.tokens.colors.panel,
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 680, maxHeight: 640),
-      child: FutureBuilder<OnlineGameReplay>(
-        future: widget.replay,
-        builder: (context, snapshot) {
-          final replay = snapshot.data;
-          if (replay == null) {
-            return const Padding(
-              padding: EdgeInsets.all(32),
-              child: CircularProgressIndicator(),
-            );
-          }
-          final events = replay.events;
-          final selected = events.isEmpty
-              ? null
-              : events[revision.clamp(0, events.length - 1)];
-          return Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 10,
-              children: [
-                Text(
-                  widget.language.strings.profileMatchReplay,
-                  style: kolkhozFontStyle.copyWith(
-                    color: widget.tokens.colors.goldBright,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
+  Widget build(BuildContext context) => KolkhozDialog(
+    tokens: widget.tokens,
+    padding: EdgeInsets.zero,
+    semanticLabel: widget.language.strings.profileMatchReplay,
+    child: FutureBuilder<OnlineGameReplay>(
+      future: widget.replay,
+      builder: (context, snapshot) {
+        final replay = snapshot.data;
+        if (replay == null) {
+          return const Padding(
+            padding: EdgeInsets.all(32),
+            child: CircularProgressIndicator(),
+          );
+        }
+        final events = replay.events;
+        final selected = events.isEmpty
+            ? null
+            : events[revision.clamp(0, events.length - 1)];
+        return Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 10,
+            children: [
+              Text(
+                widget.language.strings.profileMatchReplay,
+                style: kolkhozFontStyle.copyWith(
+                  color: widget.tokens.colors.goldBright,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
                 ),
-                Text(
-                  widget.language.strings.profileReplaySummary(
-                    seed: replay.seed,
-                    mode:
-                        (replay.ranked
-                                ? widget.language.strings.kolkhozappRanked
-                                : widget.language.strings.kolkhozappCasual)
-                            .toUpperCase(),
-                    count: events.length,
-                  ),
+              ),
+              Text(
+                widget.language.strings.profileReplaySummary(
+                  seed: replay.seed,
+                  mode:
+                      (replay.ranked
+                              ? widget.language.strings.kolkhozappRanked
+                              : widget.language.strings.kolkhozappCasual)
+                          .toUpperCase(),
+                  count: events.length,
                 ),
-                Wrap(
-                  spacing: 12,
+              ),
+              Wrap(
+                spacing: 12,
+                children: [
+                  for (final result in replay.results)
+                    Text(
+                      '${result.rank}. ${result.displayName} ${result.score}',
+                    ),
+                ],
+              ),
+              const Divider(),
+              if (selected != null) ...[
+                Text(
+                  actionLabel(selected),
+                  key: const Key('replay-current-action'),
+                ),
+                Slider(
+                  value: revision.toDouble(),
+                  min: 0,
+                  max: (events.length - 1).toDouble(),
+                  divisions: events.length - 1 > 0 ? events.length - 1 : null,
+                  semanticFormatterCallback: (value) {
+                    final index = value
+                        .round()
+                        .clamp(0, events.length - 1)
+                        .toInt();
+                    return '${index + 1} OF ${events.length}: '
+                        '${actionLabel(events[index])}';
+                  },
+                  onChanged: (value) =>
+                      setState(() => revision = value.round()),
+                ),
+                Row(
                   children: [
-                    for (final result in replay.results)
-                      Text(
-                        '${result.rank}. ${result.displayName} ${result.score}',
-                      ),
+                    TactileTextButton(
+                      onPressed: revision == 0
+                          ? null
+                          : () => setState(() => revision--),
+                      child: Text(widget.language.strings.profilePrevious),
+                    ),
+                    TactileTextButton(
+                      onPressed: revision >= events.length - 1
+                          ? null
+                          : () => setState(() => revision++),
+                      child: Text(widget.language.strings.profileNext),
+                    ),
+                    const Spacer(),
+                    Text('${revision + 1}/${events.length}'),
                   ],
                 ),
-                const Divider(),
-                if (selected != null) ...[
-                  Text(
-                    actionLabel(selected),
-                    key: const Key('replay-current-action'),
-                  ),
-                  Slider(
-                    value: revision.toDouble(),
-                    min: 0,
-                    max: (events.length - 1).toDouble(),
-                    divisions: events.length - 1 > 0 ? events.length - 1 : null,
-                    onChanged: (value) =>
-                        setState(() => revision = value.round()),
-                  ),
-                  Row(
-                    children: [
-                      TactileTextButton(
-                        onPressed: revision == 0
-                            ? null
-                            : () => setState(() => revision--),
-                        child: Text(widget.language.strings.profilePrevious),
-                      ),
-                      TactileTextButton(
-                        onPressed: revision >= events.length - 1
-                            ? null
-                            : () => setState(() => revision++),
-                        child: Text(widget.language.strings.profileNext),
-                      ),
-                      const Spacer(),
-                      Text('${revision + 1}/${events.length}'),
-                    ],
-                  ),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: events.length,
-                      itemBuilder: (context, index) =>
-                          MechanicalSelectionSurface(
-                            selected: index == revision,
-                            onPressed: () => setState(() => revision = index),
-                            child: ListTile(
-                              dense: true,
-                              selected: index == revision,
-                              title: Text(actionLabel(events[index])),
-                            ),
-                          ),
-                    ),
-                  ),
-                ] else
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        widget.language.strings.profileNoRecordedActions,
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: events.length,
+                    itemBuilder: (context, index) => TactileButton(
+                      selected: index == revision,
+                      onPressed: () => setState(() => revision = index),
+                      child: ListTile(
+                        dense: true,
+                        selected: index == revision,
+                        title: Text(actionLabel(events[index])),
                       ),
                     ),
-                  ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TactileTextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(widget.language.strings.profileClose),
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ] else
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      widget.language.strings.profileNoRecordedActions,
+                    ),
+                  ),
+                ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TactileTextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(widget.language.strings.profileClose),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     ),
   );
 }

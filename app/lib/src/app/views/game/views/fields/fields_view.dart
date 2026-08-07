@@ -404,16 +404,18 @@ class _JobTileState extends State<JobTile> {
     final actionableTarget = validTarget && onAssign != null;
     final highlighted = trump == job.suit;
     final showHover = hovered && actionableTarget;
-    final showAssignPrompt = actionableTarget && job.assignedCards.isEmpty;
+    final assignedCards = visibleAssignedJobCards(job);
+    final showAssignPrompt = actionableTarget && assignedCards.isEmpty;
     return MouseRegion(
       cursor: actionableTarget
           ? SystemMouseCursors.click
           : SystemMouseCursors.basic,
       onEnter: (_) => setState(() => hovered = true),
       onExit: (_) => setState(() => hovered = false),
-      child: TactileControlSurface(
+      child: TactileButton(
         enabled: actionableTarget,
         onPressed: actionableTarget ? onAssign : null,
+        semanticLabel: '${widget.language.suitName(job.suit)} job',
         pressTravel: 3,
         hoverLift: -1,
         hoverScale: 1.012,
@@ -530,7 +532,7 @@ class _JobTileState extends State<JobTile> {
                     Expanded(
                       child: SizedBox.expand(
                         child: ClipRect(
-                          child: job.assignedCards.isEmpty
+                          child: assignedCards.isEmpty
                               ? Center(
                                   child: SizedBox(
                                     key: const Key(
@@ -557,7 +559,7 @@ class _JobTileState extends State<JobTile> {
                                   ),
                                 )
                               : AssignedJobCardStack(
-                                  cards: job.assignedCards,
+                                  cards: assignedCards,
                                   tokens: tokens,
                                   trump: trump,
                                 ),

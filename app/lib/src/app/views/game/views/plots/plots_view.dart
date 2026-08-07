@@ -4,6 +4,7 @@ import 'dart:ui' show clampDouble;
 import 'package:flutter/material.dart';
 
 import 'package:kolkhoz_app/src/app/settings/settings.dart';
+import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/field_plan_assets.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
@@ -292,16 +293,25 @@ List<Widget> plotOverviewCardItems({
                           size: cardSize,
                         ),
                       )
-                    : GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: selectable
-                            ? () => onPlotCardTap?.call(card.id, zone)
-                            : null,
+                    : selectable
+                    ? TactileButton(
+                        semanticLabel: '${card.rank} of ${card.suit}',
+                        onPressed: () => onPlotCardTap?.call(card.id, zone),
+                        pressTravel: 0,
+                        hoverLift: 0,
+                        pressScale: 1,
+                        hoverScale: 1,
+                        haptics: false,
                         child: GameCard(
                           card: selectedPlotCard(card, selectedCardID),
                           tokens: tokens,
                           sizeOverride: cardSize,
                         ),
+                      )
+                    : GameCard(
+                        card: selectedPlotCard(card, selectedCardID),
+                        tokens: tokens,
+                        sizeOverride: cardSize,
                       ),
               ),
             ),

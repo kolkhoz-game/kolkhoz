@@ -31,6 +31,8 @@ class AppNavigationController extends ChangeNotifier {
   AppSettingsSection get settingsSection => _settingsSection;
   bool get showingTutorial => _showingTutorial;
 
+  void showHome() => _navigate(AppDestination.home, showingTutorial: false);
+
   void showOffline({KolkhozGameLaunchOrigin? launchOrigin}) => _navigate(
     AppDestination.offline,
     launchOrigin: launchOrigin,

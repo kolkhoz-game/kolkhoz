@@ -163,6 +163,8 @@ class _CardViewControls extends StatelessWidget {
                       divisions: 8,
                       value: scale,
                       label: scale.toStringAsFixed(2),
+                      semanticFormatterCallback: (value) =>
+                          'Card scale ${value.toStringAsFixed(2)}',
                       onChanged: onScaleChanged,
                     ),
                   ),

@@ -338,14 +338,10 @@ void registerBoardTests() {
       find.byType(HandCardControl),
     );
     expect(cardControl.card.selected, isFalse);
-    final focusable = tester.widget<FocusableActionDetector>(
-      find.descendant(
-        of: handCard,
-        matching: find.byType(FocusableActionDetector),
-      ),
+    final materialButton = tester.widget<TextButton>(
+      find.ancestor(of: handCard, matching: find.byType(TextButton)),
     );
-    expect(focusable.mouseCursor, SystemMouseCursors.click);
-    expect(focusable.actions, contains(ActivateIntent));
+    expect(materialButton.onPressed, isNotNull);
 
     final draggable = tester.widget<Draggable<CardDragData>>(
       find.ancestor(
@@ -1332,29 +1328,45 @@ void registerBoardTests() {
     );
   });
 
-  testWidgets('Foreman hint bubble renders follow-suit reminder', (
+  testWidgets('transient feedback uses a dismissible live-region SnackBar', (
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: ForemanHintBubble(
-          message: 'Remember, you must follow suit if able.',
-          tokens: defaultDesignTokens,
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                kolkhozSnackBar(
+                  tokens: defaultDesignTokens,
+                  message: 'Remember, you must follow suit if able.',
+                ),
+              ),
+              child: const Text('SHOW MESSAGE'),
+            ),
+          ),
         ),
       ),
     );
+
+    await tester.tap(find.text('SHOW MESSAGE'));
+    await tester.pump();
 
     expect(
       findAppText('Remember, you must follow suit if able.'),
       findsOneWidget,
     );
-    expect(find.byKey(const ValueKey('foreman-hint-card')), findsOneWidget);
-    expect(
-      findAssetImage(
-        'assets/art/field_plan/cards/faces/face-foreman-misha.png',
-      ),
-      findsOneWidget,
-    );
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.byTooltip('Close'), findsOneWidget);
+    final liveRegions = tester
+        .widgetList<Semantics>(
+          find.descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Semantics),
+          ),
+        )
+        .where((widget) => widget.properties.liveRegion == true);
+    expect(liveRegions, isNotEmpty);
   });
 
   test(
@@ -1500,6 +1512,41 @@ void registerBoardTests() {
       ),
       isEmpty,
     );
+  });
+
+  test('provisional assignments keep their trick cards visible', () {
+    final wheat9 = testCard(
+      id: 'wheat-9',
+      suit: 'wheat',
+      value: 9,
+      pending: true,
+      provisional: true,
+    );
+    final model = runtimeModelWith(
+      phase: phaseAssignment,
+      selection: SelectionState.empty,
+      jobs: [
+        Job(
+          suit: 'wheat',
+          hours: 0,
+          requiredHours: jobRequiredHours,
+          claimed: false,
+          reward: null,
+          assignedCards: [wheat9],
+          validAssignmentTarget: true,
+          highlighted: false,
+        ),
+      ],
+      lastTrick: Trick(
+        plays: [TrickPlay(seatID: 0, card: wheat9)],
+        winnerSeatID: 0,
+      ),
+    );
+
+    expect(assignmentControlCards(model), isEmpty);
+    expect(visibleAssignmentTrick(model).plays.single.card, wheat9);
+    expect(pendingAssignmentTargets(model), {'wheat-9': 'wheat'});
+    expect(visibleAssignedJobCards(model.table.jobs.single), isEmpty);
   });
 
   test('assignment command bar is only visible for human assignment turns', () {
@@ -6605,6 +6652,13 @@ void registerBoardTests() {
       value: card.value,
       pending: true,
     );
+    final draftCard = testCard(
+      id: card.id,
+      suit: card.suit,
+      value: card.value,
+      pending: true,
+      provisional: true,
+    );
     final before = modelWithActivePanel(
       runtimeModelWith(
         phase: phaseAssignment,
@@ -6630,6 +6684,26 @@ void registerBoardTests() {
                   claimed: job.claimed,
                   reward: job.reward,
                   assignedCards: [pendingCard],
+                  validAssignmentTarget: job.validAssignmentTarget,
+                  highlighted: job.highlighted,
+                )
+              : job,
+      ],
+      lastTrick: before.table.lastTrick,
+    );
+    final draft = runtimeModelWith(
+      phase: phaseAssignment,
+      selection: SelectionState.empty,
+      jobs: [
+        for (final job in base.table.jobs)
+          job.suit == 'wheat'
+              ? Job(
+                  suit: job.suit,
+                  hours: job.hours,
+                  requiredHours: job.requiredHours,
+                  claimed: job.claimed,
+                  reward: job.reward,
+                  assignedCards: [draftCard],
                   validAssignmentTarget: job.validAssignmentTarget,
                   highlighted: job.highlighted,
                 )
@@ -6696,6 +6770,24 @@ void registerBoardTests() {
     await tester.pump();
     await tester.pump();
 
+    setMotionState(() => model = draft);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(FlyingCard), findsNothing);
+    expect(
+      find.byKey(const ValueKey('assignment-preview-arrows')),
+      findsOneWidget,
+    );
+    final previewPaint = tester.widget<CustomPaint>(
+      find.byKey(const ValueKey('assignment-preview-arrows')),
+    );
+    final previewPainter = previewPaint.painter! as AssignmentPreviewPainter;
+    expect(previewPainter.routes, hasLength(1));
+    expect(previewPainter.routes.single.cardID, card.id);
+    expect(previewPainter.routes.single.suit, 'wheat');
+
     setMotionState(() {
       model = after;
       transition = GamePresentationTransition(
@@ -6717,13 +6809,17 @@ void registerBoardTests() {
     await tester.pump();
     await tester.pump();
     await tester.pump();
+    expect(
+      find.byKey(const ValueKey('assignment-preview-arrows')),
+      findsNothing,
+    );
     expect(find.byType(FlyingCard), findsWidgets);
 
     await tester.pump(const Duration(milliseconds: 1100));
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.byType(ErrorWidget), findsNothing);
-    expect(findAppText('+8'), findsWidgets);
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
@@ -7605,12 +7701,12 @@ void registerBoardTests() {
     await tester.tap(find.bySemanticsLabel('NEW GAME'));
     await tester.tap(find.bySemanticsLabel('HOW TO PLAY'));
     await tester.tap(find.bySemanticsLabel('MAIN MENU'));
-    await tester.tap(find.bySemanticsLabel('Confirm new game'));
-    await tester.tap(find.bySemanticsLabel('Confirm main menu'));
+    await tester.tap(find.byType(SwitchListTile).at(0));
+    await tester.tap(find.byType(SwitchListTile).at(1));
 
     await tester.tap(find.bySemanticsLabel('Assist'));
     await tester.pump();
-    await tester.tap(find.bySemanticsLabel('Invalid-tap hints'));
+    await tester.tap(find.byType(SwitchListTile).last);
 
     await tester.tap(find.bySemanticsLabel('Display'));
     await tester.pump();

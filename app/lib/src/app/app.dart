@@ -67,6 +67,7 @@ ThemeData kolkhozTheme(DesignTokens tokens) {
   final bodyStyle = kolkhozFontStyle.copyWith(color: tokens.colors.cream);
   final actionStyle = kolkhozFontStyle.copyWith(fontWeight: FontWeight.w800);
   return base.copyWith(
+    focusColor: tokens.colors.goldBright,
     scaffoldBackgroundColor: tokens.colors.background,
     canvasColor: tokens.colors.panel,
     cardColor: tokens.colors.panel,
@@ -81,6 +82,10 @@ ThemeData kolkhozTheme(DesignTokens tokens) {
     dialogTheme: DialogThemeData(
       backgroundColor: tokens.colors.panel,
       surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radius.md),
+        side: BorderSide(color: tokens.colors.gold.withValues(alpha: 0.7)),
+      ),
       titleTextStyle: bodyStyle.copyWith(
         color: tokens.colors.gold,
         fontSize: 21,
@@ -89,6 +94,16 @@ ThemeData kolkhozTheme(DesignTokens tokens) {
       contentTextStyle: bodyStyle.copyWith(
         fontSize: 16,
         fontWeight: FontWeight.w700,
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: tokens.colors.black.withValues(alpha: 0.94),
+      contentTextStyle: bodyStyle.copyWith(fontWeight: FontWeight.w800),
+      closeIconColor: tokens.colors.goldBright,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.radius.sm),
+        side: BorderSide(color: tokens.colors.gold.withValues(alpha: 0.7)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -126,83 +141,24 @@ Future<bool> showGameControlConfirmation({
   required String message,
   required String confirmLabel,
 }) async {
-  final result = await showDialog<bool>(
+  return showKolkhozConfirmation(
     context: context,
-    builder: (context) {
-      final actionTextStyle = kolkhozFontStyle.copyWith(
-        fontSize: 15,
-        fontWeight: FontWeight.w800,
-      );
-      return AlertDialog(
-        backgroundColor: tokens.colors.panel,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(tokens.radius.md),
-          side: BorderSide(color: tokens.colors.gold.withValues(alpha: 0.7)),
-        ),
-        titleTextStyle: kolkhozFontStyle.copyWith(
-          color: tokens.colors.gold,
-          fontSize: 21,
-          fontWeight: FontWeight.w900,
-        ),
-        contentTextStyle: kolkhozFontStyle.copyWith(
-          color: tokens.colors.cream,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-        ),
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TactileTextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: tokens.colors.creamDim,
-              textStyle: actionTextStyle,
-            ),
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(language.strings.kolkhozappCancel),
-          ),
-          TactileTextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: tokens.colors.goldBright,
-              textStyle: actionTextStyle,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(confirmLabel),
-          ),
-        ],
-      );
-    },
+    tokens: tokens,
+    title: title,
+    message: message,
+    cancelLabel: language.strings.kolkhozappCancel,
+    confirmLabel: confirmLabel,
   );
-  return result ?? false;
 }
 
 Future<bool> showPushNotificationOffer({
   required BuildContext context,
   DesignTokens tokens = defaultDesignTokens,
 }) async {
-  final actionTextStyle = kolkhozFontStyle.copyWith(
-    fontSize: 15,
-    fontWeight: FontWeight.w800,
-  );
   final result = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: tokens.colors.panel,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(tokens.radius.md),
-        side: BorderSide(color: tokens.colors.gold.withValues(alpha: 0.7)),
-      ),
-      titleTextStyle: kolkhozFontStyle.copyWith(
-        color: tokens.colors.gold,
-        fontSize: 21,
-        fontWeight: FontWeight.w900,
-      ),
-      contentTextStyle: kolkhozFontStyle.copyWith(
-        color: tokens.colors.cream,
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-      ),
+    builder: (context) => KolkhozAlertDialog(
+      tokens: tokens,
       title: const Text('Stay informed'),
       content: const Text(
         'Kolkhoz can notify you about comrade requests, invitations, and '
@@ -211,18 +167,11 @@ Future<bool> showPushNotificationOffer({
       ),
       actions: [
         TactileTextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: tokens.colors.creamDim,
-            textStyle: actionTextStyle,
-          ),
+          autofocus: true,
           onPressed: () => Navigator.of(context).pop(false),
           child: const Text('Not now'),
         ),
         TactileTextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: tokens.colors.goldBright,
-            textStyle: actionTextStyle,
-          ),
           onPressed: () => Navigator.of(context).pop(true),
           child: const Text('Enable'),
         ),
@@ -284,9 +233,8 @@ class KolkhozApp extends StatefulWidget {
 }
 
 class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
-  static const foremanHintDuration = Duration(seconds: 3);
-
   final navigatorKey = GlobalKey<NavigatorState>();
+  final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final gameSounds = GameSoundController();
   late final AppNavigationController navigationController;
   late final GameController store;
@@ -309,8 +257,6 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
   String? handledIdentityUserID;
   int? handledSoundTransitionID;
   bool onlineSessionCreatedByLocalPlayer = false;
-  String? foremanHint;
-  Timer? foremanHintTimer;
   Timer? progressionNoticeTimer;
   String? progressionNotice;
   KolkhozGamePreset selectedPreset = KolkhozGamePreset.kolkhoz;
@@ -462,7 +408,6 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    foremanHintTimer?.cancel();
     progressionNoticeTimer?.cancel();
     mainMenuController.removeListener(handleMainMenuChanged);
     mainMenuController.dispose();
@@ -486,6 +431,27 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     if (mounted) setState(() {});
   }
 
+  void handleEscapeShortcut() {
+    final navigator = navigatorKey.currentState;
+    if (navigator != null && navigator.canPop()) {
+      unawaited(navigator.maybePop());
+      return;
+    }
+    if (showingTutorial) {
+      navigationController.closeTutorial();
+      return;
+    }
+    if (destination == AppDestination.game) {
+      unawaited(requestReturnToLobby());
+      return;
+    }
+    if (destination != AppDestination.home) {
+      navigationController.showHome();
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -505,142 +471,170 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     final tokens = settings.appearance.tokens;
     return MaterialApp(
       navigatorKey: navigatorKey,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Kolkhoz',
       locale: Locale(settings.language.name),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: kolkhozTheme(tokens),
-      builder: (context, child) => DefaultTextStyle.merge(
-        style: kolkhozFontStyle.copyWith(color: tokens.colors.cream),
-        child: Stack(
-          children: [
-            child ?? const SizedBox.shrink(),
-            if (showingLobby && demoMode && onlineSignedIn)
-              Positioned(
-                key: const ValueKey('unlock-full-game'),
-                right: 16,
-                bottom: 16,
-                child: SafeArea(
-                  child: SizedBox(
-                    width: 220,
-                    height: 46,
-                    child: ChromeAssetButton.command(
-                      label: commerce.price == null
-                          ? 'UNLOCK FULL GAME'
-                          : 'UNLOCK • ${commerce.price}',
-                      prominent: true,
-                      tokens: settings.appearance.tokens,
-                      onPressed: commerce.busy ? null : showFullGameUnlock,
-                      iconAsset: 'assets/ui/Icons/icon-lock.png',
-                      iconSize: 22,
-                    ),
-                  ),
-                ),
-              ),
-            if (activeRemoteSession?.requiresSync ?? false)
-              Positioned.fill(
-                child: ActiveSessionSyncOverlay(
-                  tokens: settings.appearance.tokens,
-                  busy: activeSessionSyncBusy,
-                  onSync: syncActiveSession,
-                ),
-              ),
-            if (store.isSpectating)
-              Positioned(
-                key: const ValueKey('spectator-banner'),
-                top: 12,
-                left: 76,
-                child: SafeArea(
-                  child: IgnorePointer(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: settings.appearance.tokens.colors.black
-                            .withValues(alpha: 0.8),
-                        border: Border.all(
-                          color: settings.appearance.tokens.colors.gold,
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'SPECTATING • READ ONLY',
-                        style: kolkhozFontStyle.copyWith(
-                          color: settings.appearance.tokens.colors.goldBright,
-                          fontWeight: FontWeight.w900,
+      builder: (context, child) => Focus(
+        autofocus: true,
+        skipTraversal: true,
+        child: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.escape):
+                handleEscapeShortcut,
+          },
+          child: FocusTraversalGroup(
+            policy: ReadingOrderTraversalPolicy(),
+            child: DefaultTextStyle.merge(
+              style: kolkhozFontStyle.copyWith(color: tokens.colors.cream),
+              child: Stack(
+                children: [
+                  child ?? const SizedBox.shrink(),
+                  if (showingLobby && demoMode && onlineSignedIn)
+                    Positioned(
+                      key: const ValueKey('unlock-full-game'),
+                      right: 16,
+                      bottom: 16,
+                      child: SafeArea(
+                        child: SizedBox(
+                          width: 220,
+                          height: 46,
+                          child: ChromeAssetButton.command(
+                            label: commerce.price == null
+                                ? 'UNLOCK FULL GAME'
+                                : 'UNLOCK • ${commerce.price}',
+                            prominent: true,
+                            tokens: settings.appearance.tokens,
+                            onPressed: commerce.busy
+                                ? null
+                                : showFullGameUnlock,
+                            iconAsset: 'assets/ui/Icons/icon-lock.png',
+                            iconSize: 22,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-            if (store.onlineUpdate?.series case final series?)
-              Positioned(
-                key: const ValueKey('series-banner'),
-                top: 12,
-                right: 12,
-                child: SafeArea(
-                  child: IgnorePointer(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
+                  if (activeRemoteSession?.requiresSync ?? false)
+                    Positioned.fill(
+                      child: ActiveSessionSyncOverlay(
+                        tokens: settings.appearance.tokens,
+                        busy: activeSessionSyncBusy,
+                        onSync: syncActiveSession,
                       ),
-                      decoration: BoxDecoration(
-                        color: settings.appearance.tokens.colors.black
-                            .withValues(alpha: 0.8),
-                        border: Border.all(
-                          color: settings.appearance.tokens.colors.gold,
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'BEST OF ${series.bestOf} • ROUND ${series.roundNumber} • '
-                        '${[for (var i = 0; i < 4; i++) 'P${i + 1} ${series.winsFor(i)}'].join('  ')}',
-                        style: kolkhozFontStyle.copyWith(
-                          color: settings.appearance.tokens.colors.goldBright,
-                          fontWeight: FontWeight.w900,
+                    ),
+                  if (store.isSpectating)
+                    Positioned(
+                      key: const ValueKey('spectator-banner'),
+                      top: 12,
+                      left: 76,
+                      child: SafeArea(
+                        child: IgnorePointer(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: settings.appearance.tokens.colors.black
+                                  .withValues(alpha: 0.8),
+                              border: Border.all(
+                                color: settings.appearance.tokens.colors.gold,
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'SPECTATING • READ ONLY',
+                              style: kolkhozFontStyle.copyWith(
+                                color: settings
+                                    .appearance
+                                    .tokens
+                                    .colors
+                                    .goldBright,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-            if (store.onlineUpdate?.tournament case final tournament?)
-              Positioned(
-                key: const ValueKey('tournament-round-banner'),
-                top: 12,
-                left: 76,
-                child: SafeArea(
-                  child: IgnorePointer(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: settings.appearance.tokens.colors.redDark
-                            .withValues(alpha: 0.88),
-                        border: Border.all(
-                          color: settings.appearance.tokens.colors.gold,
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'TOURNAMENT • ROUND ${tournament.roundNumber}/${tournament.totalRounds} • TABLE ${tournament.tableNumber}',
-                        style: kolkhozFontStyle.copyWith(
-                          color: settings.appearance.tokens.colors.goldBright,
-                          fontWeight: FontWeight.w900,
+                  if (store.onlineUpdate?.series case final series?)
+                    Positioned(
+                      key: const ValueKey('series-banner'),
+                      top: 12,
+                      right: 12,
+                      child: SafeArea(
+                        child: IgnorePointer(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: settings.appearance.tokens.colors.black
+                                  .withValues(alpha: 0.8),
+                              border: Border.all(
+                                color: settings.appearance.tokens.colors.gold,
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'BEST OF ${series.bestOf} • ROUND ${series.roundNumber} • '
+                              '${[for (var i = 0; i < 4; i++) 'P${i + 1} ${series.winsFor(i)}'].join('  ')}',
+                              style: kolkhozFontStyle.copyWith(
+                                color: settings
+                                    .appearance
+                                    .tokens
+                                    .colors
+                                    .goldBright,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  if (store.onlineUpdate?.tournament case final tournament?)
+                    Positioned(
+                      key: const ValueKey('tournament-round-banner'),
+                      top: 12,
+                      left: 76,
+                      child: SafeArea(
+                        child: IgnorePointer(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: settings.appearance.tokens.colors.redDark
+                                  .withValues(alpha: 0.88),
+                              border: Border.all(
+                                color: settings.appearance.tokens.colors.gold,
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'TOURNAMENT • ROUND ${tournament.roundNumber}/${tournament.totalRounds} • TABLE ${tournament.tableNumber}',
+                              style: kolkhozFontStyle.copyWith(
+                                color: settings
+                                    .appearance
+                                    .tokens
+                                    .colors
+                                    .goldBright,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-          ],
+            ),
+          ),
         ),
       ),
       home: AnimatedBuilder(
@@ -924,18 +918,6 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
                 key: const ValueKey('app-content'),
                 child: KolkhozCardBackScope(cardBack: cardBack, child: content),
               ),
-              if (foremanHint != null && !showingTutorial)
-                Positioned(
-                  key: const ValueKey('foreman-hint'),
-                  right: 18,
-                  bottom: 18,
-                  child: IgnorePointer(
-                    child: ForemanHintBubble(
-                      message: foremanHint!,
-                      tokens: tokens,
-                    ),
-                  ),
-                ),
               if (progressionNotice != null && !showingTutorial)
                 Positioned(
                   key: const ValueKey('progression-notice'),
@@ -999,28 +981,17 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     await WidgetsBinding.instance.endOfFrame;
     final context = navigatorKey.currentContext;
     if (context == null || !context.mounted) return;
-    final link = await showDialog<bool>(
+    final link = await showKolkhozConfirmation(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: settings.appearance.tokens.colors.panel,
-        title: const Text('DEVICE-ONLY GUEST'),
-        content: const Text(
+      tokens: settings.appearance.tokens,
+      title: 'DEVICE-ONLY GUEST',
+      message:
           'This account is tied to this device. If you already have a Kolkhoz '
           'account, link it now to keep your profile and progress together.',
-        ),
-        actions: [
-          TactileTextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('CONTINUE AS GUEST'),
-          ),
-          TactileTextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('LINK ACCOUNT'),
-          ),
-        ],
-      ),
+      cancelLabel: 'CONTINUE AS GUEST',
+      confirmLabel: 'LINK ACCOUNT',
     );
-    if (link == true && mounted) {
+    if (link && mounted) {
       navigationController.showProfile();
     }
   }
@@ -1060,8 +1031,8 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
       context: navigatorKey.currentContext!,
       builder: (context) => AnimatedBuilder(
         animation: commerce,
-        builder: (context, _) => AlertDialog(
-          backgroundColor: settings.appearance.tokens.colors.panel,
+        builder: (context, _) => KolkhozAlertDialog(
+          tokens: settings.appearance.tokens,
           title: Text(
             commerce.fullGameUnlocked
                 ? 'FULL GAME UNLOCKED'
@@ -1323,7 +1294,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
             : 'Журнал игры сохранён: ${file.path}',
       );
     } catch (exception) {
-      showForemanHintMessage('$exception');
+      showForemanHintMessage('$exception', isError: true);
     }
   }
 
@@ -1336,27 +1307,27 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     );
   }
 
-  void showForemanHintMessage(String message) {
-    foremanHintTimer?.cancel();
-    setState(() {
-      foremanHint = message;
-    });
-    foremanHintTimer = Timer(foremanHintDuration, () {
-      if (!mounted) {
-        return;
-      }
-      setState(() => foremanHint = null);
-      foremanHintTimer = null;
-    });
+  void showForemanHintMessage(String message, {bool isError = false}) {
+    if (showingTutorial) {
+      return;
+    }
+    final messenger = scaffoldMessengerKey.currentState;
+    if (messenger == null) {
+      return;
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        kolkhozSnackBar(
+          tokens: settings.appearance.tokens,
+          message: message,
+          isError: isError,
+        ),
+      );
   }
 
   void clearForemanHint() {
-    foremanHintTimer?.cancel();
-    foremanHintTimer = null;
-    if (foremanHint == null || !mounted) {
-      return;
-    }
-    setState(() => foremanHint = null);
+    scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
   }
 
   void handleRemoteConnectionChanged() {
@@ -1387,29 +1358,8 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     activeInviteDialogSessionID = invite.sessionID;
     final join = await showDialog<bool>(
       context: dialogContext,
-      builder: (context) => AlertDialog(
-        backgroundColor: settings.appearance.tokens.colors.panel,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-            settings.appearance.tokens.radius.md,
-          ),
-          side: BorderSide(
-            color: settings.appearance.tokens.colors.gold.withValues(
-              alpha: 0.7,
-            ),
-          ),
-        ),
-        titleTextStyle: kolkhozFontStyle.copyWith(
-          color: settings.appearance.tokens.colors.gold,
-          fontSize: 21,
-          fontWeight: FontWeight.w900,
-        ),
-        contentTextStyle: kolkhozFontStyle.copyWith(
-          color: settings.appearance.tokens.colors.cream,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-        ),
+      builder: (context) => KolkhozAlertDialog(
+        tokens: settings.appearance.tokens,
         title: Text(settings.language.strings.kolkhozappGameInvite),
         content: Text(
           settings.language.strings.kolkhozappValue1InvitedYouToAGame(
@@ -1418,24 +1368,11 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
         ),
         actions: [
           TactileTextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: settings.appearance.tokens.colors.creamDim,
-              textStyle: kolkhozFontStyle.copyWith(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+            autofocus: true,
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(settings.language.strings.kolkhozappDecline),
           ),
           TactileTextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: settings.appearance.tokens.colors.goldBright,
-              textStyle: kolkhozFontStyle.copyWith(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
             onPressed: () => Navigator.of(context).pop(true),
             child: Text(settings.language.strings.kolkhozappJoinGame),
           ),
@@ -1765,7 +1702,7 @@ class _KolkhozAppState extends State<KolkhozApp> with WidgetsBindingObserver {
     } catch (exception) {
       if (mounted) {
         setState(() => activeSessionSyncBusy = false);
-        showForemanHintMessage('$exception');
+        showForemanHintMessage('$exception', isError: true);
       }
     }
   }
@@ -2028,42 +1965,36 @@ class ActiveSessionSyncOverlay extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: Semantics(
-                    button: true,
+                  child: TactileButton(
                     enabled: !busy,
-                    label: busy ? 'Syncing view' : 'Sync view',
-                    onTap: busy ? null : onSync,
-                    child: ExcludeSemantics(
-                      child: TactileControlSurface(
-                        enabled: !busy,
-                        onPressed: busy ? null : onSync,
-                        pressTravel: 3,
-                        hoverLift: -1.5,
-                        hoverScale: 1.02,
-                        child: IgnorePointer(
-                          child: FilledButton.icon(
-                            onPressed: busy ? null : () {},
-                            icon: busy
-                                ? const SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.sync),
-                            label: Text(busy ? 'SYNCING…' : 'SYNC VIEW'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: tokens.colors.gold,
-                              foregroundColor: tokens.colors.black,
-                              textStyle: kolkhozFontStyle.copyWith(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ),
-                        ),
+                    onPressed: busy ? null : onSync,
+                    semanticLabel: busy ? 'Syncing view' : 'Sync view',
+                    pressTravel: 3,
+                    hoverLift: -1.5,
+                    hoverScale: 1.02,
+                    useDefaultMaterialStyle: true,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: tokens.colors.gold,
+                      foregroundColor: tokens.colors.black,
+                      textStyle: kolkhozFontStyle.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
                       ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 8,
+                      children: [
+                        if (busy)
+                          const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          const Icon(Icons.sync),
+                        Text(busy ? 'SYNCING…' : 'SYNC VIEW'),
+                      ],
                     ),
                   ),
                 ),

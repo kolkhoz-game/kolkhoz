@@ -467,24 +467,18 @@ class _FieldPlanWorldSceneState extends State<FieldPlanWorldScene> {
                     top: 12,
                     right: 12,
                     child: SafeArea(
-                      child: Semantics(
-                        button: true,
-                        label: 'Return to overview',
-                        onTap: () => widget.onFocusSurface(null),
-                        child: ExcludeSemantics(
-                          child: TactileControlSurface(
-                            onPressed: () => widget.onFocusSurface(null),
-                            pressTravel: 2,
-                            hoverLift: -1,
-                            hoverScale: 1.05,
-                            child: IgnorePointer(
-                              child: IconButton.filledTonal(
-                                key: const Key('field-plan-surface-dismiss'),
-                                tooltip: 'Return to overview',
-                                onPressed: () {},
-                                icon: const Icon(Icons.close),
-                              ),
-                            ),
+                      child: TactileButton(
+                        onPressed: () => widget.onFocusSurface(null),
+                        semanticLabel: 'Return to overview',
+                        pressTravel: 2,
+                        hoverLift: -1,
+                        hoverScale: 1.05,
+                        child: IgnorePointer(
+                          child: IconButton.filledTonal(
+                            key: const Key('field-plan-surface-dismiss'),
+                            tooltip: 'Return to overview',
+                            onPressed: () {},
+                            icon: const Icon(Icons.close),
                           ),
                         ),
                       ),
@@ -691,6 +685,8 @@ class _FieldPlanWorldEditor extends StatelessWidget {
                       value: layer.scale,
                       min: 0.5,
                       max: 1.5,
+                      semanticFormatterCallback: (value) =>
+                          'Layer scale ${value.toStringAsFixed(2)}',
                       onChanged: (value) => onLayoutChanged(
                         layout.replaceLayer(layer.copyWith(scale: value)),
                       ),
@@ -700,6 +696,8 @@ class _FieldPlanWorldEditor extends StatelessWidget {
                       value: layer.parallax,
                       min: 0,
                       max: 1.5,
+                      semanticFormatterCallback: (value) =>
+                          'Layer parallax ${value.toStringAsFixed(2)}',
                       onChanged: (value) => onLayoutChanged(
                         layout.replaceLayer(layer.copyWith(parallax: value)),
                       ),
@@ -708,6 +706,7 @@ class _FieldPlanWorldEditor extends StatelessWidget {
                       children: [
                         const Text('Depth'),
                         IconButton(
+                          tooltip: 'Move layer backward',
                           onPressed: () => onLayoutChanged(
                             layout.replaceLayer(
                               layer.copyWith(zOrder: layer.zOrder - 1),
@@ -717,6 +716,7 @@ class _FieldPlanWorldEditor extends StatelessWidget {
                         ),
                         Text('${layer.zOrder}'),
                         IconButton(
+                          tooltip: 'Move layer forward',
                           onPressed: () => onLayoutChanged(
                             layout.replaceLayer(
                               layer.copyWith(zOrder: layer.zOrder + 1),
@@ -746,6 +746,8 @@ class _FieldPlanWorldEditor extends StatelessWidget {
                       value: cameraPosition,
                       min: 0,
                       max: 2,
+                      semanticFormatterCallback: (value) =>
+                          'Camera position ${value.toStringAsFixed(2)}',
                       onChanged: onCameraChanged,
                     ),
                     Wrap(

@@ -19,8 +19,6 @@ class ComradesView extends StatefulWidget {
 class _ComradesPanelState extends State<ComradesView> {
   late final TextEditingController codeController;
   bool actionBusy = false;
-  String? message;
-  bool messageIsError = false;
 
   OnlineComradesResponse get comrades =>
       widget.profileController?.comrades ?? const OnlineComradesResponse();
@@ -71,8 +69,7 @@ class _ComradesPanelState extends State<ComradesView> {
     await runComradeAction(() async {
       await connection.sendComradeRequest(code);
       codeController.clear();
-      message = widget.language.strings.kolkhozappComradeRequestSent;
-      messageIsError = false;
+      _showFeedback(widget.language.strings.kolkhozappComradeRequestSent);
     });
   }
 
@@ -81,12 +78,13 @@ class _ComradesPanelState extends State<ComradesView> {
     if (connection == null) return;
     await runComradeAction(() async {
       await connection.respondToComradeRequest(userID: userID, accept: accept);
-      message = widget.language.t(
-        accept
-            ? KolkhozText.kolkhozappComradeRequestAccepted
-            : KolkhozText.kolkhozappComradeRequestDeclined,
+      _showFeedback(
+        widget.language.t(
+          accept
+              ? KolkhozText.kolkhozappComradeRequestAccepted
+              : KolkhozText.kolkhozappComradeRequestDeclined,
+        ),
       );
-      messageIsError = false;
     });
   }
 
@@ -95,8 +93,7 @@ class _ComradesPanelState extends State<ComradesView> {
     if (connection == null) return;
     await runComradeAction(() async {
       await connection.removeComrade(userID);
-      message = widget.language.strings.kolkhozappComradeRemoved;
-      messageIsError = false;
+      _showFeedback(widget.language.strings.kolkhozappComradeRemoved);
     });
   }
 
@@ -109,10 +106,7 @@ class _ComradesPanelState extends State<ComradesView> {
     if (!mounted) {
       return;
     }
-    setState(() {
-      message = widget.language.strings.kolkhozappCopied;
-      messageIsError = false;
-    });
+    _showFeedback(widget.language.strings.kolkhozappCopied);
   }
 
   Future<void> runComradeAction(
@@ -125,20 +119,13 @@ class _ComradesPanelState extends State<ComradesView> {
     if (mounted) {
       setState(() {
         actionBusy = showWorking;
-        if (showWorking) {
-          message = null;
-          messageIsError = false;
-        }
       });
     }
     try {
       await action();
     } catch (exception) {
       if (mounted) {
-        setState(() {
-          message = _comradeSyncErrorMessage(exception);
-          messageIsError = true;
-        });
+        _showFeedback(_comradeSyncErrorMessage(exception), isError: true);
       }
     } finally {
       if (mounted) {
@@ -152,6 +139,19 @@ class _ComradesPanelState extends State<ComradesView> {
       return onlineFailureStatusMessage(exception, widget.language);
     }
     return widget.language.strings.kolkhozappProfileSyncFailed;
+  }
+
+  void _showFeedback(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        kolkhozSnackBar(
+          tokens: widget.tokens,
+          message: message,
+          isError: isError,
+        ),
+      );
   }
 
   @override
@@ -237,12 +237,6 @@ class _ComradesPanelState extends State<ComradesView> {
             ),
           ),
         ),
-        if (message != null)
-          OnlineStatusBanner(
-            tokens: widget.tokens,
-            message: message!,
-            isError: messageIsError,
-          ),
         LayoutBuilder(
           builder: (context, constraints) {
             const footerControlHeight = 38.0;
@@ -277,15 +271,22 @@ class _ComradesPanelState extends State<ComradesView> {
                     : copyComradeCode,
               ),
             );
-            final inputBox = Container(
+            final inputBox = SizedBox(
               height: footerControlHeight,
-              alignment: Alignment.center,
-              decoration: _comradeFooterBoxDecoration(widget.tokens),
-              child: TextField(
+              child: KolkhozTextField(
+                tokens: widget.tokens,
                 controller: codeController,
+                enabled: !busy && widget.profileController != null,
                 maxLength: 12,
-                minLines: 1,
-                maxLines: 1,
+                textInputAction: TextInputAction.done,
+                textCapitalization: TextCapitalization.characters,
+                autocorrect: false,
+                enableSuggestions: false,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+                  const UpperCaseTextFormatter(),
+                  LengthLimitingTextInputFormatter(12),
+                ],
                 textAlignVertical: TextAlignVertical.center,
                 style: kolkhozFontStyle.copyWith(
                   color: widget.tokens.colors.cardInk,
@@ -293,22 +294,24 @@ class _ComradesPanelState extends State<ComradesView> {
                   fontWeight: FontWeight.w800,
                   height: 1,
                 ),
-                cursorColor: widget.tokens.colors.redDark,
-                decoration: InputDecoration(
-                  hintText: widget.language
-                      .t(KolkhozText.kolkhozappComradeCode)
-                      .toUpperCase(),
-                  counterText: '',
-                  isCollapsed: true,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  hintStyle: kolkhozFontStyle.copyWith(
-                    color: widget.tokens.colors.cardInk.withValues(alpha: 0.44),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                  ),
+                hintText: widget.language
+                    .t(KolkhozText.kolkhozappComradeCode)
+                    .toUpperCase(),
+                fillColor: widget.tokens.colors.cardFill,
+                borderColor: widget.tokens.colors.cardInk.withValues(
+                  alpha: 0.38,
                 ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                hintStyle: kolkhozFontStyle.copyWith(
+                  color: widget.tokens.colors.cardInk.withValues(alpha: 0.44),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) {
+                  if (!busy) unawaited(addComrade());
+                },
               ),
             );
             final addButton = SizedBox(
@@ -322,7 +325,12 @@ class _ComradesPanelState extends State<ComradesView> {
                 tokens: widget.tokens,
                 iconAsset:
                     'assets/art/field_plan/shared/pictograms/add-friend.png',
-                onPressed: busy ? null : addComrade,
+                onPressed:
+                    busy ||
+                        widget.profileController == null ||
+                        codeController.text.trim().isEmpty
+                    ? null
+                    : addComrade,
               ),
             );
             if (constraints.maxWidth < 720) {

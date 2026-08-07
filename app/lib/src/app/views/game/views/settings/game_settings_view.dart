@@ -393,45 +393,40 @@ class OptionsMenuTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      button: true,
-      selected: selected,
-      label: label,
-      child: ExcludeSemantics(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth.isFinite
-                ? constraints.maxWidth
-                : 120.0;
-            final height = (width * 0.30).clamp(38.0, 52.0);
-            final iconSize = (height * 0.72).clamp(24.0, 38.0);
-            return Tooltip(
-              message: label,
-              child: ChromeAssetButton(
-                label: label,
-                tokens: tokens,
-                backgroundAsset: selected
-                    ? chromeButtonPrimaryAsset
-                    : chromeButtonSecondaryAsset,
-                textColor: selected
-                    ? tokens.colors.onAccent
-                    : tokens.colors.cardInk,
-                textSize: _optionsMenuTabTextSize(height),
-                onPressed: onPressed,
-                iconAsset: iconAsset,
-                iconSize: iconSize,
-                height: height,
-                padding: EdgeInsets.symmetric(
-                  horizontal: (height * 0.08).clamp(3.0, 6.0),
-                ),
-                spacing: (height * 0.08).clamp(3.0, 5.0),
-                expandLabel: false,
-              ),
-            );
-          },
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 120.0;
+        final height = (width * 0.30).clamp(38.0, 52.0);
+        final iconSize = (height * 0.72).clamp(24.0, 38.0);
+        return Tooltip(
+          message: label,
+          excludeFromSemantics: true,
+          child: ChromeAssetButton(
+            label: label,
+            tokens: tokens,
+            backgroundAsset: selected
+                ? chromeButtonPrimaryAsset
+                : chromeButtonSecondaryAsset,
+            textColor: selected
+                ? tokens.colors.onAccent
+                : tokens.colors.cardInk,
+            textSize: _optionsMenuTabTextSize(height),
+            onPressed: onPressed,
+            iconAsset: iconAsset,
+            iconSize: iconSize,
+            height: height,
+            padding: EdgeInsets.symmetric(
+              horizontal: (height * 0.08).clamp(3.0, 6.0),
+            ),
+            spacing: (height * 0.08).clamp(3.0, 5.0),
+            expandLabel: false,
+            selected: selected,
+            semanticLabel: label,
+          ),
+        );
+      },
     );
   }
 }
@@ -952,58 +947,52 @@ class OptionsCardBackButton extends StatelessWidget {
     final borderColor = selected
         ? tokens.colors.gold
         : tokens.colors.gold.withValues(alpha: 0.32);
-    return Semantics(
-      container: true,
-      button: true,
-      selected: selected,
-      enabled: onPressed != null,
-      label: cardBackLabel,
-      child: ExcludeSemantics(
-        child: Tooltip(
-          message: label,
-          child: MechanicalSelectionSurface(
-            selected: selected,
-            enabled: onPressed != null,
-            onPressed: onPressed,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: tokens.colors.black.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: borderColor, width: selected ? 2 : 1),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(5),
-                child: SizedBox(
-                  width: optionsCardBackPreviewWidth,
-                  height: optionsCardBackPreviewHeight,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.asset(
-                          cardBack.displayedAssetPathFor(
-                            dark: !tokens.usesLightAppearance,
-                          ),
-                          fit: BoxFit.cover,
-                          filterQuality: FilterQuality.medium,
-                          color: unlocked
-                              ? null
-                              : tokens.colors.black.withValues(alpha: 0.58),
-                          colorBlendMode: unlocked ? null : BlendMode.srcATop,
-                        ),
-                        if (!unlocked)
-                          Center(
-                            child: Image.asset(
-                              'assets/ui/Icons/icon-lock.png',
-                              width: 20,
-                              height: 20,
-                              filterQuality: FilterQuality.none,
-                            ),
-                          ),
-                      ],
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: TactileButton(
+        selected: selected,
+        semanticSelected: selected,
+        semanticLabel: label,
+        enabled: onPressed != null,
+        onPressed: onPressed,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: tokens.colors.black.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: borderColor, width: selected ? 2 : 1),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: SizedBox(
+              width: optionsCardBackPreviewWidth,
+              height: optionsCardBackPreviewHeight,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      cardBack.displayedAssetPathFor(
+                        dark: !tokens.usesLightAppearance,
+                      ),
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.medium,
+                      color: unlocked
+                          ? null
+                          : tokens.colors.black.withValues(alpha: 0.58),
+                      colorBlendMode: unlocked ? null : BlendMode.srcATop,
                     ),
-                  ),
+                    if (!unlocked)
+                      Center(
+                        child: Image.asset(
+                          'assets/ui/Icons/icon-lock.png',
+                          width: 20,
+                          height: 20,
+                          filterQuality: FilterQuality.none,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -1036,76 +1025,45 @@ class OptionsSettingToggle extends StatelessWidget {
     final foreground = enabled
         ? tokens.colors.creamDim
         : tokens.colors.creamDim.withValues(alpha: 0.5);
-    return Semantics(
-      container: true,
-      button: true,
-      enabled: enabled,
-      toggled: value,
-      label: label,
-      child: ExcludeSemantics(
-        child: MechanicalSelectionSurface(
-          selected: value,
-          enabled: enabled,
-          onPressed: enabled ? () => onChanged!(!value) : null,
-          child: Container(
-            padding: optionsMenuSettingPadding,
-            decoration: BoxDecoration(
-              color: tokens.colors.black.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(
-                color: value
-                    ? tokens.colors.gold.withValues(alpha: 0.58)
-                    : tokens.colors.steel.withValues(alpha: 0.45),
+    return Container(
+      decoration: BoxDecoration(
+        color: tokens.colors.black.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(
+          color: value
+              ? tokens.colors.gold.withValues(alpha: 0.58)
+              : tokens.colors.steel.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: SwitchListTile(
+          value: value,
+          onChanged: onChanged,
+          contentPadding: optionsMenuSettingPadding,
+          activeThumbColor: tokens.colors.gold,
+          activeTrackColor: tokens.colors.gold.withValues(alpha: 0.32),
+          inactiveThumbColor: tokens.colors.steel,
+          inactiveTrackColor: tokens.colors.black.withValues(alpha: 0.16),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 2,
+            children: [
+              ChromePixelLabel(
+                label,
+                size: DisplayTextSize.caption,
+                color: value ? tokens.colors.gold : foreground,
               ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 9,
-              children: [
-                Container(
-                  width: 18,
-                  height: 18,
-                  margin: const EdgeInsets.only(top: 2),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: value
-                        ? tokens.colors.gold.withValues(alpha: 0.2)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: value
-                          ? tokens.colors.gold
-                          : tokens.colors.steel.withValues(alpha: 0.72),
-                    ),
-                  ),
-                  child: value
-                      ? Icon(Icons.check, size: 13, color: tokens.colors.gold)
-                      : null,
+              Text(
+                body,
+                softWrap: true,
+                style: kolkhozFontStyle.copyWith(
+                  color: foreground,
+                  fontSize: menuRuleBodyFontSize,
+                  fontWeight: FontWeight.w700,
                 ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 2,
-                    children: [
-                      ChromePixelLabel(
-                        label,
-                        size: DisplayTextSize.caption,
-                        color: value ? tokens.colors.gold : foreground,
-                      ),
-                      Text(
-                        body,
-                        softWrap: true,
-                        style: kolkhozFontStyle.copyWith(
-                          color: foreground,
-                          fontSize: menuRuleBodyFontSize,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1165,9 +1123,11 @@ class OptionsChromeToggle extends StatelessWidget {
     final fieldPlanIcon = iconPath.startsWith('assets/art/field_plan/');
     return Tooltip(
       message: label,
-      child: TactileControlSurface(
+      excludeFromSemantics: true,
+      child: TactileButton(
         enabled: onPressed != null,
         onPressed: onPressed,
+        semanticLabel: label,
         pressTravel: 3,
         hoverScale: 1.06,
         child: SizedBox(
@@ -1232,81 +1192,45 @@ class AnimationSpeedControl extends StatelessWidget {
             size: DisplayTextSize.caption,
             color: tokens.colors.smoke,
           ),
-          Row(
-            children: [
+          SegmentedButton<GameAnimationSpeed>(
+            segments: [
               for (final speed in GameAnimationSpeed.values)
-                Expanded(
-                  child: AnimationSpeedSegment(
-                    speed: speed,
-                    selected: speed == selected,
-                    tokens: tokens,
-                    language: language,
-                    onTap: onChanged == null ? null : () => onChanged!(speed),
+                ButtonSegment(
+                  value: speed,
+                  label: ChromePixelLabel(
+                    animationSpeedLabel(speed, language).toUpperCase(),
+                    size: DisplayTextSize.caption2,
+                    color: speed == selected
+                        ? tokens.colors.gold
+                        : tokens.colors.creamDim,
                   ),
                 ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class AnimationSpeedSegment extends StatelessWidget {
-  const AnimationSpeedSegment({
-    required this.speed,
-    required this.selected,
-    required this.tokens,
-    required this.language,
-    this.onTap,
-    super.key,
-  });
-
-  final GameAnimationSpeed speed;
-  final bool selected;
-  final DesignTokens tokens;
-  final KolkhozLanguage language;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? tokens.colors.gold : tokens.colors.creamDim;
-    final label = animationSpeedLabel(speed, language).toUpperCase();
-    return Semantics(
-      button: true,
-      selected: selected,
-      enabled: onTap != null,
-      label: label,
-      child: ExcludeSemantics(
-        child: MechanicalSelectionSurface(
-          selected: selected,
-          enabled: onTap != null,
-          onPressed: onTap,
-          child: Container(
-            height: optionsAnimationSpeedSegmentHeight,
-            decoration: BoxDecoration(
-              color: selected
-                  ? tokens.colors.gold.withValues(alpha: 0.18)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: selected
-                    ? tokens.colors.gold
-                    : tokens.colors.steel.withValues(alpha: 0.5),
+            selected: {selected},
+            onSelectionChanged: onChanged == null
+                ? null
+                : (selection) => onChanged!(selection.single),
+            showSelectedIcon: false,
+            style: ButtonStyle(
+              minimumSize: const WidgetStatePropertyAll(
+                Size(0, optionsAnimationSpeedSegmentHeight),
               ),
-            ),
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: ChromePixelLabel(
-                  label,
-                  size: DisplayTextSize.caption2,
-                  color: color,
+              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? tokens.colors.gold.withValues(alpha: 0.18)
+                    : Colors.transparent,
+              ),
+              side: WidgetStateProperty.resolveWith(
+                (states) => BorderSide(
+                  color: states.contains(WidgetState.selected)
+                      ? tokens.colors.gold
+                      : tokens.colors.steel.withValues(alpha: 0.5),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

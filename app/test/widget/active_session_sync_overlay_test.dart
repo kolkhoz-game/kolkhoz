@@ -30,7 +30,7 @@ void main() {
     expect(find.text('SYNC VIEW'), findsOneWidget);
     final syncButton = find.ancestor(
       of: find.text('SYNC VIEW'),
-      matching: find.byType(TactileControlSurface),
+      matching: find.byType(TactileButton),
     );
     expect(syncButton, findsOneWidget);
     await tester.tap(syncButton);
@@ -57,10 +57,10 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('SYNCING…'), findsOneWidget);
-    final syncButton = tester.widget<TactileControlSurface>(
+    final syncButton = tester.widget<TactileButton>(
       find.ancestor(
         of: find.text('SYNCING…'),
-        matching: find.byType(TactileControlSurface),
+        matching: find.byType(TactileButton),
       ),
     );
     expect(syncButton.enabled, isFalse);

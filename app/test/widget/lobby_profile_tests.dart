@@ -2268,7 +2268,7 @@ void registerLobbyAndProfileTests() {
     await tester.tap(findAppText('JOIN GAME').last);
     await tester.pump();
 
-    expect(joinedInviteCode, 'abcde');
+    expect(joinedInviteCode, 'ABCDE');
   });
 
   testWidgets('online ban state disables the assign button', (tester) async {
@@ -2369,7 +2369,7 @@ void registerLobbyAndProfileTests() {
     await tester.pump();
 
     expect(matchmakeCalls, 1);
-    expect(joinedInviteCode, 'abcde');
+    expect(joinedInviteCode, 'ABCDE');
   });
 
   testWidgets('online ban state hides the public game browser', (tester) async {
@@ -2435,7 +2435,7 @@ void registerLobbyAndProfileTests() {
     await tester.tap(findAppText('JOIN GAME').last);
     await tester.pump();
 
-    expect(joinedInviteCode, 'abcde');
+    expect(joinedInviteCode, 'ABCDE');
   });
 
   testWidgets('online waiting room holds joined players through countdown', (

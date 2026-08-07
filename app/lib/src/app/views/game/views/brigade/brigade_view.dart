@@ -701,45 +701,39 @@ class FieldsJobPile extends StatelessWidget {
     final assignmentAction = assignmentActionForJob(model, job);
     final actionHandler = onAction;
     final canAssign = assignmentAction != null && actionHandler != null;
+    final assignedCards = visibleAssignedJobCards(job);
     final handler = canAssign
         ? () => actionHandler(assignmentAction)
         : onInspect;
-    final pile = Semantics(
-      button: handler != null,
+    final pile = TactileButton(
       enabled: handler != null,
-      label: language.suitName(job.suit),
-      onTap: handler,
-      child: ExcludeSemantics(
-        child: TactileControlSurface(
-          enabled: handler != null,
-          onPressed: handler,
-          pressTravel: 3,
-          hoverLift: -1.5,
-          hoverScale: 1.018,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: canAssign
-                  ? tokens.colors.cream.withValues(alpha: 0.08)
-                  : Colors.transparent,
-              border: Border.all(
-                color: canAssign
-                    ? tokens.colors.gold.withValues(alpha: 0.55)
-                    : Colors.transparent,
-                width: 2,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: job.assignedCards.isEmpty
-                  ? const SizedBox.expand()
-                  : AssignedJobCardStack(
-                      cards: job.assignedCards,
-                      tokens: tokens,
-                      trump: model.table.trump,
-                    ),
-            ),
+      onPressed: handler,
+      semanticLabel: language.suitName(job.suit),
+      pressTravel: 3,
+      hoverLift: -1.5,
+      hoverScale: 1.018,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: canAssign
+              ? tokens.colors.cream.withValues(alpha: 0.08)
+              : Colors.transparent,
+          border: Border.all(
+            color: canAssign
+                ? tokens.colors.gold.withValues(alpha: 0.55)
+                : Colors.transparent,
+            width: 2,
           ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: assignedCards.isEmpty
+              ? const SizedBox.expand()
+              : AssignedJobCardStack(
+                  cards: assignedCards,
+                  tokens: tokens,
+                  trump: model.table.trump,
+                ),
         ),
       ),
     );
@@ -1009,53 +1003,47 @@ class FarmsteadPlayerPortrait extends StatelessWidget {
         : reactionAsset(reaction!.reactionID);
     return MotionTrackedRegion(
       motionKey: playerCardMotionSourceKey(seat.id),
-      child: Semantics(
-        button: true,
-        label: seat.name,
-        onTap: onInspect,
-        child: ExcludeSemantics(
-          child: TactileControlSurface(
-            key: Key('player-portrait-${seat.id}-inspect'),
-            onPressed: onInspect,
-            pressTravel: 2,
-            hoverLift: -1,
-            hoverScale: 1.025,
-            child: LayoutBuilder(
-              builder: (context, constraints) => Stack(
-                fit: StackFit.expand,
-                children: [
-                  PlayerPortrait(
-                    seat: seat,
-                    tokens: tokens,
-                    width: constraints.maxWidth,
-                    height: constraints.maxHeight,
-                    badgeVisible: false,
+      child: TactileButton(
+        key: Key('player-portrait-${seat.id}-inspect'),
+        onPressed: onInspect,
+        semanticLabel: seat.name,
+        pressTravel: 2,
+        hoverLift: -1,
+        hoverScale: 1.025,
+        child: LayoutBuilder(
+          builder: (context, constraints) => Stack(
+            fit: StackFit.expand,
+            children: [
+              PlayerPortrait(
+                seat: seat,
+                tokens: tokens,
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                badgeVisible: false,
+              ),
+              if (reactionIcon != null)
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: tokens.colors.black.withValues(alpha: 0.62),
+                    shape: BoxShape.circle,
                   ),
-                  if (reactionIcon != null)
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: tokens.colors.black.withValues(alpha: 0.62),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Image.asset(
-                          reactionIcon.startsWith('assets/')
-                              ? reactionIcon
-                              : 'assets/ui/Icons/$reactionIcon',
-                          filterQuality:
-                              reactionIcon.startsWith('assets/art/field_plan/')
-                              ? FilterQuality.high
-                              : FilterQuality.none,
-                          isAntiAlias: reactionIcon.startsWith(
-                            'assets/art/field_plan/',
-                          ),
-                        ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Image.asset(
+                      reactionIcon.startsWith('assets/')
+                          ? reactionIcon
+                          : 'assets/ui/Icons/$reactionIcon',
+                      filterQuality:
+                          reactionIcon.startsWith('assets/art/field_plan/')
+                          ? FilterQuality.high
+                          : FilterQuality.none,
+                      isAntiAlias: reactionIcon.startsWith(
+                        'assets/art/field_plan/',
                       ),
                     ),
-                ],
-              ),
-            ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -2245,89 +2233,77 @@ class PlayerBadge extends StatelessWidget {
     final motion = GameMotion.of(context);
     return MotionTrackedRegion(
       motionKey: playerCardMotionSourceKey(seat.id),
-      child: Semantics(
-        button: true,
-        label: displayName,
-        onTap: onInspect,
-        child: ExcludeSemantics(
-          child: TactileControlSurface(
-            key: Key('player-portrait-${seat.id}-inspect'),
-            onPressed: onInspect,
-            pressTravel: 2,
-            hoverLift: -1,
-            hoverScale: 1.025,
-            child: SizedBox(
-              width: width,
-              height: height,
-              child: AnimatedSlide(
-                offset: active ? const Offset(0, -0.025) : Offset.zero,
-                duration: motion.turnTransition,
-                curve: Curves.easeOutBack,
-                child: AnimatedScale(
-                  scale: active ? 1.025 : 1,
-                  duration: motion.turnTransition,
-                  curve: Curves.easeOutBack,
-                  child: MotionImpactSurface(
-                    impactKey: 'player-${seat.id}',
-                    style: MotionImpactStyle.stamp,
-                    glowColor: accent,
-                    matches: (impact) =>
-                        impact.destination == MotionZone.trick(seat.id),
-                    child: FieldPlanSign(
-                      borderColor: human ? const Color(0xffa33a28) : accent,
-                      borderWidth: active ? 2 : 1,
-                      child: Row(
-                        children: [
-                          SizedBox.square(
-                            dimension: height,
-                            child: PlayerPortrait(
-                              seat: seat,
-                              tokens: tokens,
-                              width: height,
-                              height: height,
-                              badgeVisible: false,
-                            ),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 5,
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    displayName.toUpperCase(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: fieldPlanDisplayTextStyle.copyWith(
-                                      color: ink,
-                                      fontSize: math.max(10, height * 0.24),
-                                    ),
-                                  ),
-                                  HeroMedalPulse(
-                                    active: heroWithinReach,
-                                    child: Text(
-                                      '${seat.visibleScore}  •  ${seat.medals}/$maxTricks',
-                                      maxLines: 1,
-                                      style: fieldPlanBodyStrongTextStyle
-                                          .copyWith(
-                                            color: accent,
-                                            fontSize: math.max(
-                                              8,
-                                              height * 0.18,
-                                            ),
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+      child: TactileButton(
+        key: Key('player-portrait-${seat.id}-inspect'),
+        onPressed: onInspect,
+        semanticLabel: displayName,
+        pressTravel: 2,
+        hoverLift: -1,
+        hoverScale: 1.025,
+        child: SizedBox(
+          width: width,
+          height: height,
+          child: AnimatedSlide(
+            offset: active ? const Offset(0, -0.025) : Offset.zero,
+            duration: motion.turnTransition,
+            curve: Curves.easeOutBack,
+            child: AnimatedScale(
+              scale: active ? 1.025 : 1,
+              duration: motion.turnTransition,
+              curve: Curves.easeOutBack,
+              child: MotionImpactSurface(
+                impactKey: 'player-${seat.id}',
+                style: MotionImpactStyle.stamp,
+                glowColor: accent,
+                matches: (impact) =>
+                    impact.destination == MotionZone.trick(seat.id),
+                child: FieldPlanSign(
+                  borderColor: human ? const Color(0xffa33a28) : accent,
+                  borderWidth: active ? 2 : 1,
+                  child: Row(
+                    children: [
+                      SizedBox.square(
+                        dimension: height,
+                        child: PlayerPortrait(
+                          seat: seat,
+                          tokens: tokens,
+                          width: height,
+                          height: height,
+                          badgeVisible: false,
+                        ),
                       ),
-                    ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayName.toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: fieldPlanDisplayTextStyle.copyWith(
+                                  color: ink,
+                                  fontSize: math.max(10, height * 0.24),
+                                ),
+                              ),
+                              HeroMedalPulse(
+                                active: heroWithinReach,
+                                child: Text(
+                                  '${seat.visibleScore}  •  ${seat.medals}/$maxTricks',
+                                  maxLines: 1,
+                                  style: fieldPlanBodyStrongTextStyle.copyWith(
+                                    color: accent,
+                                    fontSize: math.max(8, height * 0.18),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -2513,28 +2489,22 @@ class ExpandedPlayerInfoPanel extends StatelessWidget {
           : null,
       footer: onClose == null
           ? null
-          : Semantics(
-              button: true,
-              label: language.strings.kolkhozappCancel,
-              onTap: onClose,
-              child: ExcludeSemantics(
-                child: TactileControlSurface(
-                  onPressed: onClose,
-                  pressTravel: 2,
-                  hoverLift: -0.5,
-                  hoverScale: 1.015,
-                  child: SizedBox(
-                    height: 26,
-                    child: Center(
-                      child: DisplayText(
-                        language.strings.kolkhozappCancel,
-                        size: DisplayTextSize.xSmall,
-                        variant: DisplayTextWeight.bold,
-                        color: tokens.colors.gold,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+          : TactileButton(
+              onPressed: onClose,
+              semanticLabel: language.strings.kolkhozappCancel,
+              pressTravel: 2,
+              hoverLift: -0.5,
+              hoverScale: 1.015,
+              child: SizedBox(
+                height: 26,
+                child: Center(
+                  child: DisplayText(
+                    language.strings.kolkhozappCancel,
+                    size: DisplayTextSize.xSmall,
+                    variant: DisplayTextWeight.bold,
+                    color: tokens.colors.gold,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),

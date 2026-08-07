@@ -52,32 +52,43 @@ class _AdminOperationsPanelState extends State<AdminOperationsView> {
   Future<void> restart() async {
     final connection = widget.remoteConnection;
     if (connection == null || restarting) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKolkhozConfirmation(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Restart production server?'),
-        content: const Text(
+      tokens: widget.tokens,
+      title: 'Restart production server?',
+      message:
           'This restarts only kolkhoz-server.service. Active clients may '
           'briefly reconnect. A five-minute cooldown applies.',
-        ),
-        actions: [
-          TactileTextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('CANCEL'),
-          ),
-          TactileTextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('RESTART'),
-          ),
-        ],
-      ),
+      cancelLabel: 'CANCEL',
+      confirmLabel: 'RESTART',
+      destructive: true,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     setState(() => restarting = true);
     try {
       await connection.restartProductionServer();
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            kolkhozSnackBar(
+              tokens: widget.tokens,
+              message: 'Production server restart requested.',
+            ),
+          );
+      }
     } catch (exception) {
-      if (mounted) setState(() => error = exception);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            kolkhozSnackBar(
+              tokens: widget.tokens,
+              message: '$exception',
+              isError: true,
+            ),
+          );
+      }
     } finally {
       if (mounted) setState(() => restarting = false);
     }

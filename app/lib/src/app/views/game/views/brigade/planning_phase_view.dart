@@ -8,6 +8,7 @@ import 'package:kolkhoz_app/src/app/views/game/views/brigade/brigade_layout.dart
 import 'package:kolkhoz_app/src/app/views/game/views/components/board_widgets.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/components/display/table_display.dart';
 import 'package:kolkhoz_app/src/app/views/game/views/plots/plots_view.dart';
+import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'package:kolkhoz_app/src/app/views/shared/display_text.dart';
 
@@ -471,35 +472,18 @@ class RewardFlipCard extends StatelessWidget {
             ),
       back: ScaledCardBack(tokens: tokens, size: size),
     );
-    final interactiveCard = Semantics(
-      button: true,
+    final interactiveCard = TactileButton(
       enabled: enabled,
       selected: selected,
-      label: label,
-      onTap: enabled ? onPressed : null,
-      child: ExcludeSemantics(
-        child: FocusableActionDetector(
-          enabled: enabled,
-          mouseCursor: enabled
-              ? SystemMouseCursors.click
-              : SystemMouseCursors.basic,
-          actions: {
-            ActivateIntent: CallbackAction<ActivateIntent>(
-              onInvoke: (_) {
-                if (enabled) {
-                  onPressed?.call();
-                }
-                return null;
-              },
-            ),
-          },
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: enabled ? onPressed : null,
-            child: card,
-          ),
-        ),
-      ),
+      semanticLabel: label,
+      semanticSelected: selected,
+      onPressed: enabled ? onPressed : null,
+      pressTravel: 0,
+      hoverLift: 0,
+      pressScale: 1,
+      hoverScale: 1,
+      haptics: false,
+      child: card,
     );
     return DraggableCardSurface(
       enabled: reward != null && draggable,

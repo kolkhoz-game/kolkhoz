@@ -37,6 +37,9 @@ void main() {
     navigation.returnFromGame();
     expect(navigation.destination, AppDestination.online);
     expect(navigation.showingTutorial, isFalse);
+
+    navigation.showHome();
+    expect(navigation.destination, AppDestination.home);
   });
 
   test('main menu controller owns invitation polling and dismissal', () async {

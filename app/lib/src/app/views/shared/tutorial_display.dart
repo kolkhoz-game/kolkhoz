@@ -561,22 +561,19 @@ class TutorialOrientationPanel extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Semantics(
-                      button: true,
-                      label: MaterialLocalizations.of(
+                    TactileButton(
+                      key: const Key('tutorial-close'),
+                      onPressed: onClose,
+                      semanticLabel: MaterialLocalizations.of(
                         context,
                       ).closeButtonTooltip,
-                      child: TactileControlSurface(
-                        key: const Key('tutorial-close'),
-                        onPressed: onClose,
-                        pressTravel: 2,
-                        hoverLift: -1,
-                        hoverScale: 1.08,
-                        child: Icon(
-                          Icons.close,
-                          color: tokens.colors.creamDim,
-                          size: 22,
-                        ),
+                      pressTravel: 2,
+                      hoverLift: -1,
+                      hoverScale: 1.08,
+                      child: Icon(
+                        Icons.close,
+                        color: tokens.colors.creamDim,
+                        size: 22,
                       ),
                     ),
                   ],
@@ -649,14 +646,16 @@ class TutorialCollapsedBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final motion = GameMotion.of(context);
-    return TactileControlSurface(
+    return TactileButton(
       key: const Key('tutorial-expand'),
       onPressed: onExpand,
+      semanticLabel: 'Open Foreman Misha',
       pressTravel: 2.5,
       hoverLift: -1.5,
       hoverScale: 1.04,
       child: Tooltip(
         message: 'Open Foreman Misha',
+        excludeFromSemantics: true,
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0, end: 1),
           duration: motion.enabled
@@ -900,53 +899,6 @@ class TutorialDialoguePanel extends StatelessWidget {
   }
 }
 
-class ForemanHintBubble extends StatelessWidget {
-  const ForemanHintBubble({
-    required this.message,
-    required this.tokens,
-    super.key,
-  });
-
-  final String message;
-  final DesignTokens tokens;
-
-  @override
-  Widget build(BuildContext context) {
-    return PanelStyleSurface(
-      tokens: tokens,
-      padding: const EdgeInsets.all(8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        spacing: 8,
-        children: [
-          ForemanMishaCard(
-            key: const ValueKey('foreman-hint-card'),
-            tokens: tokens,
-            width: 58,
-            height: 70,
-          ),
-          Flexible(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 270),
-              child: Text(
-                message,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: kolkhozFontStyle.copyWith(
-                  color: tokens.colors.cream,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class TutorialHeader extends StatelessWidget {
   const TutorialHeader({
     required this.step,
@@ -999,9 +951,10 @@ class TutorialHeader extends StatelessWidget {
           ),
         ),
         if (onCollapse != null)
-          TactileControlSurface(
+          TactileButton(
             key: const Key('tutorial-collapse'),
             onPressed: onCollapse,
+            semanticLabel: 'Collapse tutorial',
             pressTravel: 2,
             hoverLift: -1,
             hoverScale: 1.08,
@@ -1024,32 +977,29 @@ class TutorialHeader extends StatelessWidget {
               ),
             ),
           ),
-        Semantics(
-          button: true,
-          label: MaterialLocalizations.of(context).closeButtonTooltip,
-          child: TactileControlSurface(
-            key: const Key('tutorial-close'),
-            onPressed: onClose,
-            pressTravel: 2,
-            hoverLift: -1,
-            hoverScale: 1.08,
-            child: Container(
-              width: 28,
-              height: 28,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: tokens.colors.black.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: tokens.colors.steel.withValues(alpha: 0.56),
-                ),
+        TactileButton(
+          key: const Key('tutorial-close'),
+          onPressed: onClose,
+          semanticLabel: MaterialLocalizations.of(context).closeButtonTooltip,
+          pressTravel: 2,
+          hoverLift: -1,
+          hoverScale: 1.08,
+          child: Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: tokens.colors.black.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: tokens.colors.steel.withValues(alpha: 0.56),
               ),
-              child: DisplayText(
-                'X',
-                size: DisplayTextSize.caption,
-                variant: DisplayTextWeight.bold,
-                color: tokens.colors.creamDim,
-              ),
+            ),
+            child: DisplayText(
+              'X',
+              size: DisplayTextSize.caption,
+              variant: DisplayTextWeight.bold,
+              color: tokens.colors.creamDim,
             ),
           ),
         ),

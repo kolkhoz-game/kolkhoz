@@ -1219,7 +1219,6 @@ class HandCardControl extends StatefulWidget {
 
 class _HandCardControlState extends State<HandCardControl>
     with SingleTickerProviderStateMixin {
-  bool focused = false;
   late final AnimationController invalidController;
 
   @override
@@ -1281,7 +1280,7 @@ class _HandCardControlState extends State<HandCardControl>
           tokens: widget.tokens,
           size: widget.size,
           pressEnabled: actionable || widget.dragData != null,
-          focused: focused || widget.lifted,
+          focused: widget.lifted,
           onHoverChanged: widget.onEmphasisChanged,
           child: AnimatedOpacity(
             opacity: widget.unavailable ? 0.58 : 1,
@@ -1315,51 +1314,32 @@ class _HandCardControlState extends State<HandCardControl>
           );
     final interactiveCard = Tooltip(
       message: label,
-      child: Semantics(
-        key: Key('hand-card-${widget.card.id}'),
-        container: true,
-        button: actionable,
+      excludeFromSemantics: true,
+      child: TactileButton(
+        semanticKey: Key('hand-card-${widget.card.id}'),
         enabled: actionable,
         selected: widget.card.selected,
-        label: label,
-        onTap: actionable ? _handleTap : null,
-        child: ExcludeSemantics(
-          child: FocusableActionDetector(
-            enabled: actionable,
-            mouseCursor: actionable
-                ? SystemMouseCursors.click
-                : SystemMouseCursors.basic,
-            onShowFocusHighlight: (value) => setState(() => focused = value),
-            actions: {
-              ActivateIntent: CallbackAction<ActivateIntent>(
-                onInvoke: (_) {
-                  _handleTap();
-                  return null;
-                },
-              ),
-            },
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: actionable ? _handleTap : null,
-              child: TweenAnimationBuilder<double>(
-                key: ValueKey('hand-card-deal-${widget.card.id}'),
-                tween: Tween(begin: 0, end: 1),
-                duration: dealDuration,
-                curve: dealCurve,
-                builder: (context, value, child) => Opacity(
-                  opacity: value.clamp(0, 1),
-                  child: Transform.translate(
-                    offset: Offset(0, (1 - value) * widget.size.height * 0.12),
-                    child: Transform.scale(
-                      scale: 0.94 + value * 0.06,
-                      child: child,
-                    ),
-                  ),
-                ),
-                child: card,
-              ),
+        semanticLabel: label,
+        semanticSelected: widget.card.selected,
+        onPressed: actionable ? _handleTap : null,
+        pressTravel: 0,
+        hoverLift: 0,
+        pressScale: 1,
+        hoverScale: 1,
+        haptics: false,
+        child: TweenAnimationBuilder<double>(
+          key: ValueKey('hand-card-deal-${widget.card.id}'),
+          tween: Tween(begin: 0, end: 1),
+          duration: dealDuration,
+          curve: dealCurve,
+          builder: (context, value, child) => Opacity(
+            opacity: value.clamp(0, 1),
+            child: Transform.translate(
+              offset: Offset(0, (1 - value) * widget.size.height * 0.12),
+              child: Transform.scale(scale: 0.94 + value * 0.06, child: child),
             ),
           ),
+          child: card,
         ),
       ),
     );
@@ -1697,38 +1677,23 @@ class AssignmentCommandCard extends StatelessWidget {
     );
     final interactiveCard = Tooltip(
       message: label,
-      child: Semantics(
-        container: true,
-        button: enabled,
+      excludeFromSemantics: true,
+      child: TactileButton(
         enabled: enabled,
         selected: selected,
-        label: label,
-        onTap: onTap,
-        child: ExcludeSemantics(
-          child: FocusableActionDetector(
-            enabled: enabled,
-            mouseCursor: enabled
-                ? SystemMouseCursors.click
-                : SystemMouseCursors.basic,
-            actions: {
-              ActivateIntent: CallbackAction<ActivateIntent>(
-                onInvoke: (_) {
-                  onTap?.call();
-                  return null;
-                },
-              ),
-            },
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onTap,
-              child: TactileCardSurface(
-                tokens: tokens,
-                size: sizeOverride,
-                pressEnabled: enabled,
-                child: cardSurface,
-              ),
-            ),
-          ),
+        semanticLabel: label,
+        semanticSelected: selected,
+        onPressed: onTap,
+        pressTravel: 0,
+        hoverLift: 0,
+        pressScale: 1,
+        hoverScale: 1,
+        haptics: false,
+        child: TactileCardSurface(
+          tokens: tokens,
+          size: sizeOverride,
+          pressEnabled: enabled,
+          child: cardSurface,
         ),
       ),
     );
@@ -1832,33 +1797,27 @@ class ActionIconButton extends StatelessWidget {
     final child = enabled ? button : Opacity(opacity: 0.55, child: button);
     return Tooltip(
       message: label,
-      child: Semantics(
-        button: true,
+      excludeFromSemantics: true,
+      child: TactileButton(
         enabled: enabled,
-        label: label,
-        onTap: onPressed,
-        child: ExcludeSemantics(
-          child: TactileControlSurface(
-            enabled: enabled,
-            onPressed: onPressed,
-            pressTravel: 3 * scale,
-            hoverLift: -1.5 * scale,
-            hoverScale: 1.055,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: tokens.colors.black.withValues(
-                      alpha: prominent ? 0.28 : 0.18,
-                    ),
-                    blurRadius: (prominent ? 5 : 3) * scale,
-                    offset: Offset(0, 2 * scale),
-                  ),
-                ],
+        onPressed: onPressed,
+        semanticLabel: label,
+        pressTravel: 3 * scale,
+        hoverLift: -1.5 * scale,
+        hoverScale: 1.055,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: tokens.colors.black.withValues(
+                  alpha: prominent ? 0.28 : 0.18,
+                ),
+                blurRadius: (prominent ? 5 : 3) * scale,
+                offset: Offset(0, 2 * scale),
               ),
-              child: child,
-            ),
+            ],
           ),
+          child: child,
         ),
       ),
     );

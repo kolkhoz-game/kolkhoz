@@ -74,34 +74,37 @@ class _RulesViewState extends State<RulesView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _RulesTabButton(
-                  key: const Key('how-to-play-tab'),
-                  label: strings.boardOptionspanelHowToPlay,
-                  iconPath: fieldPlanHowToPlayPictogram.fieldPlanPath,
-                  selected: selectedTab == _RulesViewTab.howToPlay,
-                  tokens: widget.tokens,
-                  onPressed: () {
-                    setState(() => selectedTab = _RulesViewTab.howToPlay);
-                  },
+          KolkhozDirectionalFocusGroup(
+            axis: Axis.horizontal,
+            child: Row(
+              children: [
+                Expanded(
+                  child: _RulesTabButton(
+                    key: const Key('how-to-play-tab'),
+                    label: strings.boardOptionspanelHowToPlay,
+                    iconPath: fieldPlanHowToPlayPictogram.fieldPlanPath,
+                    selected: selectedTab == _RulesViewTab.howToPlay,
+                    tokens: widget.tokens,
+                    onPressed: () {
+                      setState(() => selectedTab = _RulesViewTab.howToPlay);
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _RulesTabButton(
-                  key: const Key('rules-tab'),
-                  label: strings.boardOptionspanelRules,
-                  iconPath: 'assets/ui/Icons/icon-rules-scroll.png',
-                  selected: selectedTab == _RulesViewTab.rules,
-                  tokens: widget.tokens,
-                  onPressed: () {
-                    setState(() => selectedTab = _RulesViewTab.rules);
-                  },
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _RulesTabButton(
+                    key: const Key('rules-tab'),
+                    label: strings.boardOptionspanelRules,
+                    iconPath: 'assets/ui/Icons/icon-rules-scroll.png',
+                    selected: selectedTab == _RulesViewTab.rules,
+                    tokens: widget.tokens,
+                    onPressed: () {
+                      setState(() => selectedTab = _RulesViewTab.rules);
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -115,12 +118,20 @@ class _RulesViewState extends State<RulesView> {
                   tokens: widget.tokens,
                   color: colors.panel,
                   textureOpacity: 0.08,
-                  child: MechanicalPanelSwitcher(
-                    panelKey: selectedTab,
-                    child: switch (selectedTab) {
-                      _RulesViewTab.howToPlay => const _HowToPlayPage(),
-                      _RulesViewTab.rules => const _CompleteRulesPage(),
+                  child: KolkhozFocusHandoff(
+                    handoffKey: selectedTab,
+                    semanticLabel: switch (selectedTab) {
+                      _RulesViewTab.howToPlay =>
+                        strings.boardOptionspanelHowToPlay,
+                      _RulesViewTab.rules => strings.boardOptionspanelRules,
                     },
+                    child: MechanicalPanelSwitcher(
+                      panelKey: selectedTab,
+                      child: switch (selectedTab) {
+                        _RulesViewTab.howToPlay => const _HowToPlayPage(),
+                        _RulesViewTab.rules => const _CompleteRulesPage(),
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -190,7 +201,7 @@ class _RulesTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = selected ? tokens.colors.onAccent : tokens.colors.gold;
-    return MechanicalSelectionSurface(
+    return TactileButton(
       selected: selected,
       semanticSelected: selected,
       semanticLabel: label,

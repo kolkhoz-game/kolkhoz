@@ -648,20 +648,22 @@ class _VariantIconStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 7,
-      runSpacing: 7,
-      children: [
-        for (var index = 0; index < rows.length; index += 1)
-          _VariantIconChip(
-            tokens: tokens,
-            label: rows[index].localizedTitle(language, variants),
-            iconAsset: rows[index].iconAssetFor(variants),
-            selected: index == selectedIndex,
-            enabled: rows[index].valueOf(variants),
-            onPressed: () => onSelected(index),
-          ),
-      ],
+    return KolkhozDirectionalFocusGroup(
+      child: Wrap(
+        spacing: 7,
+        runSpacing: 7,
+        children: [
+          for (var index = 0; index < rows.length; index += 1)
+            _VariantIconChip(
+              tokens: tokens,
+              label: rows[index].localizedTitle(language, variants),
+              iconAsset: rows[index].iconAssetFor(variants),
+              selected: index == selectedIndex,
+              enabled: rows[index].valueOf(variants),
+              onPressed: () => onSelected(index),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -688,7 +690,7 @@ class _VariantIconChip extends StatelessWidget {
     return Tooltip(
       message: label,
       excludeFromSemantics: true,
-      child: MechanicalSelectionSurface(
+      child: TactileButton(
         selected: selected,
         semanticSelected: selected,
         semanticLabel: label,
@@ -745,63 +747,44 @@ class _VariantToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = row.localizedTitle(language, variants);
-    final toggleSize = compact ? 30.0 : 34 + 12 * scale;
-    return MechanicalSelectionSurface(
-      selected: value,
-      semanticToggled: value,
-      semanticLabel: label,
-      onPressed: () => onChanged(!value),
-      child: VariantRowBackground(
-        tokens: tokens,
-        active: value,
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 12 : 16 + 12 * scale,
-          vertical: compact ? 9 : 13 + 12 * scale,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          spacing: compact ? 10 : 12 + 8 * scale,
-          children: [
-            VariantIcon(
-              row.iconAssetFor(variants),
-              size: compact ? 40 : _variantIconSize(scale),
-              opacity: value ? 1 : 0.82,
-            ),
-            Expanded(
-              child: _VariantText(
-                tokens: tokens,
-                language: language,
-                variants: variants,
-                row: row,
-                active: value,
-                scale: scale,
-                compact: compact,
+    return VariantRowBackground(
+      tokens: tokens,
+      active: value,
+      padding: EdgeInsets.zero,
+      child: Material(
+        type: MaterialType.transparency,
+        child: SwitchListTile(
+          value: value,
+          onChanged: onChanged,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: compact ? 12 : 16 + 12 * scale,
+            vertical: compact ? 3 : 5 + 4 * scale,
+          ),
+          activeThumbColor: tokens.colors.goldBright,
+          activeTrackColor: tokens.colors.gold.withValues(alpha: 0.5),
+          inactiveThumbColor: tokens.colors.steel,
+          inactiveTrackColor: tokens.colors.black.withValues(alpha: 0.16),
+          title: Row(
+            spacing: compact ? 10 : 12 + 8 * scale,
+            children: [
+              VariantIcon(
+                row.iconAssetFor(variants),
+                size: compact ? 40 : _variantIconSize(scale),
+                opacity: value ? 1 : 0.82,
               ),
-            ),
-            Container(
-              width: toggleSize,
-              height: toggleSize,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: value
-                    ? tokens.colors.gold.withValues(alpha: 0.82)
-                    : tokens.colors.black.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: value
-                      ? tokens.colors.goldBright
-                      : tokens.colors.steel.withValues(alpha: 0.45),
+              Expanded(
+                child: _VariantText(
+                  tokens: tokens,
+                  language: language,
+                  variants: variants,
+                  row: row,
+                  active: value,
+                  scale: scale,
+                  compact: compact,
                 ),
               ),
-              child: value
-                  ? MainMenuAssetIcon(
-                      fieldPlanToolbarConfirmIconPath,
-                      size: toggleSize * 0.63,
-                    )
-                  : null,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -1925,97 +1925,76 @@ class TopInfoStrip extends StatefulWidget {
 }
 
 class _TopInfoStripState extends State<TopInfoStrip> {
-  final Map<String, LayerLink> jobGaugeLinks = {
-    for (final suit in displaySuitOrder) suit: LayerLink(),
+  final Map<String, MenuController> jobMenuControllers = {
+    for (final suit in displaySuitOrder) suit: MenuController(),
   };
-  OverlayEntry? jobOverlay;
   String? openJobSuit;
 
   @override
   void didUpdateWidget(TopInfoStrip oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.model.panels.active == panelJobs && openJobSuit != null) {
-      jobOverlay?.remove();
-      jobOverlay = null;
-      openJobSuit = null;
+      closeJobMenu();
     } else if (openJobSuit != null &&
         !widget.model.table.jobs.any((job) => job.suit == openJobSuit)) {
-      closeJobOverlay();
-    } else {
-      jobOverlay?.markNeedsBuild();
+      closeJobMenu();
     }
   }
 
-  @override
-  void dispose() {
-    jobOverlay?.remove();
-    super.dispose();
-  }
-
-  void toggleJobOverlay(String suit) {
+  void toggleJobMenu(String suit) {
+    final controller = jobMenuControllers[suit]!;
     if (openJobSuit == suit) {
-      closeJobOverlay();
+      controller.close();
       return;
     }
-    closeJobOverlay();
-    openJobSuit = suit;
-    jobOverlay = OverlayEntry(builder: buildJobOverlay);
-    Overlay.of(context).insert(jobOverlay!);
-    setState(() {});
+    closeJobMenu();
+    controller.open();
   }
 
-  void closeJobOverlay() {
-    jobOverlay?.remove();
-    jobOverlay = null;
-    openJobSuit = null;
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  Widget buildJobOverlay(BuildContext context) {
+  void closeJobMenu() {
     final suit = openJobSuit;
-    if (suit == null) {
-      return const SizedBox.shrink();
+    if (suit != null) {
+      jobMenuControllers[suit]?.close();
     }
-    final job = widget.model.table.jobs.firstWhere(
-      (job) => job.suit == suit,
-      orElse: () => emptyVisualJob(suit),
-    );
+  }
+
+  Widget buildJobMenu(Job job, Widget gauge) {
+    final suit = job.suit;
     final screenSize = MediaQuery.sizeOf(context);
     final width = math.min(240.0, screenSize.width - 16);
     final height = math.min(320.0, screenSize.height * 0.56);
-    final firstGauge = suit == displaySuitOrder.first;
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: closeJobOverlay,
-          ),
-        ),
-        CompositedTransformFollower(
-          link: jobGaugeLinks[suit]!,
-          targetAnchor: firstGauge
-              ? Alignment.bottomLeft
-              : Alignment.bottomCenter,
-          followerAnchor: firstGauge ? Alignment.topLeft : Alignment.topCenter,
-          offset: const Offset(0, 7),
-          showWhenUnlinked: false,
-          child: SizedBox(
-            key: ValueKey('job-gauge-overlay-$suit'),
-            width: width,
-            height: height,
-            child: JobTile(
-              job: job,
-              assignmentPhase: false,
-              trump: widget.model.table.trump,
-              tokens: widget.tokens,
-              language: widget.language,
-            ),
+    return MenuAnchor(
+      controller: jobMenuControllers[suit],
+      alignmentOffset: const Offset(0, 7),
+      consumeOutsideTap: false,
+      onOpen: () => setState(() => openJobSuit = suit),
+      onClose: () {
+        if (mounted && openJobSuit == suit) {
+          setState(() => openJobSuit = null);
+        }
+      },
+      style: MenuStyle(
+        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+        backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+        shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+        elevation: const WidgetStatePropertyAll(0),
+        fixedSize: WidgetStatePropertyAll(Size(width, height)),
+      ),
+      menuChildren: [
+        SizedBox(
+          key: ValueKey('job-gauge-overlay-$suit'),
+          width: width,
+          height: height,
+          child: JobTile(
+            job: job,
+            assignmentPhase: false,
+            trump: widget.model.table.trump,
+            tokens: widget.tokens,
+            language: widget.language,
           ),
         ),
       ],
+      builder: (context, controller, child) => gauge,
     );
   }
 
@@ -2118,9 +2097,9 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                               SizedBox(
                                 width: gaugeFrameWidth,
                                 child: Center(
-                                  child: CompositedTransformTarget(
-                                    link: jobGaugeLinks[job.suit]!,
-                                    child: _TopInfoJobGaugeControl(
+                                  child: buildJobMenu(
+                                    job,
+                                    _TopInfoJobGaugeControl(
                                       model: model,
                                       job: job,
                                       tokens: tokens,
@@ -2130,8 +2109,7 @@ class _TopInfoStripState extends State<TopInfoStrip> {
                                           topInfo.gaugeContentWidthMultiplier,
                                       gaugeHeight: gaugeHeight,
                                       expanded: openJobSuit == job.suit,
-                                      onInspect: () =>
-                                          toggleJobOverlay(job.suit),
+                                      onInspect: () => toggleJobMenu(job.suit),
                                       onAction: widget.onAction,
                                     ),
                                   ),
@@ -2256,26 +2234,23 @@ class _TopInfoJobGaugeControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final control = Semantics(
-      button: true,
-      label: '${language.suitName(job.suit)} job',
-      expanded: expanded,
-      child: TactileControlSurface(
-        key: ValueKey('job-gauge-button-${job.suit}'),
-        onPressed: onInspect,
-        pressTravel: 2,
-        hoverLift: -1,
-        hoverScale: 1.025,
-        child: MotionTrackedRegion(
-          motionKey: jobGaugeMotionTargetKey(job.suit),
-          child: JobGauge(
-            job: job,
-            highlighted: model.table.trump == job.suit,
-            width: gaugeWidth,
-            height: gaugeHeight,
-            tokens: tokens,
-            hideReward: model.table.phase == phasePlanning,
-          ),
+    final control = TactileButton(
+      key: ValueKey('job-gauge-button-${job.suit}'),
+      onPressed: onInspect,
+      semanticLabel: '${language.suitName(job.suit)} job',
+      semanticExpanded: expanded,
+      pressTravel: 2,
+      hoverLift: -1,
+      hoverScale: 1.025,
+      child: MotionTrackedRegion(
+        motionKey: jobGaugeMotionTargetKey(job.suit),
+        child: JobGauge(
+          job: job,
+          highlighted: model.table.trump == job.suit,
+          width: gaugeWidth,
+          height: gaugeHeight,
+          tokens: tokens,
+          hideReward: model.table.phase == phasePlanning,
         ),
       ),
     );

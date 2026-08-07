@@ -4,15 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:kolkhoz_app/src/app/settings/animation_speed.dart';
 import 'package:kolkhoz_app/src/app/settings/game_motion.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/game_presentation_transition.dart';
+import 'package:kolkhoz_app/src/app/views/game/game_controller/models/assignment_projection.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/game_constants.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/engine_values.dart';
 import 'package:kolkhoz_app/src/app/views/game/game_controller/models/render_model.dart';
 import 'package:kolkhoz_app/src/app/views/shared/design_tokens.dart';
 import 'card_flight.dart';
+import 'assignment_preview.dart';
 import 'card_motion_resolver.dart';
 import 'card_motion_tracking.dart';
 
 export 'card_flight.dart';
+export 'assignment_preview.dart';
 export 'card_motion_plan.dart';
 export 'card_motion_resolver.dart';
 export 'card_motion_tracking.dart';
@@ -51,9 +54,11 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
   final List<CardFlight> _flights = [];
   final Set<String> _presentedAssignmentCardIDs = {};
   final Set<int> _landedFlightIDs = {};
+  List<AssignmentPreviewRoute> _assignmentPreviewRoutes = const [];
   Set<String> _pendingFlightCardIDs = const {};
   int _nextFlightID = 0;
   int _planGeneration = 0;
+  int _assignmentPreviewGeneration = 0;
   CardMotionPlan? _activePlan;
   int _activeStageIndex = 0;
   Timer? _transitionHoldTimer;
@@ -63,6 +68,7 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
   @override
   void initState() {
     super.initState();
+    _scheduleAssignmentPreviewRefresh();
     final initialTransitionID = widget.transition?.id;
     _afterCardLayout(() {
       _controller.commitFrame();
@@ -75,6 +81,7 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
   @override
   void didUpdateWidget(CardMotionLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _scheduleAssignmentPreviewRefresh();
     if (widget.transition != null &&
         oldWidget.transition?.id == widget.transition?.id) {
       return;
@@ -200,6 +207,45 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
     });
   }
 
+  void _scheduleAssignmentPreviewRefresh() {
+    final generation = ++_assignmentPreviewGeneration;
+    _afterCardLayout(() {
+      if (generation != _assignmentPreviewGeneration || !mounted) {
+        return;
+      }
+      final routes = widget.transition == null
+          ? _resolveAssignmentPreviewRoutes(widget.model)
+          : const <AssignmentPreviewRoute>[];
+      if (_sameAssignmentPreviewRoutes(_assignmentPreviewRoutes, routes)) {
+        return;
+      }
+      setState(() => _assignmentPreviewRoutes = routes);
+    });
+  }
+
+  List<AssignmentPreviewRoute> _resolveAssignmentPreviewRoutes(
+    TableViewModel model,
+  ) {
+    final rects = _controller.currentRects;
+    final routes = <AssignmentPreviewRoute>[];
+    for (final entry in pendingAssignmentTargets(model).entries) {
+      final source = rects[trickCardMotionSourceKey(entry.key)];
+      final target = rects[jobGaugeMotionTargetKey(entry.value)];
+      if (source == null || target == null) {
+        continue;
+      }
+      routes.add(
+        AssignmentPreviewRoute(
+          cardID: entry.key,
+          suit: entry.value,
+          source: source,
+          target: target,
+        ),
+      );
+    }
+    return routes;
+  }
+
   void _play(CardMotionPlan plan) {
     if (plan.stages.isEmpty) {
       if (_pendingFlightCardIDs.isNotEmpty) {
@@ -322,6 +368,17 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
         clipBehavior: Clip.none,
         children: [
           widget.child,
+          if (widget.transition == null && _assignmentPreviewRoutes.isNotEmpty)
+            Positioned.fill(
+              child: ExcludeSemantics(
+                child: IgnorePointer(
+                  child: AssignmentPreviewOverlay(
+                    routes: _assignmentPreviewRoutes,
+                    tokens: widget.tokens,
+                  ),
+                ),
+              ),
+            ),
           Positioned.fill(
             child: ExcludeSemantics(
               child: IgnorePointer(
@@ -361,6 +418,21 @@ class _CardMotionLayerState extends State<CardMotionLayer> {
     _controller.dispose();
     super.dispose();
   }
+}
+
+bool _sameAssignmentPreviewRoutes(
+  List<AssignmentPreviewRoute> left,
+  List<AssignmentPreviewRoute> right,
+) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 MotionZone? motionZoneForEngineTransition({

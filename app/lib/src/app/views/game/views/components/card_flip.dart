@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:kolkhoz_app/src/app/settings/game_motion.dart';
+import 'package:kolkhoz_app/src/app/views/shared/chrome_button.dart';
 
 class CardFlip extends StatefulWidget {
   const CardFlip({
@@ -164,33 +165,33 @@ class _InteractiveCardFlipState extends State<InteractiveCardFlip> {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: showingFront ? widget.revealedLabel : widget.concealedLabel,
-      onTap: _handleTap,
-      child: ExcludeSemantics(
-        child: MouseRegion(
-          onEnter: (_) {
-            if (!widget.forceShowFront) {
-              setState(() => hovered = true);
-            }
-          },
-          onExit: (_) {
-            if (!widget.forceShowFront) {
-              setState(() => hovered = false);
-            }
-          },
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _handleTap,
-            child: CardFlip(
-              showFront: showingFront,
-              front: widget.front,
-              back: widget.back,
-              frontKey: widget.frontKey,
-              backKey: widget.backKey,
-            ),
-          ),
+    return TactileButton(
+      semanticLabel: showingFront
+          ? widget.revealedLabel
+          : widget.concealedLabel,
+      onPressed: _handleTap,
+      pressTravel: 0,
+      hoverLift: 0,
+      pressScale: 1,
+      hoverScale: 1,
+      haptics: false,
+      child: MouseRegion(
+        onEnter: (_) {
+          if (!widget.forceShowFront) {
+            setState(() => hovered = true);
+          }
+        },
+        onExit: (_) {
+          if (!widget.forceShowFront) {
+            setState(() => hovered = false);
+          }
+        },
+        child: CardFlip(
+          showFront: showingFront,
+          front: widget.front,
+          back: widget.back,
+          frontKey: widget.frontKey,
+          backKey: widget.backKey,
         ),
       ),
     );

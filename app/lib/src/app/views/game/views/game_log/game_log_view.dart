@@ -159,36 +159,33 @@ class ReactionTray extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 child: Tooltip(
                   message: _reactionLabel(reactionID, language),
-                  child: Semantics(
+                  excludeFromSemantics: true,
+                  child: TactileButton(
                     key: Key('reaction-$reactionID'),
-                    button: true,
                     enabled: enabled,
-                    label: _reactionLabel(reactionID, language),
-                    child: TactileControlSurface(
-                      enabled: enabled,
-                      onPressed: enabled
-                          ? () => onReaction?.call(reactionID)
-                          : null,
-                      pressTravel: 3,
-                      hoverScale: 1.08,
-                      child: Opacity(
-                        opacity: enabled ? 1 : 0.48,
-                        child: SizedBox.square(
-                          dimension: 44,
-                          child: Center(
-                            child: Image.asset(
-                              reactionAsset(reactionID).startsWith('assets/')
-                                  ? reactionAsset(reactionID)
-                                  : 'assets/ui/Icons/${reactionAsset(reactionID)}',
-                              width: 30,
-                              height: 30,
-                              filterQuality:
-                                  reactionAsset(
-                                    reactionID,
-                                  ).startsWith('assets/art/field_plan/')
-                                  ? FilterQuality.high
-                                  : FilterQuality.none,
-                            ),
+                    semanticLabel: _reactionLabel(reactionID, language),
+                    onPressed: enabled
+                        ? () => onReaction?.call(reactionID)
+                        : null,
+                    pressTravel: 3,
+                    hoverScale: 1.08,
+                    child: Opacity(
+                      opacity: enabled ? 1 : 0.48,
+                      child: SizedBox.square(
+                        dimension: 44,
+                        child: Center(
+                          child: Image.asset(
+                            reactionAsset(reactionID).startsWith('assets/')
+                                ? reactionAsset(reactionID)
+                                : 'assets/ui/Icons/${reactionAsset(reactionID)}',
+                            width: 30,
+                            height: 30,
+                            filterQuality:
+                                reactionAsset(
+                                  reactionID,
+                                ).startsWith('assets/art/field_plan/')
+                                ? FilterQuality.high
+                                : FilterQuality.none,
                           ),
                         ),
                       ),
@@ -252,57 +249,51 @@ class _LogExpansionState extends State<_LogExpansion> {
     final motion = GameMotion.of(context);
     return Column(
       children: [
-        Semantics(
-          button: true,
-          expanded: expanded,
-          label: widget.title,
-          onTap: toggle,
-          child: ExcludeSemantics(
-            child: TactileControlSurface(
-              onPressed: toggle,
-              pressTravel: 2,
-              hoverLift: -0.5,
-              hoverScale: 1.01,
-              child: SizedBox(
-                height: 40,
-                child: Row(
-                  children: [
-                    AnimatedRotation(
-                      turns: expanded ? 0.25 : 0,
-                      duration: motion.logChevron,
-                      child: CustomPaint(
-                        size: const Size.square(14),
-                        painter: _ExpansionChevronPainter(
-                          color: expanded
-                              ? widget.tokens.colors.gold
-                              : widget.tokens.colors.smoke,
-                        ),
-                      ),
+        TactileButton(
+          onPressed: toggle,
+          semanticLabel: widget.title,
+          semanticExpanded: expanded,
+          pressTravel: 2,
+          hoverLift: -0.5,
+          hoverScale: 1.01,
+          child: SizedBox(
+            height: 40,
+            child: Row(
+              children: [
+                AnimatedRotation(
+                  turns: expanded ? 0.25 : 0,
+                  duration: motion.logChevron,
+                  child: CustomPaint(
+                    size: const Size.square(14),
+                    painter: _ExpansionChevronPainter(
+                      color: expanded
+                          ? widget.tokens.colors.gold
+                          : widget.tokens.colors.smoke,
                     ),
-                    const SizedBox(width: 8),
-                    Transform.flip(
-                      flipX: widget.flipIconHorizontally,
-                      child: Image.asset(
-                        widget.iconAsset,
-                        width: 24,
-                        height: 24,
-                        filterQuality: FilterQuality.none,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: DisplayText(
-                        widget.title,
-                        size: DisplayTextSize.headline,
-                        variant: DisplayTextWeight.bold,
-                        color: widget.tokens.colors.cream,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Transform.flip(
+                  flipX: widget.flipIconHorizontally,
+                  child: Image.asset(
+                    widget.iconAsset,
+                    width: 24,
+                    height: 24,
+                    filterQuality: FilterQuality.none,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DisplayText(
+                    widget.title,
+                    size: DisplayTextSize.headline,
+                    variant: DisplayTextWeight.bold,
+                    color: widget.tokens.colors.cream,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
