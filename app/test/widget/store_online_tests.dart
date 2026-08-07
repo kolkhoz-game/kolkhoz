@@ -1091,6 +1091,12 @@ void registerStoreAndOnlineTests() {
       phase: phaseRequisition,
       selection: SelectionState.empty,
       jobs: base.table.jobs,
+      legalActions: [
+        testLegalAction(
+          kind: actionContinueAfterRequisition,
+          label: 'Continue',
+        ),
+      ],
       seats: [
         base.table.seats[0],
         seatWithPlot(
@@ -1103,6 +1109,10 @@ void registerStoreAndOnlineTests() {
     final heldModel = withHeldRequisitionNominations(returnedModel, held);
     expect(heldModel.table.seats[1].plot.revealed, isEmpty);
     expect(heldModel.table.trick.plays.single.card.id, card.id);
+    expect(
+      heldModel.legalActions.map((action) => action.kind),
+      contains(actionContinueAfterRequisition),
+    );
     final returnStates = projectPresentationBatch(
       before: heldModel,
       after: heldModel,

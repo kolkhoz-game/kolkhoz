@@ -988,13 +988,13 @@ TableViewModel _withTable(
   required TableState table,
   Panels? panels,
   SelectionState? selection,
-  List<LegalAction> legalActions = const [],
+  List<LegalAction>? legalActions,
 }) => TableViewModel(
   viewer: model.viewer,
   table: table,
   panels: panels ?? model.panels,
   selection: selection ?? model.selection,
-  legalActions: legalActions,
+  legalActions: legalActions ?? model.legalActions,
   seed: model.seed,
 );
 
